@@ -14,10 +14,21 @@ const { title, description } = Astro.props;
 		<meta charset="UTF-8" />
 		<meta name="description" content={description} />
 		<meta name="viewport" content="width=device-width" />
-		<!-- NEW FAVICON LINK -->
-		<link rel="icon" type="image/png" href="/images/favicon.png" />
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
+
+		<!-- ========= NEW, COMPLETE FAVICON & MANIFEST SETUP ========= -->
+		<!-- Modern browsers will prefer the SVG for its scalability -->
+		<link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+		<!-- Fallback for older browsers -->
+		<link rel="icon" href="/favicon.ico" sizes="any">
+		<!-- A common PNG size -->
+		<link rel="icon" type="image/png" sizes="96x96" href="/images/favicon-96x96.png">
+		<!-- Apple Touch Icon for iOS home screens (e.g., iPhone/iPad) -->
+		<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+		<!-- Web App Manifest for Android home screens & theme colors -->
+		<link rel="manifest" href="/site.webmanifest">
+		<!-- ========================================================= -->
 
 		<!-- Google Fonts -->
 		<link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,7 +39,6 @@ const { title, description } = Astro.props;
         <header class="border-b border-brand-sandstone sticky top-0 bg-brand-linen/80 backdrop-blur-sm z-50">
             <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
                 
-				<!-- UPDATED LOGO PATH -->
                 <a href="/" class="flex items-center gap-3 hover:opacity-80 transition-opacity z-50">
 					<img src="/images/logo.png" alt="Family Trust Therapy Logo" class="h-14 w-14">
 					<div>
