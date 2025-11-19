@@ -7,17 +7,24 @@ import Layout from '../layouts/Layout.astro';
     title="Contact | Attachment Matters, LLC" 
     description="Reach out to schedule a consultation. Call today to begin your family's journey toward healing and connection.">
 
-    <div class="container mx-auto px-6 py-24 md:py-32 text-center">
-        <h1 class="text-4xl md:text-5xl font-extrabold text-brand-charcoal">Let's Connect</h1>
-        <p class="mt-4 text-xl text-brand-charcoal/80 max-w-2xl mx-auto">
-            I am currently accepting a limited number of new clients. The best way to begin is to call me directly for a complimentary consultation.
-        </p>
-
-        <div class="mt-12 bg-white border border-brand-stone/80 rounded-2xl shadow-xl p-10 inline-block">
-            <p class="font-medium text-brand-charcoal/80">Schedule by phone:</p>
-            <a href="tel:505-920-6351" class="mt-2 block text-4xl font-extrabold text-brand-terracotta hover:text-brand-deep-teal transition-colors">
-                (505) 920-6351
-            </a>
-        </div>
-    </div>
+    <section class="container mx-auto px-6 py-24">
+		<div class="grid md:grid-cols-2 gap-12 items-center max-w-5xl mx-auto">
+			<div>
+				<h1 class="text-4xl md:text-5xl font-extrabold text-brand-charcoal">Ready to Take the Next Step?</h1>
+				<p class="mt-4 text-xl text-brand-charcoal/80">
+					I am currently accepting a limited number of new clients. The best way to begin is to call me directly for a complimentary consultation to see if we are a good fit.
+				</p>
+				<div class="mt-8 bg-white border border-brand-stone/80 rounded-2xl p-8 inline-block">
+					<p class="font-medium text-brand-charcoal/80">Schedule by phone:</p>
+					<a href="tel:505-920-6351" class="mt-2 block text-4xl font-extrabold text-brand-terracotta hover:text-brand-deep-teal transition-colors">
+						(505) 920-6351
+					</a>
+				</div>
+			</div>
+			<div>
+				<!-- Image Placeholder -->
+				<img src="/images/contact-calm.jpg" alt="A calm, serene image of a smooth stone stack." class="rounded-3xl shadow-xl w-full h-full object-cover">
+			</div>
+		</div>
+    </section>
 </Layout>

@@ -11,7 +11,8 @@ export default {
         'brand-charcoal': '#333333',    // A dark, rich gray for main text, softer than black
         'brand-terracotta': '#C66E4E',  // Your warm, autumnal accent for buttons and highlights
         'brand-deep-teal': '#1D5A5A',   // A professional, calming secondary accent
-        'brand-stone': '#EAE5DC',       // A subtle color for borders and dividers
+        'brand-stone': '#EAE5DC',       // A subtle color for borders and background sections
+        'brand-highlight': '#FDE68A',   // A warm yellow for highlighting text, like the inspiration
       },
       fontFamily: {
         sans: ['Inter', ...defaultTheme.fontFamily.sans],

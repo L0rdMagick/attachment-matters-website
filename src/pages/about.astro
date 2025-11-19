@@ -6,39 +6,34 @@ import Layout from '../layouts/Layout.astro';
 <Layout 
     title="About Me | Attachment Matters, LLC" 
     description="Meet a highly experienced, compassionate LCSW dedicated to attachment-focused, trauma-responsive clinical work.">
-    
-    <div class="container mx-auto px-6 py-24 md:py-32">
-        <div class="max-w-5xl mx-auto">
-            <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center">
-                <div>
-                    <!-- IMPORTANT: Replace this src with the path to your actual headshot image -->
-                    <img src="https://via.placeholder.com/600x700.png/EAE5DC/333333?text=Your+Professional+Headshot" alt="Headshot of the therapist" class="rounded-3xl shadow-2xl w-full object-cover">
-                </div>
-                <div>
-                    <h1 class="text-3xl md:text-4xl font-extrabold text-brand-charcoal">Warm, Compassionate, and Uncompromisingly Skilled</h1>
-                    <p class="mt-6 text-brand-charcoal/80">
-                        I am a client-centered provider who combines deep compassion with exceptional skill. With **16 years of experience** in complex family systems, I have earned a reputation as a leading professional in the region for a reason: I am dedicated to achieving positive outcomes for the families I serve.
-                    </p>
-                    <p class="mt-4 text-brand-charcoal/80">
-                        As an LCSW for 14 years with a spotless ethical record, my approach is always relationship-driven, attachment-focused, and trauma-responsive.
-                    </p>
-                </div>
-            </div>
 
-            <div class="mt-24 bg-white/70 p-10 rounded-2xl border border-brand-stone/80">
-                <h2 class="text-2xl font-bold text-brand-charcoal text-center">My Integrative & Evidence-Based Approach</h2>
-                <p class="mt-4 text-brand-charcoal/80 text-center max-w-3xl mx-auto">
-                    I utilize a wide array of evidence-based practices to support your family's unique journey to bonding and wellness.
-                </p>
-                <div class="mt-8 flex flex-wrap justify-center gap-3">
-                    <span class="bg-brand-stone text-brand-charcoal/80 font-medium py-2 px-4 rounded-full">Cognitive Behavior Therapy (CBT)</span>
-                    <span class="bg-brand-stone text-brand-charcoal/80 font-medium py-2 px-4 rounded-full">Child Centered Play Therapy</span>
-                    <span class="bg-brand-stone text-brand-charcoal/80 font-medium py-2 px-4 rounded-full">Synergetic Play Therapy (SPT)</span>
-                    <span class="bg-brand-stone text-brand-charcoal/80 font-medium py-2 px-4 rounded-full">Parent Child Interactional Therapy (PCIT)</span>
-                    <span class="bg-brand-stone text-brand-charcoal/80 font-medium py-2 px-4 rounded-full">The Neurosequential Model</span>
-                    <span class="bg-brand-stone text-brand-charcoal/80 font-medium py-2 px-4 rounded-full">Trauma Focused CBT (TF-CBT)</span>
-                </div>
-            </div>
-        </div>
-    </div>
+    <section class="container mx-auto px-6 py-24">
+		<div class="text-center max-w-3xl mx-auto">
+			<h1 class="text-4xl md:text-5xl font-extrabold text-brand-charcoal">A Premiere Provider for Complex Family Systems</h1>
+			<p class="mt-4 text-xl text-brand-charcoal/80">With 16 years of experience, I bring a depth of expertise and a reputation for excellence to my work with children and families.</p>
+		</div>
+		<div class="mt-16 max-w-5xl mx-auto">
+			<!-- Image Placeholder -->
+			<img src="/images/about-hero.jpg" alt="A bright, professional, and welcoming therapy office space." class="rounded-3xl shadow-2xl w-full h-96 object-cover">
+		</div>
+	</section>
+
+	<section class="bg-white py-24 border-y border-brand-stone">
+		<div class="container mx-auto px-6">
+			<div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center max-w-5xl mx-auto">
+				<div>
+					<h2 class="text-3xl font-bold text-brand-charcoal">My Core Beliefs</h2>
+					<ul class="mt-6 space-y-4 text-brand-charcoal/90">
+						<li class="flex items-start"><span class="text-brand-terracotta font-bold mr-3 mt-1">✓</span><span>Every family has the capacity for growth and healing.</span></li>
+						<li class="flex items-start"><span class="text-brand-terracotta font-bold mr-3 mt-1">✓</span><span>Safety and trust are the non-negotiable foundation of therapy.</span></li>
+						<li class="flex items-start"><span class="text-brand-terracotta font-bold mr-3 mt-1">✓</span><span>A child-centered focus ultimately benefits the entire family system.</span></li>
+					</ul>
+				</div>
+				<div>
+					<!-- Image Placeholder -->
+					<img src="/images/about-values.jpg" alt="Detail shot of hands tending to a small plant, connoting growth and care." class="rounded-3xl shadow-xl w-full h-full object-cover">
+				</div>
+			</div>
+		</div>
+	</section>
 </Layout>

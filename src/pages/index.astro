@@ -8,64 +8,58 @@ import Layout from '../layouts/Layout.astro';
 	description="Premiere therapeutic services for children and families. Specializing in attachment-focused, trauma-responsive care to build connection and hope.">
 
 	<!-- Hero Section -->
-	<section class="container mx-auto px-6 py-24 md:py-32 text-center">
-		<h1 class="text-4xl md:text-6xl font-extrabold text-brand-charcoal leading-tight">
-			Therapy that Moves at the Speed of Trust
-		</h1>
-		<p class="mt-6 max-w-2xl mx-auto text-xl text-brand-charcoal/80">
-			A warm, compassionate, and highly skilled practice dedicated to helping your family build stronger bonds and navigate life's challenges with confidence.
-		</p>
-		<a href="/contact" class="mt-10 inline-block bg-brand-terracotta text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">
-			Book a Consultation
-		</a>
-	</section>
-
-	<!-- "As Featured In" / Credibility Bar (Placeholder) -->
-	<section class="container mx-auto px-6 text-center">
-		<p class="text-sm font-medium text-brand-charcoal/50">A TRUSTED PROFESSIONAL IN THE REGION</p>
-		<div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-8 items-center text-brand-charcoal/40 font-semibold">
-			<!-- You can replace these with logos of organizations you've worked with or associations you belong to -->
-			<div class="text-center">16+ Years Experience</div>
-			<div class="text-center">Licensed Clinical Social Worker</div>
-			<div class="text-center">Attachment-Focused Care</div>
-			<div class="text-center">Trauma-Responsive</div>
-		</div>
-	</section>
-
-	<!-- Services Overview -->
-	<section class="container mx-auto px-6 py-24 md:py-32">
-		<div class="text-center max-w-3xl mx-auto">
-			<h2 class="text-3xl md:text-4xl font-extrabold text-brand-charcoal">How I Can Help Your Family Thrive</h2>
-			<p class="mt-4 text-brand-charcoal/80">I offer specialized services designed to create lasting change by focusing on the core of family wellness: connection.</p>
-		</div>
-
-		<div class="mt-16 grid md:grid-cols-3 gap-8">
-			<!-- Card 1 -->
-			<div class="bg-white rounded-2xl p-8 border border-brand-stone/80 shadow-sm">
-				<h3 class="text-2xl font-bold text-brand-deep-teal">Intensive Family Services</h3>
-				<p class="mt-3 text-brand-charcoal/80">Strengthening bonds between parents and children to address mental health and improve your connection.</p>
+	<section class="container mx-auto px-6 pt-16 pb-24">
+		<div class="grid md:grid-cols-2 gap-12 items-center">
+			<div>
+				<h1 class="text-5xl md:text-6xl font-extrabold text-brand-charcoal leading-tight">
+					Therapy that builds connection and <span class="relative inline-block"><span class="absolute inset-0 bg-brand-highlight -skew-y-2 z-0"></span><span class="relative z-10">trust</span></span>
+				</h1>
+				<p class="mt-8 text-xl text-brand-charcoal/80">
+					A warm, compassionate, and highly skilled practice dedicated to helping your family build stronger bonds and navigate challenges with confidence.
+				</p>
+				<a href="/contact" class="mt-10 inline-block bg-brand-terracotta text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">
+					Book a Consultation
+				</a>
 			</div>
-			<!-- Card 2 -->
-			<div class="bg-white rounded-2xl p-8 border border-brand-stone/80 shadow-sm">
-				<h3 class="text-2xl font-bold text-brand-deep-teal">Court-Involved Assessments</h3>
-				<p class="mt-3 text-brand-charcoal/80">Providing skilled assessments for legal professionals in areas of family functioning, attachment, and co-parenting.</p>
-			</div>
-			<!-- Card 3 -->
-			<div class="bg-white rounded-2xl p-8 border border-brand-stone/80 shadow-sm">
-				<h3 class="text-2xl font-bold text-brand-deep-teal">Parenting Workshops</h3>
-				<p class="mt-3 text-brand-charcoal/80">Educational workshops for organizations focused on improving parent education and caregiver capacity.</p>
+			<div>
+				<!-- Image Placeholder -->
+				<img src="/images/hero-connection.jpg" alt="A warm, candid moment showing connection between a parent and child." class="rounded-3xl shadow-2xl w-full h-full object-cover">
 			</div>
 		</div>
 	</section>
 
-	<!-- Final Call to Action Block -->
-	<section class="container mx-auto px-6">
-		<div class="bg-brand-deep-teal text-white rounded-3xl p-12 md:p-20 text-center">
-			<h2 class="text-3xl md:text-4xl font-extrabold">Your family deserves to feel safe, seen, and hopeful.</h2>
-			<p class="mt-4 max-w-2xl mx-auto text-white/80">Let's work together to build a more connected and resilient future for your children.</p>
-			<a href="/contact" class="mt-8 inline-block bg-white text-brand-deep-teal font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:scale-105 transition-transform">
-				Get Started Today
-			</a>
+	<!-- Features Section -->
+	<section class="bg-brand-stone/70 py-24">
+		<div class="container mx-auto px-6 text-center">
+			<h2 class="text-3xl font-bold text-brand-charcoal">A Child-Centered, Family-Focused Approach</h2>
+			<div class="mt-12 grid md:grid-cols-3 gap-12">
+				<div>
+					<h3 class="text-xl font-bold text-brand-deep-teal">Attachment-Focused</h3>
+					<p class="mt-2 text-brand-charcoal/80">Strengthening the parent-child bond is at the heart of everything we do.</p>
+				</div>
+				<div>
+					<h3 class="text-xl font-bold text-brand-deep-teal">Trauma-Responsive</h3>
+					<p class="mt-2 text-brand-charcoal/80">Creating a safe space that acknowledges and honors past experiences.</p>
+				</div>
+				<div>
+					<h3 class="text-xl font-bold text-brand-deep-teal">Evidence-Based</h3>
+					<p class="mt-2 text-brand-charcoal/80">Utilizing proven therapeutic models to ensure the highest quality of care.</p>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- Testimonial Section -->
+	<section class="container mx-auto px-6 py-24">
+		<div class="bg-white rounded-3xl p-12 md:p-16 border border-brand-stone text-center max-w-4xl mx-auto shadow-lg">
+			<p class="text-2xl md:text-3xl font-medium text-brand-charcoal/90 leading-snug">
+				"I am a warm, compassionate, and client-centered provider who does not mess around because I am very skilled at what I do. My goal is to help your family find connection and improve overall functioning."
+			</p>
+			<div class="mt-8">
+				<img src="/images/headshot-circle.jpg" alt="Headshot of the therapist" class="w-20 h-20 rounded-full mx-auto shadow-md">
+				<p class="mt-4 font-bold text-brand-charcoal">Your Name, LCSW</p>
+				<p class="text-sm text-brand-charcoal/60">Founder of Attachment Matters, LLC</p>
+			</div>
 		</div>
 	</section>
 </Layout>
