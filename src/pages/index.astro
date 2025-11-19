@@ -7,33 +7,41 @@ import Layout from '../layouts/Layout.astro';
 	title="Family Trust Therapy | Expert Child and Family Therapy" 
 	description="Premiere therapeutic services for children and families. Specializing in attachment-focused, trauma-responsive care to build connection and hope.">
 
-	<!-- Hero Section -->
+	<!-- NEW HERO SECTION (Inspired by screenshot) -->
 	<section class="container mx-auto px-6 pt-16">
 		<div class="grid md:grid-cols-2 gap-12 items-center">
-			<div>
-				<h1 class="text-5xl md:text-6xl font-serif font-bold text-brand-ink leading-tight">
-					Therapy that builds connection and trust.
-				</h1>
-				<p class="mt-8 text-xl text-brand-ink/80">
-					A warm, compassionate, and highly skilled practice dedicated to helping your family build stronger bonds and navigate challenges with confidence.
-				</p>
-				<a href="/contact" class="mt-10 inline-block bg-brand-terracotta text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">
-					Book a Consultation
-				</a>
+			<!-- Left Column: Logo and Title -->
+			<div class="flex flex-col items-center text-center">
+				<img src="/images/logo.png" alt="Family Trust Therapy Logo" class="w-56 h-56">
+				<h1 class="text-4xl font-serif font-bold text-brand-ink mt-6">Family Trust Therapy</h1>
 			</div>
+			<!-- Right Column: Hero Image -->
 			<div>
-				<!-- UPDATED IMAGE PATH -->
 				<img src="/images/hero-connection.png" alt="A warm, candid moment showing connection between a parent and child." class="rounded-3xl shadow-2xl w-full h-full object-cover">
 			</div>
 		</div>
 	</section>
 
-	<!-- QUOTE SECTION -->
-	<section class="container mx-auto px-6 py-24 pb-24">
+	<!-- NEW CONTENT CARD SECTION -->
+	<section class="container mx-auto px-6 pt-24">
+		<div class="bg-white rounded-3xl p-12 border border-brand-sandstone shadow-xl text-center max-w-4xl mx-auto">
+			<h2 class="text-4xl md:text-5xl font-serif font-bold text-brand-ink leading-tight">
+				Therapy that builds connection and trust.
+			</h2>
+			<p class="mt-6 text-xl text-brand-ink/80 max-w-2xl mx-auto">
+				A warm, compassionate, and highly skilled practice dedicated to helping your family build stronger bonds and navigate challenges with confidence.
+			</p>
+			<a href="/contact" class="mt-10 inline-block bg-brand-terracotta text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">
+				Book a Consultation
+			</a>
+		</div>
+	</section>
+
+	<!-- QUOTE SECTION (Unchanged from your version) -->
+	<section class="container mx-auto px-6 pt-24">
 		<div class="bg-white rounded-3xl p-12 border border-brand-sandstone shadow-xl flex flex-col md:flex-row gap-12 items-center max-w-5xl mx-auto">
 			<!-- Image Column -->
 			<div class="md:w-1/4 flex-shrink-0 text-center">
-				<!-- UPDATED IMAGE PATH -->
 				<img src="/images/headshot-circle.jpg" alt="Headshot of the therapist" class="w-40 h-40 rounded-full mx-auto shadow-md">
 				<p class="mt-4 font-bold font-serif text-brand-ink">Genevieve Giddings, LCSW</p>
 				<p class="text-sm text-brand-ink/60 leading-tight">Founder,<br>Family Trust Therapy</p>
@@ -48,7 +56,7 @@ import Layout from '../layouts/Layout.astro';
 		</div>
 	</section>
 
-	<!-- Features Section -->
+	<!-- Features Section (Unchanged from your version, with corrected spacing) -->
 	<section class="bg-brand-sandstone py-24">
 		<div class="container mx-auto px-6 text-center">
 			<h2 class="text-3xl font-serif font-bold text-brand-ink">A Child-Centered, Family-Focused Approach</h2>
