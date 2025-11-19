@@ -8,7 +8,8 @@ import Layout from '../layouts/Layout.astro';
 	description="Premiere therapeutic services for children and families. Specializing in attachment-focused, trauma-responsive care to build connection and hope.">
 
 	<!-- Hero Section -->
-	<section class="container mx-auto px-6 pt-16 pb-24">
+	<!-- CHANGE: Removed bottom padding (pb-24) to create a consistent spacing system. -->
+	<section class="container mx-auto px-6 pt-16">
 		<div class="grid md:grid-cols-2 gap-12 items-center">
 			<div>
 				<h1 class="text-5xl md:text-6xl font-serif font-bold text-brand-ink leading-tight">
@@ -27,11 +28,12 @@ import Layout from '../layouts/Layout.astro';
 		</div>
 	</section>
 
-	<!-- NEW QUOTE SECTION -->
-	<section class="container mx-auto px-6 py-24">
+	<!-- QUOTE SECTION -->
+	<!-- CHANGE: Changed vertical padding (py-24) to only top padding (pt-24) to control the space above this section. -->
+	<section class="container mx-auto px-6 pt-24">
 		<div class="bg-white rounded-3xl p-12 border border-brand-sandstone shadow-xl grid md:grid-cols-12 gap-12 items-center max-w-5xl mx-auto">
 			<!-- Image Column -->
-			<div class="md:col-span-4 text-center">
+			<div class="md-col-span-4 text-center">
 				<img src="/images/headshot-circle.jpg" alt="Headshot of the therapist" class="w-40 h-40 rounded-full mx-auto shadow-md">
 				<p class="mt-4 font-bold font-serif text-brand-ink">Genevieve Giddings, LCSW</p>
 				<p class="text-sm text-brand-ink/60">Founder, Attachment Matters, LLC</p>
@@ -60,7 +62,7 @@ import Layout from '../layouts/Layout.astro';
 					<p class="mt-2 text-brand-ink/80">Creating a safe space that acknowledges and honors past experiences.</p>
 				</div>
 				<div>
-					<h3 class="text-2xl font-serif text-brand-moss">Evidence-Based</h3>
+					<h3 class="text-serif text-2xl font-bold text-brand-moss">Evidence-Based</h3>
 					<p class="mt-2 text-brand-ink/80">Utilizing proven therapeutic models to ensure the highest quality of care.</p>
 				</div>
 			</div>
