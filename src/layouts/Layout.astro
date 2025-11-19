@@ -9,7 +9,7 @@ const { title, description } = Astro.props;
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="description" content={description} />
@@ -18,22 +18,22 @@ const { title, description } = Astro.props;
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
 
-		<!-- Google Fonts: Lato -->
+		<!-- Google Fonts: Inter -->
 		<link rel="preconnect" href="https://fonts.googleapis.com">
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
 	</head>
-	<body class="bg-brand-sand text-brand-gray font-sans antialiased">
-        <header class="border-b border-brand-blush/50">
-            <nav class="container mx-auto px-6 py-5 flex justify-between items-center">
-                <a href="/" class="text-2xl font-bold text-brand-deep-purple hover:text-brand-rust transition-colors">
+	<body class="bg-brand-cream text-brand-charcoal font-sans antialiased text-lg leading-relaxed">
+        <header class="border-b border-brand-stone/80 sticky top-0 bg-brand-cream/80 backdrop-blur-sm z-50">
+            <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+                <a href="/" class="text-xl font-bold text-brand-charcoal hover:text-brand-terracotta transition-colors">
 					Attachment Matters, LLC
 				</a>
-                <ul class="flex space-x-8 text-lg">
-                    <li><a href="/" class="pb-1 border-b-2 border-transparent hover:border-brand-rust transition-colors">Home</a></li>
-                    <li><a href="/about" class="pb-1 border-b-2 border-transparent hover:border-brand-rust transition-colors">About Me</a></li>
-                    <li><a href="/services" class="pb-1 border-b-2 border-transparent hover:border-brand-rust transition-colors">Services</a></li>
-                    <li><a href="/contact" class="pb-1 border-b-2 border-transparent hover:border-brand-rust transition-colors">Contact</a></li>
+                <ul class="flex space-x-8 font-medium">
+                    <li><a href="/" class="hover:text-brand-terracotta transition-colors">Home</a></li>
+                    <li><a href="/about" class="hover:text-brand-terracotta transition-colors">About</a></li>
+                    <li><a href="/services" class="hover:text-brand-terracotta transition-colors">Services</a></li>
+                    <li><a href="/contact" class="hover:text-brand-terracotta transition-colors">Contact</a></li>
                 </ul>
             </nav>
         </header>
@@ -42,14 +42,14 @@ const { title, description } = Astro.props;
 			<slot />
 		</main>
 
-        <footer class="bg-brand-deep-purple text-white/90 mt-24">
+        <footer class="bg-white border-t border-brand-stone/80 mt-24">
             <div class="container mx-auto px-6 py-12 text-center">
-				<h3 class="text-xl font-bold">Attachment Matters, LLC</h3>
-                <p class="mt-2 text-white/70 max-w-lg mx-auto">"Therapeutic interventions that move at the speed of trust"</p>
-                <div class="mt-6 border-t border-white/20 pt-6">
-					<p>Ready to take the next step?</p>
-					<a href="tel:505-920-6351" class="mt-2 inline-block text-xl font-bold text-brand-teal hover:text-white transition-colors">(505) 920-6351</a>
-					<p class="mt-8 text-sm text-white/50">&copy; {new Date().getFullYear()} Attachment Matters, LLC. All rights reserved.</p>
+				<h3 class="text-lg font-bold">Attachment Matters, LLC</h3>
+                <p class="mt-2 text-brand-charcoal/70 max-w-lg mx-auto text-base">"Therapeutic interventions that move at the speed of trust"</p>
+                <div class="mt-6">
+					<p class="text-sm">Inquire about services:</p>
+					<a href="tel:505-920-6351" class="mt-1 inline-block text-lg font-bold text-brand-deep-teal hover:text-brand-terracotta transition-colors">(505) 920-6351</a>
+					<p class="mt-8 text-xs text-brand-charcoal/40">&copy; {new Date().getFullYear()} Attachment Matters, LLC. All rights reserved.</p>
 				</div>
             </div>
         </footer>
