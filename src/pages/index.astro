@@ -27,6 +27,25 @@ import Layout from '../layouts/Layout.astro';
 		</div>
 	</section>
 
+	<!-- NEW QUOTE SECTION -->
+	<section class="container mx-auto px-6 py-24">
+		<div class="bg-white rounded-3xl p-12 border border-brand-sandstone shadow-xl grid md:grid-cols-12 gap-12 items-center max-w-5xl mx-auto">
+			<!-- Image Column -->
+			<div class="md:col-span-4 text-center">
+				<img src="/images/headshot-circle.png" alt="Headshot of the therapist" class="w-40 h-40 rounded-full mx-auto shadow-md">
+				<p class="mt-4 font-bold font-serif text-brand-ink">Your Name, LCSW</p>
+				<p class="text-sm text-brand-ink/60">Founder, Attachment Matters, LLC</p>
+			</div>
+			<!-- Quote Column -->
+			<div class="md:col-span-8 relative">
+				<span class="absolute -top-8 -left-4 text-8xl font-serif text-brand-sandstone opacity-50 z-0">“</span>
+				<p class="relative z-10 text-2xl font-serif text-brand-ink/90 leading-snug">
+					I am a warm, compassionate, and client-centered provider who does not mess around because I am very skilled at what I do. My goal is to help your family find connection and improve overall functioning.
+				</p>
+			</div>
+		</div>
+	</section>
+
 	<!-- Features Section -->
 	<section class="bg-brand-sandstone py-24">
 		<div class="container mx-auto px-6 text-center">
@@ -45,17 +64,6 @@ import Layout from '../layouts/Layout.astro';
 					<p class="mt-2 text-brand-ink/80">Utilizing proven therapeutic models to ensure the highest quality of care.</p>
 				</div>
 			</div>
-		</div>
-	</section>
-
-	<!-- Final Call to Action Block -->
-	<section class="container mx-auto px-6 py-24">
-		<div class="bg-brand-moss text-white rounded-3xl p-12 md:p-20 text-center">
-			<h2 class="text-3xl md:text-4xl font-serif font-bold">Your family deserves to feel safe, seen, and hopeful.</h2>
-			<p class="mt-4 max-w-2xl mx-auto text-white/80">Let's work together to build a more connected and resilient future for your children.</p>
-			<a href="/contact" class="mt-8 inline-block bg-white text-brand-moss font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:scale-105 transition-transform">
-				Get Started Today
-			</a>
 		</div>
 	</section>
 </Layout>

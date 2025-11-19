@@ -18,7 +18,7 @@ const { title, description } = Astro.props;
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
 
-		<!-- Google Fonts: Playfair Display (Serif) & Source Sans 3 (Sans-serif) -->
+		<!-- Google Fonts -->
 		<link rel="preconnect" href="https://fonts.googleapis.com">
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 		<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
@@ -26,8 +26,14 @@ const { title, description } = Astro.props;
 	<body class="bg-brand-linen text-brand-ink font-sans antialiased text-lg leading-relaxed">
         <header class="border-b border-brand-sandstone sticky top-0 bg-brand-linen/80 backdrop-blur-sm z-50">
             <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
-                <a href="/" class="text-xl font-bold font-serif text-brand-ink hover:text-brand-terracotta transition-colors z-50">
-					Attachment Matters, LLC
+                
+				<!-- NEW LOGO AND STACKED TEXT -->
+                <a href="/" class="flex items-center gap-3 hover:opacity-80 transition-opacity z-50">
+					<img src="/logo.png" alt="Attachment Matters, LLC Logo" class="h-14 w-14">
+					<div>
+						<span class="block font-serif font-bold text-xl leading-tight text-brand-ink">Attachment</span>
+						<span class="block font-serif text-lg leading-tight text-brand-ink">Matters, LLC</span>
+					</div>
 				</a>
                 
 				<!-- Desktop Menu -->
