@@ -7,15 +7,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        'brand-cream': '#FAF7F2',       // A soft, warm, premium off-white for backgrounds
-        'brand-charcoal': '#333333',    // A dark, rich gray for main text, softer than black
-        'brand-terracotta': '#C66E4E',  // Your warm, autumnal accent for buttons and highlights
-        'brand-deep-teal': '#1D5A5A',   // A professional, calming secondary accent
-        'brand-stone': '#EAE5DC',       // A subtle color for borders and background sections
-        'brand-highlight': '#FDE68A',   // A warm yellow for highlighting text, like the inspiration
+        'brand-linen': '#F7F2E9',       // A warmer, richer off-white for main backgrounds
+        'brand-ink': '#2C2A2A',         // A very dark brown/black for main text
+        'brand-terracotta': '#BF5B33',  // A deeper, richer, more earthy orange
+        'brand-moss': '#4A5741',        // A deep, calming, and professional olive/moss green
+        'brand-sandstone': '#EAE1D2',   // A warmer, darker shade for background sections
       },
       fontFamily: {
-        sans: ['Inter', ...defaultTheme.fontFamily.sans],
+        // Expressive serif for headings
+        serif: ['Playfair Display', ...defaultTheme.fontFamily.serif],
+        // Clean, warm sans-serif for body text
+        sans: ['Source Sans 3', ...defaultTheme.fontFamily.sans],
       },
     },
   },

@@ -18,38 +18,38 @@ const { title, description } = Astro.props;
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
 
-		<!-- Google Fonts: Inter -->
+		<!-- Google Fonts: Playfair Display (Serif) & Source Sans 3 (Sans-serif) -->
 		<link rel="preconnect" href="https://fonts.googleapis.com">
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
 	</head>
-	<body class="bg-brand-cream text-brand-charcoal font-sans antialiased text-lg leading-relaxed">
-        <header class="border-b border-brand-stone/80 sticky top-0 bg-brand-cream/80 backdrop-blur-sm z-50">
+	<body class="bg-brand-linen text-brand-ink font-sans antialiased text-lg leading-relaxed">
+        <header class="border-b border-brand-sandstone sticky top-0 bg-brand-linen/80 backdrop-blur-sm z-50">
             <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
-                <a href="/" class="text-xl font-bold text-brand-charcoal hover:text-brand-terracotta transition-colors z-50">
+                <a href="/" class="text-xl font-bold font-serif text-brand-ink hover:text-brand-terracotta transition-colors z-50">
 					Attachment Matters, LLC
 				</a>
                 
-				<!-- Desktop Menu (Hidden on mobile) -->
-                <ul class="hidden md:flex space-x-8 font-medium">
+				<!-- Desktop Menu -->
+                <ul class="hidden md:flex space-x-8 font-sans font-semibold text-sm tracking-wider uppercase">
                     <li><a href="/" class="hover:text-brand-terracotta transition-colors">Home</a></li>
                     <li><a href="/about" class="hover:text-brand-terracotta transition-colors">About</a></li>
                     <li><a href="/services" class="hover:text-brand-terracotta transition-colors">Services</a></li>
                     <li><a href="/contact" class="hover:text-brand-terracotta transition-colors">Contact</a></li>
                 </ul>
 
-				<!-- Hamburger Button (Visible on mobile) -->
+				<!-- Hamburger Button -->
 				<button id="menu-toggle" class="md:hidden z-50">
-					<svg id="hamburger-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-					<svg id="close-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+					<svg id="hamburger-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+					<svg id="close-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
 				</button>
 
             </nav>
         </header>
 
-		<!-- Mobile Menu (Hidden by default) -->
-		<div id="mobile-menu" class="hidden md:hidden fixed inset-0 bg-brand-cream z-40 flex flex-col items-center justify-center">
-			<ul class="flex flex-col space-y-8 text-2xl font-bold text-center">
+		<!-- Mobile Menu -->
+		<div id="mobile-menu" class="hidden md:hidden fixed inset-0 bg-brand-linen z-40 flex flex-col items-center justify-center">
+			<ul class="flex flex-col space-y-8 text-2xl font-serif text-center">
 				<li><a href="/" class="hover:text-brand-terracotta transition-colors">Home</a></li>
 				<li><a href="/about" class="hover:text-brand-terracotta transition-colors">About</a></li>
 				<li><a href="/services" class="hover:text-brand-terracotta transition-colors">Services</a></li>
@@ -61,14 +61,13 @@ const { title, description } = Astro.props;
 			<slot />
 		</main>
 
-        <footer class="bg-white border-t border-brand-stone/80 mt-24">
+        <footer class="bg-brand-sandstone mt-24">
             <div class="container mx-auto px-6 py-12 text-center">
-				<h3 class="text-lg font-bold">Attachment Matters, LLC</h3>
-                <p class="mt-2 text-brand-charcoal/70 max-w-lg mx-auto text-base">"Therapeutic interventions that move at the speed of trust"</p>
+				<h3 class="text-lg font-bold font-serif">Attachment Matters, LLC</h3>
+                <p class="mt-2 text-brand-ink/70 max-w-lg mx-auto text-base">"Therapeutic interventions that move at the speed of trust"</p>
                 <div class="mt-6">
-					<p class="text-sm">Inquire about services:</p>
-					<a href="tel:505-920-6351" class="mt-1 inline-block text-lg font-bold text-brand-deep-teal hover:text-brand-terracotta transition-colors">(505) 920-6351</a>
-					<p class="mt-8 text-xs text-brand-charcoal/40">&copy; {new Date().getFullYear()} Attachment Matters, LLC. All rights reserved.</p>
+					<a href="tel:505-920-6351" class="mt-1 inline-block text-lg font-semibold text-brand-moss hover:text-brand-terracotta transition-colors">(505) 920-6351</a>
+					<p class="mt-8 text-xs text-brand-ink/40">&copy; {new Date().getFullYear()} Attachment Matters, LLC. All rights reserved.</p>
 				</div>
             </div>
         </footer>
@@ -79,7 +78,6 @@ const { title, description } = Astro.props;
 			const hamburgerIcon = document.getElementById('hamburger-icon');
 			const closeIcon = document.getElementById('close-icon');
 
-			// Check if all elements exist before adding event listeners
 			if (menuToggle && mobileMenu && hamburgerIcon && closeIcon) {
 				menuToggle.addEventListener('click', () => {
 					mobileMenu.classList.toggle('hidden');
@@ -87,7 +85,6 @@ const { title, description } = Astro.props;
 					closeIcon.classList.toggle('hidden');
 				});
 
-				// Close menu when a link is clicked
 				mobileMenu.querySelectorAll('a').forEach(link => {
 					link.addEventListener('click', () => {
 						mobileMenu.classList.add('hidden');
