@@ -8,7 +8,6 @@ import Layout from '../layouts/Layout.astro';
 	description="Premiere therapeutic services for children and families. Specializing in attachment-focused, trauma-responsive care to build connection and hope.">
 
 	<!-- Hero Section -->
-	<!-- CHANGE: Removed bottom padding (pb-24) to create a consistent spacing system. -->
 	<section class="container mx-auto px-6 pt-16">
 		<div class="grid md:grid-cols-2 gap-12 items-center">
 			<div>
@@ -28,20 +27,22 @@ import Layout from '../layouts/Layout.astro';
 		</div>
 	</section>
 
-	<!-- QUOTE SECTION -->
-	<!-- CHANGE: Changed vertical padding (py-24) to only top padding (pt-24) to control the space above this section. -->
+	<!-- QUOTE SECTION - REVISED FOR BETTER SPACING -->
 	<section class="container mx-auto px-6 pt-24">
-		<div class="bg-white rounded-3xl p-12 border border-brand-sandstone shadow-xl grid md:grid-cols-12 gap-12 items-center max-w-5xl mx-auto">
+		<!-- CHANGE: Switched to a flexbox layout for more natural spacing. -->
+		<div class="bg-white rounded-3xl p-12 border border-brand-sandstone shadow-xl flex flex-col md:flex-row gap-12 items-center max-w-5xl mx-auto">
 			<!-- Image Column -->
-			<div class="md-col-span-4 text-center">
+			<!-- CHANGE: Column now has a fixed width, preventing it from squashing the text. -->
+			<div class="md:w-1/4 flex-shrink-0 text-center">
 				<img src="/images/headshot-circle.jpg" alt="Headshot of the therapist" class="w-40 h-40 rounded-full mx-auto shadow-md">
 				<p class="mt-4 font-bold font-serif text-brand-ink">Genevieve Giddings, LCSW</p>
-				<p class="text-sm text-brand-ink/60">Founder, Attachment Matters, LLC</p>
+				<p class="text-sm text-brand-ink/60 leading-tight">Founder,<br>Attachment Matters, LLC</p>
 			</div>
 			<!-- Quote Column -->
-			<div class="md:col-span-8 relative">
-				<span class="absolute -top-8 -left-4 text-8xl font-serif text-brand-sandstone opacity-50 z-0">“</span>
-				<p class="relative z-10 text-2xl font-serif text-brand-ink/90 leading-snug">
+			<!-- CHANGE: Quote now takes up the remaining flexible space. -->
+			<div class="relative w-full">
+				<span class="absolute -top-6 -left-4 text-8xl font-serif text-brand-sandstone opacity-50 z-0">“</span>
+				<p class="relative z-10 text-2xl font-serif text-brand-ink/90 leading-relaxed">
 					I am a highly compassionate and skilled professional dedicated to family healing through focused, effective interventions. My goal is to help your family dramatically strengthen the connections you share with each other.
 				</p>
 			</div>
