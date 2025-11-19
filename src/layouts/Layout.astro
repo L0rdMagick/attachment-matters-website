@@ -14,7 +14,8 @@ const { title, description } = Astro.props;
 		<meta charset="UTF-8" />
 		<meta name="description" content={description} />
 		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<!-- NEW FAVICON LINK -->
+		<link rel="icon" type="image/png" href="/images/favicon.png" />
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
 
@@ -27,7 +28,7 @@ const { title, description } = Astro.props;
         <header class="border-b border-brand-sandstone sticky top-0 bg-brand-linen/80 backdrop-blur-sm z-50">
             <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
                 
-				<!-- NEW LOGO AND STACKED BRAND NAME -->
+				<!-- UPDATED LOGO PATH -->
                 <a href="/" class="flex items-center gap-3 hover:opacity-80 transition-opacity z-50">
 					<img src="/images/logo.png" alt="Family Trust Therapy Logo" class="h-14 w-14">
 					<div>
@@ -69,12 +70,10 @@ const { title, description } = Astro.props;
 
         <footer class="bg-brand-sandstone mt-24">
             <div class="container mx-auto px-6 py-12 text-center">
-				<!-- UPDATED FOOTER BRANDING -->
 				<h3 class="text-lg font-bold font-serif">Family Trust Therapy</h3>
                 <p class="mt-2 text-brand-ink/70 max-w-lg mx-auto text-base">"Therapeutic interventions that move at the speed of trust"</p>
                 <div class="mt-6">
 					<a href="tel:505-920-6351" class="mt-1 inline-block text-lg font-semibold text-brand-moss hover:text-brand-terracotta transition-colors">(505) 920-6351</a>
-					<!-- UPDATED COPYRIGHT AND PARENT COMPANY INFO -->
 					<p class="mt-8 text-xs text-brand-ink/40">&copy; {new Date().getFullYear()} Family Trust Therapy. A service of Attachment Matters, LLC.</p>
 				</div>
             </div>
