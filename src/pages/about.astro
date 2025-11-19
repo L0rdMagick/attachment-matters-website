@@ -7,38 +7,40 @@ import Layout from '../layouts/Layout.astro';
     title="About Me | Attachment Matters, LLC" 
     description="Learn about my experience, credentials, and therapeutic approach. I am a relationship-driven, attachment-focused, and trauma-responsive clinician.">
     
-    <div class="container mx-auto px-6 py-16">
-        <h1 class="text-4xl font-sans font-bold text-brand-deep-purple text-center">My Philosophy & Approach</h1>
-        
-        <div class="mt-12 grid md:grid-cols-3 gap-8 items-center">
-            <div class="md:col-span-1">
-                <!-- You will replace this with your headshot -->
-                <img src="https://via.placeholder.com/400x400.png/f4d3d3/483248?text=Your+Headshot" alt="Headshot of the therapist" class="rounded-full shadow-lg mx-auto">
+    <div class="container mx-auto px-6 py-20">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-4xl md:text-5xl font-black text-brand-deep-purple text-center">My Philosophy & Approach</h1>
+            
+            <div class="mt-16 grid md:grid-cols-5 gap-12 items-center">
+                <div class="md:col-span-2">
+                    <!-- IMPORTANT: Replace this src with the path to your actual headshot image -->
+                    <img src="https://via.placeholder.com/400x400.png/f4d3d3/483248?text=Your+Headshot" alt="Headshot of the therapist" class="rounded-full shadow-2xl mx-auto w-64 h-64 md:w-full md:h-auto object-cover">
+                </div>
+                <div class="md:col-span-3">
+                    <h2 class="text-2xl font-bold text-brand-rust">Warm, Compassionate, and Highly Skilled</h2>
+                    <p class="mt-4 text-lg font-light leading-relaxed">
+                        The most critical thing you should know is that I am a client-centered provider who is exceptionally skilled at what I do. With **16 years of experience** in complex family systems, I have earned a reputation as a leading professional in the region. 
+                    </p>
+                    <p class="mt-4 text-lg font-light leading-relaxed">
+                        As an LCSW for 14 years with a spotless ethical record, my approach is always relationship-driven, attachment-focused, and trauma-responsive.
+                    </p>
+                </div>
             </div>
-            <div class="md:col-span-2">
-                <h2 class="text-2xl font-sans font-semibold text-brand-rust">Warm, Compassionate, and Highly Skilled</h2>
-                <p class="mt-4 text-lg">
-                    The most critical information you should know about me is that I am a client-centered provider who is also very skilled at what I do. I have **16 years of experience** in the field working with complex family systems and am well-regarded as a skilled professional in the region. 
-                </p>
-                <p class="mt-4 text-lg">
-                    I carry an LCSW (License in Clinical Social Work) and have been licensed for 14 years with no ethical complaints. My approach is relationship-driven, attachment-focused, and trauma-responsive.
-                </p>
-            </div>
-        </div>
 
-        <div class="mt-16 bg-white p-8 rounded-lg shadow-md">
-            <h2 class="text-2xl font-sans font-semibold text-brand-rust text-center">Credentials & Therapeutic Toolbox</h2>
-            <p class="mt-4 text-lg text-center max-w-3xl mx-auto">
-                I have an eclectic style and enjoy utilizing a wide array of evidence-based practices to support children and families. My goal is always to help you achieve better overall functioning and bonding.
-            </p>
-            <ul class="mt-6 grid sm:grid-cols-2 md:grid-cols-3 gap-4 text-center">
-                <li class="bg-brand-sand p-3 rounded">Cognitive Behavior Therapy (CBT)</li>
-                <li class="bg-brand-sand p-3 rounded">Child Centered Play Therapy</li>
-                <li class="bg-brand-sand p-3 rounded">Synergetic Play Therapy (SPT)</li>
-                <li class="bg-brand-sand p-3 rounded">Parent Child Interactional Therapy (PCIT)</li>
-                <li class="bg-brand-sand p-3 rounded">The Neurosequential Model</li>
-                <li class="bg-brand-sand p-3 rounded">Trauma Focused CBT (TF-CBT)</li>
-            </ul>
+            <div class="mt-20 bg-white/70 p-10 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-brand-deep-purple text-center">My Therapeutic Toolbox</h2>
+                <p class="mt-4 text-lg font-light text-center max-w-3xl mx-auto">
+                    I use an eclectic, integrative style, drawing from a wide array of evidence-based practices to support your family's unique journey to bonding and wellness.
+                </p>
+                <div class="mt-8 flex flex-wrap justify-center gap-3">
+                    <span class="bg-brand-deep-purple text-white/90 font-medium py-2 px-4 rounded-full">Cognitive Behavior Therapy (CBT)</span>
+                    <span class="bg-brand-deep-purple text-white/90 font-medium py-2 px-4 rounded-full">Child Centered Play Therapy</span>
+                    <span class="bg-brand-deep-purple text-white/90 font-medium py-2 px-4 rounded-full">Synergetic Play Therapy (SPT)</span>
+                    <span class="bg-brand-deep-purple text-white/90 font-medium py-2 px-4 rounded-full">Parent Child Interactional Therapy (PCIT)</span>
+                    <span class="bg-brand-deep-purple text-white/90 font-medium py-2 px-4 rounded-full">The Neurosequential Model</span>
+                    <span class="bg-brand-deep-purple text-white/90 font-medium py-2 px-4 rounded-full">Trauma Focused CBT (TF-CBT)</span>
+                </div>
+            </div>
         </div>
     </div>
 </Layout>

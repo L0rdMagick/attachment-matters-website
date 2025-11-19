@@ -8,44 +8,52 @@ import Layout from '../layouts/Layout.astro';
 	description="Warm, compassionate, and experienced therapeutic services for children and families. Specializing in attachment, family functioning, and co-parenting.">
 
 	<!-- Hero Section -->
-	<section class="bg-brand-blush text-center py-20 px-6">
-		<h1 class="text-4xl md:text-5xl font-sans font-bold text-brand-deep-purple">Attachment Matters, LLC</h1>
-		<p class="mt-4 text-xl text-brand-gray font-semibold">"Therapeutic interventions that move at the speed of trust"</p>
-		<a href="/contact" class="mt-8 inline-block bg-brand-rust text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-opacity-90 transition-colors">
-			Schedule a Consultation
-		</a>
+	<section class="bg-gradient-to-br from-brand-blush/50 to-brand-sand">
+		<div class="container mx-auto px-6 py-24 text-center">
+			<h1 class="text-4xl md:text-6xl font-black text-brand-deep-purple leading-tight">
+				Feel Safe, Seen, and Hopeful
+			</h1>
+			<p class="mt-6 max-w-2xl mx-auto text-xl text-brand-gray font-light">
+				Specialized therapy for children and families facing attachment concerns, stressed relationships, and complex life transitions.
+			</p>
+			<a href="/contact" class="mt-10 inline-block bg-brand-rust text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">
+				Schedule a Consultation
+			</a>
+		</div>
 	</section>
 
 	<!-- Introduction Section -->
-	<section class="container mx-auto px-6 py-16 text-center">
-		<h2 class="text-3xl font-sans text-brand-deep-purple font-bold">Safe, Seen, and Hopeful Therapy for Your Family</h2>
-		<p class="mt-4 max-w-2xl mx-auto text-lg">
-			Welcome. I am a warm, compassionate, and client-centered provider with 16 years of experience working with complex family systems. My practice is relationship-driven, attachment-focused, and trauma-responsive, with a specialty in early childhood mental health. I am here to help your family find connection and improve overall functioning.
-		</p>
+	<section class="container mx-auto px-6 py-20">
+		<div class="text-center max-w-3xl mx-auto">
+			<h2 class="text-3xl font-bold text-brand-deep-purple">Your Family's Partner in Growth and Connection</h2>
+			<p class="mt-4 text-lg font-light leading-relaxed">
+				Welcome. I am a warm, compassionate, and client-centered provider with 16 years of experience working with complex family systems. My practice is relationship-driven, attachment-focused, and trauma-responsive. I am here to help your family find deeper connections and achieve better overall functioning with skill and care.
+			</p>
+		</div>
 	</section>
 
-	<!-- Services Overview -->
-	<section class="bg-white py-16">
+	<!-- Services Overview in Cards -->
+	<section class="bg-white py-20">
 		<div class="container mx-auto px-6 text-center">
-			<h2 class="text-3xl font-sans text-brand-deep-purple font-bold">How I Can Help</h2>
-			<div class="mt-8 grid md:grid-cols-3 gap-8">
-				<!-- Service 1 -->
-				<div class="border border-brand-blush rounded-lg p-6">
-					<h3 class="text-2xl font-sans font-semibold text-brand-rust">Intensive Family Services</h3>
-					<p class="mt-2">Strengthening bonds between parents and children (birth to 21) to address mental health and improve your connection.</p>
+			<h2 class="text-3xl font-bold text-brand-deep-purple">How I Can Help</h2>
+			<div class="mt-12 grid md:grid-cols-3 gap-8">
+				<!-- Card 1 -->
+				<div class="bg-brand-sand/50 rounded-xl p-8 shadow-sm hover:shadow-lg transition-shadow">
+					<h3 class="text-2xl font-bold text-brand-rust">Intensive Family Services</h3>
+					<p class="mt-3 font-light">Strengthening bonds between parents and children to address mental health and improve your connection.</p>
 				</div>
-				<!-- Service 2 -->
-				<div class="border border-brand-blush rounded-lg p-6">
-					<h3 class="text-2xl font-sans font-semibold text-brand-rust">Court-Involved Assessments</h3>
-					<p class="mt-2">Providing skilled assessments for legal professionals in areas of family functioning, attachment, and co-parenting.</p>
+				<!-- Card 2 -->
+				<div class="bg-brand-sand/50 rounded-xl p-8 shadow-sm hover:shadow-lg transition-shadow">
+					<h3 class="text-2xl font-bold text-brand-rust">Court-Involved Assessments</h3>
+					<p class="mt-3 font-light">Providing skilled assessments for legal professionals in areas of family functioning, attachment, and co-parenting.</p>
 				</div>
-				<!-- Service 3 -->
-				<div class="border border-brand-blush rounded-lg p-6">
-					<h3 class="text-2xl font-sans font-semibold text-brand-rust">Parenting Workshops</h3>
-					<p class="mt-2">Educational workshops for organizations focused on improving parent education and caregiver capacity.</p>
+				<!-- Card 3 -->
+				<div class="bg-brand-sand/50 rounded-xl p-8 shadow-sm hover:shadow-lg transition-shadow">
+					<h3 class="text-2xl font-bold text-brand-rust">Parenting Workshops</h3>
+					<p class="mt-3 font-light">Educational workshops for organizations focused on improving parent education and caregiver capacity.</p>
 				</div>
 			</div>
-			<a href="/services" class="mt-10 inline-block text-brand-rust font-bold hover:underline">Explore All Services &rarr;</a>
+			<a href="/services" class="mt-12 inline-block text-brand-rust font-bold text-lg hover:underline">Explore All Services &rarr;</a>
 		</div>
 	</section>
 </Layout>

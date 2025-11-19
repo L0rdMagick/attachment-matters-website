@@ -1,7 +1,5 @@
 ---
 // src/layouts/Layout.astro
-import '../styles/global.css'; // <-- ADD THIS LINE
-
 export interface Props {
 	title: string;
 	description: string;
@@ -19,16 +17,23 @@ const { title, description } = Astro.props;
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
+
+		<!-- Google Fonts: Lato -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
 	</head>
-	<body class="bg-brand-sand text-brand-gray font-body">
-        <header class="bg-white shadow-md">
-            <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
-                <a href="/" class="text-xl font-bold text-brand-deep-purple">Attachment Matters, LLC</a>
-                <ul class="flex space-x-6">
-                    <li><a href="/" class="hover:text-brand-rust">Home</a></li>
-                    <li><a href="/about" class="hover:text-brand-rust">About Me</a></li>
-                    <li><a href="/services" class="hover:text-brand-rust">Services</a></li>
-                    <li><a href="/contact" class="hover:text-brand-rust">Contact</a></li>
+	<body class="bg-brand-sand text-brand-gray font-sans antialiased">
+        <header class="border-b border-brand-blush/50">
+            <nav class="container mx-auto px-6 py-5 flex justify-between items-center">
+                <a href="/" class="text-2xl font-bold text-brand-deep-purple hover:text-brand-rust transition-colors">
+					Attachment Matters, LLC
+				</a>
+                <ul class="flex space-x-8 text-lg">
+                    <li><a href="/" class="pb-1 border-b-2 border-transparent hover:border-brand-rust transition-colors">Home</a></li>
+                    <li><a href="/about" class="pb-1 border-b-2 border-transparent hover:border-brand-rust transition-colors">About Me</a></li>
+                    <li><a href="/services" class="pb-1 border-b-2 border-transparent hover:border-brand-rust transition-colors">Services</a></li>
+                    <li><a href="/contact" class="pb-1 border-b-2 border-transparent hover:border-brand-rust transition-colors">Contact</a></li>
                 </ul>
             </nav>
         </header>
@@ -37,13 +42,15 @@ const { title, description } = Astro.props;
 			<slot />
 		</main>
 
-        <footer class="bg-brand-deep-purple text-white mt-12">
-            <div class="container mx-auto px-6 py-8 text-center">
-                <p>&copy; {new Date().getFullYear()} Attachment Matters, LLC. All rights reserved.</p>
-                <p class="mt-2">"Therapeutic interventions that move at the speed of trust"</p>
-                <p class="mt-4">
-                    <a href="tel:505-920-6351" class="font-bold text-lg hover:underline">(505) 920-6351</a>
-                </p>
+        <footer class="bg-brand-deep-purple text-white/90 mt-24">
+            <div class="container mx-auto px-6 py-12 text-center">
+				<h3 class="text-xl font-bold">Attachment Matters, LLC</h3>
+                <p class="mt-2 text-white/70 max-w-lg mx-auto">"Therapeutic interventions that move at the speed of trust"</p>
+                <div class="mt-6 border-t border-white/20 pt-6">
+					<p>Ready to take the next step?</p>
+					<a href="tel:505-920-6351" class="mt-2 inline-block text-xl font-bold text-brand-teal hover:text-white transition-colors">(505) 920-6351</a>
+					<p class="mt-8 text-sm text-white/50">&copy; {new Date().getFullYear()} Attachment Matters, LLC. All rights reserved.</p>
+				</div>
             </div>
         </footer>
 	</body>
