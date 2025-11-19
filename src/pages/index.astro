@@ -7,8 +7,9 @@ import Layout from '../layouts/Layout.astro';
 	title="Family Trust Therapy | Expert Child and Family Therapy" 
 	description="Premiere therapeutic services for children and families. Specializing in attachment-focused, trauma-responsive care to build connection and hope.">
 
-	<!-- NEW HERO SECTION (Inspired by screenshot) -->
-	<section class="container mx-auto px-6 pt-16">
+	<!-- HERO SECTION -->
+	<!-- CHANGE: Added pb-24 to create consistent spacing below this section. -->
+	<section class="container mx-auto px-6 pt-16 pb-24">
 		<div class="grid md:grid-cols-2 gap-12 items-center">
 			<!-- Left Column: Logo and Title -->
 			<div class="flex flex-col items-center text-center">
@@ -22,8 +23,9 @@ import Layout from '../layouts/Layout.astro';
 		</div>
 	</section>
 
-	<!-- NEW CONTENT CARD SECTION -->
-	<section class="container mx-auto px-6 pt-24">
+	<!-- CONTENT CARD SECTION -->
+	<!-- CHANGE: Changed pt-24 to py-24 to ensure consistent spacing above and below. -->
+	<section class="container mx-auto px-6 py-24">
 		<div class="bg-white rounded-3xl p-12 border border-brand-sandstone shadow-xl text-center max-w-4xl mx-auto">
 			<h2 class="text-4xl md:text-5xl font-serif font-bold text-brand-ink leading-tight">
 				Therapy that builds connection and trust.
@@ -37,8 +39,9 @@ import Layout from '../layouts/Layout.astro';
 		</div>
 	</section>
 
-	<!-- QUOTE SECTION (Unchanged from your version) -->
-	<section class="container mx-auto px-6 pt-24">
+	<!-- QUOTE SECTION -->
+	<!-- CHANGE: Changed pt-24 to py-24. This is the key fix that adds the required space below the quote card. -->
+	<section class="container mx-auto px-6 py-24">
 		<div class="bg-white rounded-3xl p-12 border border-brand-sandstone shadow-xl flex flex-col md:flex-row gap-12 items-center max-w-5xl mx-auto">
 			<!-- Image Column -->
 			<div class="md:w-1/4 flex-shrink-0 text-center">
@@ -56,8 +59,9 @@ import Layout from '../layouts/Layout.astro';
 		</div>
 	</section>
 
-	<!-- Features Section (Unchanged from your version, with corrected spacing) -->
-	<section class="bg-brand-sandstone py-24 pt-24">
+	<!-- FEATURES SECTION -->
+	<!-- NOTE: No change needed here, as the space above is now correctly handled by the Quote Section. -->
+	<section class="bg-brand-sandstone py-24">
 		<div class="container mx-auto px-6 text-center">
 			<h2 class="text-3xl font-serif font-bold text-brand-ink">A Child-Centered, Family-Focused Approach</h2>
 			<div class="mt-12 grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
