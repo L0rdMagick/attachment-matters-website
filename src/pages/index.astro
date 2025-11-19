@@ -8,8 +8,8 @@ import Layout from '../layouts/Layout.astro';
 	description="Premiere therapeutic services for children and families. Specializing in attachment-focused, trauma-responsive care to build connection and hope.">
 
 	<!-- HERO SECTION -->
-	<!-- CHANGE: Added pb-24 to create consistent spacing below this section. -->
-	<section class="container mx-auto px-6 pt-16 pb-24">
+	<!-- CHANGE: Removed bottom padding (pb-24). This section no longer pushes down the next one. -->
+	<section class="container mx-auto px-6 pt-16">
 		<div class="grid md:grid-cols-2 gap-12 items-center">
 			<!-- Left Column: Logo and Title -->
 			<div class="flex flex-col items-center text-center">
@@ -24,8 +24,8 @@ import Layout from '../layouts/Layout.astro';
 	</section>
 
 	<!-- CONTENT CARD SECTION -->
-	<!-- CHANGE: Changed pt-24 to py-24 to ensure consistent spacing above and below. -->
-	<section class="container mx-auto px-6 py-24">
+	<!-- CHANGE: Switched from py-24 to pt-24. This creates a 24-unit space above, halving the original gap. -->
+	<section class="container mx-auto px-6 pt-24">
 		<div class="bg-white rounded-3xl p-12 border border-brand-sandstone shadow-xl text-center max-w-4xl mx-auto">
 			<h2 class="text-4xl md:text-5xl font-serif font-bold text-brand-ink leading-tight">
 				Therapy that builds connection and trust.
@@ -40,8 +40,8 @@ import Layout from '../layouts/Layout.astro';
 	</section>
 
 	<!-- QUOTE SECTION -->
-	<!-- CHANGE: Changed pt-24 to py-24. This is the key fix that adds the required space below the quote card. -->
-	<section class="container mx-auto px-6 py-24">
+	<!-- CHANGE: Switched from py-24 to pt-24 to maintain the new, consistent 24-unit spacing. -->
+	<section class="container mx-auto px-6 pt-24">
 		<div class="bg-white rounded-3xl p-12 border border-brand-sandstone shadow-xl flex flex-col md:flex-row gap-12 items-center max-w-5xl mx-auto">
 			<!-- Image Column -->
 			<div class="md:w-1/4 flex-shrink-0 text-center">
@@ -60,7 +60,7 @@ import Layout from '../layouts/Layout.astro';
 	</section>
 
 	<!-- FEATURES SECTION -->
-	<!-- NOTE: No change needed here, as the space above is now correctly handled by the Quote Section. -->
+	<!-- NOTE: py-24 remains here to create the 24-unit space above this section AND to create space before the footer. -->
 	<section class="bg-brand-sandstone py-24">
 		<div class="container mx-auto px-6 text-center">
 			<h2 class="text-3xl font-serif font-bold text-brand-ink">A Child-Centered, Family-Focused Approach</h2>
