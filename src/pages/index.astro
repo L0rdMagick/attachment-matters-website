@@ -8,8 +8,8 @@ import Layout from '../layouts/Layout.astro';
 	description="Premiere therapeutic services for children and families. Specializing in attachment-focused, trauma-responsive care to build connection and hope.">
 
 	<!-- Hero Section -->
-	<!-- CHANGE: Re-added bottom padding (pb-24) to make this section self-contained. -->
-	<section class="container mx-auto px-6 pt-16 pb-24">
+	<!-- CHANGE: Removed bottom padding (pb-24) to give full spacing control to the section below. -->
+	<section class="container mx-auto px-6 pt-16">
 		<div class="grid md:grid-cols-2 gap-12 items-center">
 			<div>
 				<h1 class="text-5xl md:text-6xl font-serif font-bold text-brand-ink leading-tight">
@@ -29,8 +29,8 @@ import Layout from '../layouts/Layout.astro';
 	</section>
 
 	<!-- QUOTE SECTION -->
-	<!-- CHANGE: Changed from pt-24 to py-24. This adds the necessary bottom padding to push the next section down. -->
-	<section class="container mx-auto px-6 py-24">
+	<!-- CHANGE: Reduced top padding from py-24 to pt-12. Added bottom padding of pb-24 to create a consistent gap to the next section. -->
+	<section class="container mx-auto px-6 pt-12 pb-24">
 		<div class="bg-white rounded-3xl p-12 border border-brand-sandstone shadow-xl flex flex-col md:flex-row gap-12 items-center max-w-5xl mx-auto">
 			<!-- Image Column -->
 			<div class="md:w-1/4 flex-shrink-0 text-center">
@@ -49,7 +49,7 @@ import Layout from '../layouts/Layout.astro';
 	</section>
 
 	<!-- Features Section -->
-	<!-- NOTE: No change needed here. The space is created by the section above it. -->
+	<!-- NOTE: The pb-24 from the section above creates the correct spacing here. -->
 	<section class="bg-brand-sandstone py-24">
 		<div class="container mx-auto px-6 text-center">
 			<h2 class="text-3xl font-serif font-bold text-brand-ink">A Child-Centered, Family-Focused Approach</h2>
