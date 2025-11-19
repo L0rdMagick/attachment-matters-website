@@ -8,7 +8,8 @@ import Layout from '../layouts/Layout.astro';
 	description="Premiere therapeutic services for children and families. Specializing in attachment-focused, trauma-responsive care to build connection and hope.">
 
 	<!-- Hero Section -->
-	<section class="container mx-auto px-6 pt-16">
+	<!-- CHANGE: Re-added bottom padding (pb-24) to make this section self-contained. -->
+	<section class="container mx-auto px-6 pt-16 pb-24">
 		<div class="grid md:grid-cols-2 gap-12 items-center">
 			<div>
 				<h1 class="text-5xl md:text-6xl font-serif font-bold text-brand-ink leading-tight">
@@ -27,19 +28,17 @@ import Layout from '../layouts/Layout.astro';
 		</div>
 	</section>
 
-	<!-- QUOTE SECTION - REVISED FOR BETTER SPACING -->
-	<section class="container mx-auto px-6 pt-24">
-		<!-- CHANGE: Switched to a flexbox layout for more natural spacing. -->
+	<!-- QUOTE SECTION -->
+	<!-- CHANGE: Changed from pt-24 to py-24. This adds the necessary bottom padding to push the next section down. -->
+	<section class="container mx-auto px-6 py-24">
 		<div class="bg-white rounded-3xl p-12 border border-brand-sandstone shadow-xl flex flex-col md:flex-row gap-12 items-center max-w-5xl mx-auto">
 			<!-- Image Column -->
-			<!-- CHANGE: Column now has a fixed width, preventing it from squashing the text. -->
 			<div class="md:w-1/4 flex-shrink-0 text-center">
 				<img src="/images/headshot-circle.jpg" alt="Headshot of the therapist" class="w-40 h-40 rounded-full mx-auto shadow-md">
 				<p class="mt-4 font-bold font-serif text-brand-ink">Genevieve Giddings, LCSW</p>
 				<p class="text-sm text-brand-ink/60 leading-tight">Founder,<br>Attachment Matters, LLC</p>
 			</div>
 			<!-- Quote Column -->
-			<!-- CHANGE: Quote now takes up the remaining flexible space. -->
 			<div class="relative w-full">
 				<span class="absolute -top-6 -left-4 text-8xl font-serif text-brand-sandstone opacity-50 z-0">“</span>
 				<p class="relative z-10 text-2xl font-serif text-brand-ink/90 leading-relaxed">
@@ -50,6 +49,7 @@ import Layout from '../layouts/Layout.astro';
 	</section>
 
 	<!-- Features Section -->
+	<!-- NOTE: No change needed here. The space is created by the section above it. -->
 	<section class="bg-brand-sandstone py-24">
 		<div class="container mx-auto px-6 text-center">
 			<h2 class="text-3xl font-serif font-bold text-brand-ink">A Child-Centered, Family-Focused Approach</h2>
