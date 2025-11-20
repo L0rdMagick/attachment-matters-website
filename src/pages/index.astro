@@ -10,25 +10,34 @@ import Layout from '../layouts/Layout.astro';
 	<!-- Hero Section -->
 	<section class="container mx-auto px-6 pt-16">
 		<div class="grid md:grid-cols-2 gap-12 items-center">
-			<div>
-				<h1 class="text-5xl md:text-6xl font-serif font-bold text-brand-ink leading-tight">
-					Therapy that builds connection and trust.
-				</h1>
-				<p class="mt-8 text-xl text-brand-ink/80">
-					A warm, compassionate, and highly skilled practice dedicated to helping your family build stronger bonds and navigate challenges with confidence.
-				</p>
-				<a href="/contact" class="mt-10 inline-block bg-brand-terracotta text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">
-					Book a Consultation
-				</a>
+			<!-- Left Column: Logo and Title -->
+			<div class="flex flex-col items-center text-center">
+				<img src="/images/logo.png" alt="Family Trust Therapy Logo" class="w-56 h-56">
+				<h1 class="text-4xl font-serif font-bold text-brand-ink mt-6">Family Trust Therapy</h1>
 			</div>
+			<!-- Right Column: Hero Image -->
 			<div>
 				<img src="/images/hero-connection.png" alt="A warm, candid moment showing connection between a parent and child." class="rounded-3xl shadow-2xl w-full h-full object-cover">
 			</div>
 		</div>
 	</section>
 
+	<!-- Content Card Section -->
+	<section class="container mx-auto px-6 pt-24">
+		<div class="bg-white rounded-3xl p-12 border border-brand-sandstone shadow-xl text-center max-w-4xl mx-auto">
+			<h2 class="text-4xl md:text-5xl font-serif font-bold text-brand-ink leading-tight">
+				Therapy that builds connection and trust.
+			</h2>
+			<p class="mt-6 text-xl text-brand-ink/80 max-w-2xl mx-auto">
+				A warm, compassionate, and highly skilled practice dedicated to helping your family build stronger bonds and navigate challenges with confidence.
+			</p>
+			<a href="/contact" class="mt-10 inline-block bg-brand-terracotta text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">
+				Book a Consultation
+			</a>
+		</div>
+	</section>
+
 	<!-- QUOTE SECTION -->
-	<!-- CHANGE: Removed all bottom padding (pb-24) to allow the next section to control the spacing. -->
 	<section class="container mx-auto px-6 pt-24">
 		<div class="bg-white rounded-3xl p-12 border border-brand-sandstone shadow-xl flex flex-col md:flex-row gap-12 items-center max-w-5xl mx-auto">
 			<!-- Image Column -->
@@ -47,9 +56,9 @@ import Layout from '../layouts/Layout.astro';
 		</div>
 	</section>
 
-	<!-- Features Section -->
-	<!-- CHANGE: Class is now py-24. This adds padding to the top and bottom, centering the content within the beige block. -->
-	<section class="bg-brand-sandstone py-24">
+	<!-- FEATURES SECTION -->
+	<!-- CHANGE: Added mt-24 (margin-top) to create the 24-unit space. Kept py-24 for internal vertical centering. -->
+	<section class="bg-brand-sandstone mt-24 py-24">
 		<div class="container mx-auto px-6 text-center">
 			<h2 class="text-3xl font-serif font-bold text-brand-ink">A Child-Centered, Family-Focused Approach</h2>
 			<div class="mt-12 grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
