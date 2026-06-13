@@ -1,0 +1,85 @@
+---
+// src/pages/resources/index.astro
+import Layout from '../../layouts/Layout.astro';
+import { articles } from '../../data/articles';
+---
+
+<Layout 
+  title="Resources & Insights | Family Trust Therapy" 
+  description="Explore informational resources, guides, and therapeutic insights for families, parents, and legal professionals. Specializing in attachment and trauma-responsive care in Santa Fe and Albuquerque.">
+  
+  <!-- Hero Section -->
+  <section class="container mx-auto px-6 py-20 text-center">
+    <h1 class="text-4xl md:text-5xl font-serif font-bold text-brand-ink leading-tight">
+      Family Resources & Insights
+    </h1>
+    <p class="mt-6 text-xl text-brand-ink/80 max-w-3xl mx-auto leading-relaxed">
+      A library of evidence-based guidance, attachment theory insights, and practical co-parenting strategies to support children, parents, and families throughout New Mexico.
+    </p>
+  </section>
+
+  <!-- Articles List Grid -->
+  <section class="container mx-auto px-6 pb-24">
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+      {articles.map((article) => (
+        <article class="bg-white rounded-3xl p-8 border border-brand-sandstone shadow-md flex flex-col justify-between hover:shadow-xl hover:border-brand-terracotta/30 transition-all duration-300 group">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold uppercase tracking-wider text-brand-moss bg-brand-linen px-3 py-1 rounded-full">
+                {article.category}
+              </span>
+            </div>
+            
+            <h2 class="text-2xl font-serif font-bold text-brand-ink mt-5 group-hover:text-brand-terracotta transition-colors duration-300">
+              <a href={`/resources/${article.slug}`}>
+                {article.title}
+              </a>
+            </h2>
+            
+            <p class="mt-4 text-brand-ink/75 text-base line-clamp-4 leading-relaxed">
+              {article.excerpt}
+            </p>
+          </div>
+          
+          <div class="mt-8 pt-5 border-t border-brand-sandstone flex justify-between items-center">
+            <span class="text-xs font-medium text-brand-ink/50 uppercase tracking-wide">
+              {article.readTime}
+            </span>
+            <a 
+              href={`/resources/${article.slug}`} 
+              class="text-sm font-bold text-brand-terracotta hover:text-brand-moss transition-colors duration-300 flex items-center gap-1"
+            >
+              Read Article <span>&rarr;</span>
+            </a>
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <!-- Global CTA Section -->
+  <section class="bg-brand-sandstone py-20 mt-12 border-t border-brand-sandstone">
+    <div class="container mx-auto px-6 text-center max-w-3xl">
+      <h2 class="text-3xl md:text-4xl font-serif font-bold text-brand-ink leading-tight">
+        Need Personalized Therapeutic Support?
+      </h2>
+      <p class="mt-6 text-lg text-brand-ink/80 leading-relaxed">
+        While these resources provide general guidance, every child and family dynamic is unique. Genevieve Giddings, LCSW, offers specialized, attachment-focused child therapy and intensive family-based services in Santa Fe and Albuquerque.
+      </p>
+      <div class="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+        <a 
+          href="/contact" 
+          class="bg-brand-terracotta text-white font-bold text-lg py-4 px-8 rounded-full shadow-md hover:bg-brand-moss transition-colors duration-300"
+        >
+          Book a Consultation
+        </a>
+        <a 
+          href="tel:505-920-6351" 
+          class="bg-white border border-brand-sandstone text-brand-ink font-bold text-lg py-4 px-8 rounded-full shadow-sm hover:bg-brand-linen transition-colors duration-300"
+        >
+          Call (505) 920-6351
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>

@@ -1,0 +1,109 @@
+---
+// src/pages/resources/[slug].astro
+import Layout from '../../layouts/Layout.astro';
+import { articles } from '../../data/articles';
+
+export async function getStaticPaths() {
+  return articles.map((article) => ({
+    params: { slug: article.slug },
+    props: { article },
+  }));
+}
+
+const { article } = Astro.props;
+---
+
+<Layout 
+  title={`${article.title} | Family Trust Therapy`} 
+  description={article.description}>
+  
+  <article class="container mx-auto px-6 py-16 max-w-3xl">
+    <!-- Breadcrumb link -->
+    <div class="mb-8">
+      <a 
+        href="/resources" 
+        class="inline-flex items-center text-brand-terracotta hover:text-brand-moss font-semibold text-sm transition-colors duration-300 gap-1"
+      >
+        &larr; Back to Resources
+      </a>
+    </div>
+
+    <!-- Article Header -->
+    <header class="mb-12">
+      <span class="text-xs font-semibold uppercase tracking-wider text-brand-moss bg-brand-linen px-3 py-1 rounded-full">
+        {article.category}
+      </span>
+      <h1 class="text-4xl md:text-5xl font-serif font-bold text-brand-ink mt-5 leading-tight">
+        {article.title}
+      </h1>
+      <div class="mt-6 flex items-center gap-3 text-sm text-brand-ink/60 border-b border-brand-sandstone pb-6">
+        <span class="font-semibold text-brand-moss">{article.readTime}</span>
+        <span>&bull;</span>
+        <span>Informational Resource</span>
+      </div>
+    </header>
+
+    <!-- Article Body -->
+    <div class="article-content text-brand-ink/90 text-lg leading-relaxed space-y-6">
+      <div set:html={article.content} />
+    </div>
+
+    <!-- Call to Action (CTA) -->
+    <div class="mt-20 bg-white border border-brand-sandstone rounded-3xl p-8 md:p-12 shadow-lg text-center max-w-2xl mx-auto">
+      <h3 class="text-2xl md:text-3xl font-serif font-bold text-brand-ink">
+        Supporting Your Family's Healing Journey
+      </h3>
+      <p class="mt-4 text-brand-ink/80 leading-relaxed text-base">
+        Therapeutic intervention is most effective when customized to your family's unique dynamics and attachment needs. Genevieve Giddings, LCSW, offers compassionate, professional child and family therapy.
+      </p>
+      <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+        <a 
+          href="/contact" 
+          class="bg-brand-terracotta text-white font-bold text-base py-3.5 px-8 rounded-full shadow hover:bg-brand-moss transition-colors duration-300"
+        >
+          Book a Consultation
+        </a>
+        <a 
+          href="tel:505-920-6351" 
+          class="border-2 border-brand-sandstone text-brand-ink font-bold text-base py-3 px-8 rounded-full hover:bg-brand-linen transition-colors duration-300"
+        >
+          Call (505) 920-6351
+        </a>
+      </div>
+    </div>
+  </article>
+</Layout>
+
+<style>
+  /* Custom styles for article body elements to guarantee beautiful layout without requiring tailwind prose plugin */
+  .article-content :global(p) {
+    margin-bottom: 1.5rem;
+    line-height: 1.8;
+  }
+  .article-content :global(ul) {
+    list-style-type: disc;
+    padding-left: 1.75rem;
+    margin-bottom: 1.75rem;
+    margin-top: 0.5rem;
+  }
+  .article-content :global(ol) {
+    list-style-type: decimal;
+    padding-left: 1.75rem;
+    margin-bottom: 1.75rem;
+    margin-top: 0.5rem;
+  }
+  .article-content :global(li) {
+    margin-bottom: 0.75rem;
+    line-height: 1.8;
+  }
+  .article-content :global(strong) {
+    font-weight: 700;
+    color: #2C2A2A; /* brand-ink */
+  }
+  .article-content :global(ul > li) {
+    list-style-position: outside;
+  }
+  .article-content :global(ol > li) {
+    list-style-position: outside;
+  }
+</style>
