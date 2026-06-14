@@ -15,7 +15,12 @@ const { article } = Astro.props;
 
 <Layout 
   title={`${article.title} | Family Trust Therapy`} 
-  description={article.description}>
+  description={article.description}
+  keywords={article.keywords}
+  article={{
+    publishedTime: new Date("2026-01-01").toISOString(),
+    author: "Genevieve Giddings, LCSW"
+  }}>
   
   <article class="container mx-auto px-6 py-16 max-w-3xl">
     <!-- Breadcrumb link -->
