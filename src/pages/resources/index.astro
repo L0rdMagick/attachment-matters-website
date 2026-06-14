@@ -10,7 +10,7 @@ import { articles } from '../../data/articles';
   keywords="child development articles Durango, parenting resources Colorado, attachment theory guides, trauma-informed parenting help">
   
   <!-- Hero Section -->
-  <section class="container mx-auto px-6 py-20 text-center">
+  <section class="container mx-auto px-6 py-20 text-center animate-fade-in-up">
     <h1 class="text-4xl md:text-5xl font-serif font-bold text-brand-ink leading-tight">
       Family Resources & Insights
     </h1>
@@ -22,8 +22,8 @@ import { articles } from '../../data/articles';
   <!-- Articles List Grid -->
   <section class="container mx-auto px-6 pb-24">
     <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-      {articles.map((article) => (
-        <article class="bg-white rounded-3xl p-8 border border-brand-sandstone shadow-md flex flex-col justify-between hover:shadow-xl hover:border-brand-terracotta/30 transition-all duration-300 group">
+      {articles.map((article, index) => (
+        <article class={`bg-white rounded-3xl p-8 border border-brand-sandstone shadow-md flex flex-col justify-between hover:shadow-2xl hover:-translate-y-1 hover:border-brand-terracotta/30 transition-all duration-500 group reveal delay-${(index % 3 + 1) * 100}`}>
           <div>
             <div class="flex items-center justify-between">
               <span class="text-xs font-semibold uppercase tracking-wider text-brand-moss bg-brand-linen px-3 py-1 rounded-full">

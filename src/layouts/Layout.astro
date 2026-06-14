@@ -102,6 +102,48 @@ const ogImage = new URL('/images/parent-child-attachment-therapy-durango-co.png'
 				}
 			}
 		</script>
+
+		<!-- Premium CSS Animations and Scroll Reveals -->
+		<style is:global>
+			/* Scroll Reveal classes */
+			.reveal {
+				opacity: 0;
+				transform: translateY(30px);
+				transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+				will-change: opacity, transform;
+			}
+			.reveal.active {
+				opacity: 1;
+				transform: translateY(0);
+			}
+
+			/* Page Entrance animations */
+			.animate-fade-in-up {
+				animation: fadeInUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+			}
+			.animate-fade-in-up-delay {
+				animation: fadeInUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+				animation-delay: 200ms;
+				opacity: 0; /* Starts hidden until animation plays */
+			}
+			
+			@keyframes fadeInUp {
+				from {
+					opacity: 0;
+					transform: translateY(20px);
+				}
+				to {
+					opacity: 1;
+					transform: translateY(0);
+				}
+			}
+
+			/* Stagger delays */
+			.delay-100 { transition-delay: 100ms; }
+			.delay-200 { transition-delay: 200ms; }
+			.delay-300 { transition-delay: 300ms; }
+			.delay-400 { transition-delay: 400ms; }
+		</style>
 	</head>
 	<body class="bg-brand-linen text-brand-ink font-sans antialiased text-lg leading-relaxed">
         <header class="border-b border-brand-sandstone sticky top-0 bg-brand-linen/80 backdrop-blur-sm z-50">
@@ -182,6 +224,22 @@ const ogImage = new URL('/images/parent-child-attachment-therapy-durango-co.png'
 					});
 				});
 			}
+
+			// Scroll Reveal Observer
+			const revealElements = document.querySelectorAll('.reveal');
+			const observer = new IntersectionObserver((entries) => {
+				entries.forEach(entry => {
+					if (entry.isIntersecting) {
+						entry.target.classList.add('active');
+						observer.unobserve(entry.target);
+					}
+				});
+			}, {
+				threshold: 0.1,
+				rootMargin: '0px 0px -40px 0px'
+			});
+
+			revealElements.forEach(el => observer.observe(el));
 		</script>
 	</body>
 </html>
