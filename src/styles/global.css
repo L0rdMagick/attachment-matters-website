@@ -13,6 +13,10 @@
   header,
   footer,
   nav,
+  button,
+  svg,
+  #menu-toggle,
+  #mobile-menu,
   [class*="no-print"] {
     display: none !important;
   }

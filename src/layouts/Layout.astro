@@ -146,7 +146,7 @@ const ogImage = new URL('/images/parent-child-attachment-therapy-durango-co.png'
 		</style>
 	</head>
 	<body class="bg-brand-linen text-brand-ink font-sans antialiased text-lg leading-relaxed">
-        <header class="border-b border-brand-sandstone sticky top-0 bg-brand-linen/80 backdrop-blur-sm z-50">
+        <header class="border-b border-brand-sandstone sticky top-0 bg-brand-linen/80 backdrop-blur-sm z-50 no-print print:hidden">
             <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
                 
                 <a href="/" class="flex items-center gap-3 hover:opacity-80 transition-opacity z-50">
@@ -184,7 +184,7 @@ const ogImage = new URL('/images/parent-child-attachment-therapy-durango-co.png'
         </header>
 
 		<!-- Mobile Menu -->
-		<div id="mobile-menu" class="hidden md:hidden fixed inset-0 bg-brand-linen z-40 flex flex-col items-center justify-center">
+		<div id="mobile-menu" class="hidden md:hidden fixed inset-0 bg-brand-linen z-40 flex flex-col items-center justify-center no-print print:hidden">
 			<ul class="flex flex-col space-y-8 text-2xl font-serif text-center">
 				<li><a href="/" class="hover:text-brand-terracotta transition-colors">Home</a></li>
 				<li><a href="/about" class="hover:text-brand-terracotta transition-colors">About</a></li>
