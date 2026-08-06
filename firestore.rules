@@ -17,7 +17,13 @@ service cloud.firestore {
     }
     
     function getUserRole() {
-      return isSignedIn() ? (request.auth.token.role != null ? request.auth.token.role : get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role) : null;
+      return isSignedIn() ? (
+        request.auth.token.role != null 
+          ? request.auth.token.role 
+          : (exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
+              ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role 
+              : null)
+      ) : null;
     }
     
     function isClient() {
@@ -64,9 +70,9 @@ service cloud.firestore {
 
     // Appointments
     match /appointments/{appointmentId} {
-      allow read: if (isClient() && resource.data.clientId == request.auth.uid) || isTherapist();
-      allow create: if (isClient() && request.resource.data.clientId == request.auth.uid) || isTherapist();
-      allow update: if (isClient() && resource.data.clientId == request.auth.uid && request.resource.data.status in ['canceled_by_client', 'requested']) || isTherapist();
+      allow read: if (isSignedIn() && resource.data.clientId == request.auth.uid) || isTherapist();
+      allow create: if (isSignedIn() && request.resource.data.clientId == request.auth.uid) || isTherapist();
+      allow update: if (isSignedIn() && resource.data.clientId == request.auth.uid && request.resource.data.status in ['canceled_by_client', 'requested']) || isTherapist();
       allow delete: if isTherapist();
     }
 
