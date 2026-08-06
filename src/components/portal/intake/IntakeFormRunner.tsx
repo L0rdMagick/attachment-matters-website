@@ -162,165 +162,224 @@ export const IntakeFormRunner: React.FC = () => {
   };
 
   const renderPrintableDocument = () => (
-    <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-10 shadow-sm space-y-8 font-sans print:border-none print:shadow-none print:p-0 print:m-0 print-card">
-      {/* Document Header */}
-      <div className="border-b-2 border-[#4A5741] pb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <span className="text-xs uppercase tracking-widest font-bold text-[#4A5741]">Family Trust Therapy</span>
-          <h1 className="text-2xl sm:text-3xl font-serif font-semibold text-[#2C2A2A] mt-1">Client Intake Questionnaire Document</h1>
-          <p className="text-xs text-[#2C2A2A]/70 mt-1">Confidential Clinical & Medical Record</p>
+    <div className="bg-white border-2 border-gray-900 rounded-none p-8 sm:p-12 shadow-none space-y-6 font-sans text-gray-900 print:border-none print:shadow-none print:p-0 print:m-0 print-card">
+      {/* Official Practice Letterhead & Document Header */}
+      <div className="border-b-2 border-gray-900 pb-4 space-y-2">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-serif font-bold tracking-tight text-gray-900 uppercase">
+              FAMILY TRUST THERAPY & CLINICAL SERVICES
+            </h1>
+            <p className="text-xs text-gray-700 font-medium">
+              Attachment Matters, LLC • Durango, CO 81301 • Tel: (505) 920-6351 • Email: info@familytrusttherapy.com
+            </p>
+          </div>
+          <div className="text-left sm:text-right">
+            <span className="inline-block px-3 py-1 bg-gray-100 border border-gray-900 text-[11px] font-bold tracking-widest uppercase">
+              OFFICIAL CLINICAL & LEGAL RECORD
+            </span>
+          </div>
         </div>
-        <div className="text-left sm:text-right text-xs space-y-1">
-          <p className="font-semibold text-[#2C2A2A]">Client: <span className="font-normal">{clientName}</span></p>
-          <p className="font-semibold text-[#2C2A2A]">Email: <span className="font-normal">{clientEmail}</span></p>
-          <p className="font-semibold text-[#2C2A2A]">
-            Status: <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${submitted ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>{submitted ? 'SUBMITTED' : 'DRAFT COPY'}</span>
-          </p>
-          <p className="text-[11px] text-[#2C2A2A]/60">Date: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        <div className="pt-2 text-center border-t border-gray-300">
+          <h2 className="text-lg font-serif font-bold tracking-wide uppercase text-gray-900">
+            CLIENT INITIAL CLINICAL INTAKE QUESTIONNAIRE
+          </h2>
+        </div>
+      </div>
+
+      {/* Official Document Metadata Control Box */}
+      <div className="border border-gray-900 p-4 bg-gray-50/50 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-sans">
+        <div>
+          <span className="block font-bold uppercase tracking-wider text-gray-600 text-[10px]">Client Legal Name</span>
+          <span className="font-semibold text-sm text-gray-900">{clientName}</span>
+        </div>
+        <div>
+          <span className="block font-bold uppercase tracking-wider text-gray-600 text-[10px]">Client Account Email</span>
+          <span className="font-semibold text-gray-900">{clientEmail}</span>
+        </div>
+        <div>
+          <span className="block font-bold uppercase tracking-wider text-gray-600 text-[10px]">Document Record Date</span>
+          <span className="font-semibold text-gray-900">{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+        </div>
+        <div>
+          <span className="block font-bold uppercase tracking-wider text-gray-600 text-[10px]">Submission Status</span>
+          <span className="font-bold text-gray-900 uppercase">{submitted ? 'VERIFIED SUBMISSION' : 'CLIENT DRAFT RECORD'}</span>
         </div>
       </div>
 
       {/* Section 1 */}
-      <div className="space-y-4">
-        <h2 className="text-base sm:text-lg font-serif font-semibold text-[#4A5741] border-b border-[#EAE1D2] pb-2 uppercase tracking-wide">
-          Section 1: Reason for Seeking Therapy & Primary Goals
-        </h2>
+      <div className="space-y-3 pt-2">
+        <h3 className="text-xs font-bold text-gray-900 uppercase tracking-widest bg-gray-100 p-2 border-l-4 border-gray-900">
+          SECTION 1: REASON FOR SEEKING CLINICAL TREATMENT & GOALS
+        </h3>
         
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-[#2C2A2A]/80">What brings you to therapy at this time?</p>
-          <div className="mt-1 p-3 bg-[#F7F2E9]/60 rounded-xl border border-[#EAE1D2] text-sm text-[#2C2A2A] whitespace-pre-wrap">
-            {reasonForTherapy.trim() || <span className="italic text-[#2C2A2A]/50">Not provided</span>}
+        <div className="space-y-1">
+          <p className="text-xs font-bold text-gray-800 uppercase">1.1 Primary Reason for Therapy Presentation:</p>
+          <div className="p-3 border border-gray-400 text-xs leading-relaxed min-h-[60px] whitespace-pre-wrap">
+            {reasonForTherapy.trim() || <span className="italic text-gray-500">[No clinical response recorded]</span>}
           </div>
         </div>
 
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-[#2C2A2A]/80">Current Concerns & Symptoms</p>
-          <div className="flex flex-wrap gap-2 mt-2">
+        <div className="space-y-1">
+          <p className="text-xs font-bold text-gray-800 uppercase">1.2 Reported Symptoms & Presenting Concerns:</p>
+          <div className="p-3 border border-gray-400 text-xs">
             {selectedSymptoms.length > 0 ? (
-              selectedSymptoms.map((sym) => (
-                <span key={sym} className="px-3 py-1 bg-[#4A5741]/10 text-[#4A5741] rounded-full text-xs font-semibold border border-[#4A5741]/20">
-                  ✓ {sym}
-                </span>
-              ))
+              <p className="font-medium text-gray-900">{selectedSymptoms.join(' • ')}</p>
             ) : (
-              <span className="text-xs italic text-[#2C2A2A]/60">None selected</span>
+              <span className="italic text-gray-500">[No specific symptom categories checked]</span>
             )}
           </div>
         </div>
 
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-[#2C2A2A]/80">Primary Therapy Goals</p>
-          <div className="mt-1 p-3 bg-[#F7F2E9]/60 rounded-xl border border-[#EAE1D2] text-sm text-[#2C2A2A] whitespace-pre-wrap">
-            {therapyGoals.trim() || <span className="italic text-[#2C2A2A]/50">Not provided</span>}
+        <div className="space-y-1">
+          <p className="text-xs font-bold text-gray-800 uppercase">1.3 Primary Treatment Goals & Desired Outcomes:</p>
+          <div className="p-3 border border-gray-400 text-xs leading-relaxed min-h-[50px] whitespace-pre-wrap">
+            {therapyGoals.trim() || <span className="italic text-gray-500">[No treatment goals recorded]</span>}
           </div>
         </div>
       </div>
 
       {/* Section 2 */}
-      <div className="space-y-4">
-        <h2 className="text-base sm:text-lg font-serif font-semibold text-[#4A5741] border-b border-[#EAE1D2] pb-2 uppercase tracking-wide">
-          Section 2: Treatment & Medical History
-        </h2>
+      <div className="space-y-3 pt-2">
+        <h3 className="text-xs font-bold text-gray-900 uppercase tracking-widest bg-gray-100 p-2 border-l-4 border-gray-900">
+          SECTION 2: TREATMENT & MEDICAL HISTORY
+        </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-3 bg-[#F7F2E9]/60 rounded-xl border border-[#EAE1D2] text-xs">
-            <span className="font-bold text-[#2C2A2A]">Prior Counseling / Therapy: </span>
-            <span className="font-semibold">{previousCounseling ? 'Yes' : 'No'}</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <div className="p-3 border border-gray-400 space-y-1">
+            <p className="font-bold uppercase text-gray-800">2.1 Prior Psychotherapy / Counseling History:</p>
+            <p className="font-medium">Prior Treatment Attended: <strong>{previousCounseling ? 'YES' : 'NO'}</strong></p>
             {previousCounseling && previousCounselingDetails && (
-              <p className="mt-2 pt-2 border-t border-[#EAE1D2] text-[#2C2A2A]/90">
+              <p className="pt-1 border-t border-gray-300 text-gray-800">
                 <strong>Details:</strong> {previousCounselingDetails}
               </p>
             )}
           </div>
 
-          <div className="p-3 bg-[#F7F2E9]/60 rounded-xl border border-[#EAE1D2] text-xs">
-            <span className="font-bold text-[#2C2A2A]">Current Medications: </span>
-            <p className="mt-1 text-[#2C2A2A]/90 whitespace-pre-wrap">
-              {currentMedications.trim() || <span className="italic text-[#2C2A2A]/50">None listed</span>}
-            </p>
+          <div className="p-3 border border-gray-400 space-y-1">
+            <p className="font-bold uppercase text-gray-800">2.2 Current Prescription / OTC Medications:</p>
+            <p className="whitespace-pre-wrap">{currentMedications.trim() || <span className="italic text-gray-500">[None listed]</span>}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-3 bg-[#F7F2E9]/60 rounded-xl border border-[#EAE1D2] text-xs">
-            <span className="font-bold text-[#2C2A2A]">Relevant Medical Conditions: </span>
-            <p className="mt-1 text-[#2C2A2A]/90 whitespace-pre-wrap">
-              {medicalHistoryNotes.trim() || <span className="italic text-[#2C2A2A]/50">None listed</span>}
-            </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <div className="p-3 border border-gray-400 space-y-1">
+            <p className="font-bold uppercase text-gray-800">2.3 Relevant Medical Conditions / History:</p>
+            <p className="whitespace-pre-wrap">{medicalHistoryNotes.trim() || <span className="italic text-gray-500">[None listed]</span>}</p>
           </div>
 
-          {currentProviders && (
-            <div className="p-3 bg-[#F7F2E9]/60 rounded-xl border border-[#EAE1D2] text-xs">
-              <span className="font-bold text-[#2C2A2A]">Current Healthcare Providers: </span>
-              <p className="mt-1 text-[#2C2A2A]/90 whitespace-pre-wrap">{currentProviders}</p>
-            </div>
-          )}
+          <div className="p-3 border border-gray-400 space-y-1">
+            <p className="font-bold uppercase text-gray-800">2.4 Current Healthcare / Medical Providers:</p>
+            <p className="whitespace-pre-wrap">{currentProviders.trim() || <span className="italic text-gray-500">[None listed]</span>}</p>
+          </div>
         </div>
       </div>
 
       {/* Section 3 */}
-      <div className="space-y-4">
-        <h2 className="text-base sm:text-lg font-serif font-semibold text-[#4A5741] border-b border-[#EAE1D2] pb-2 uppercase tracking-wide">
-          Section 3: Social History, Safety Screening & Additional Information
-        </h2>
+      <div className="space-y-3 pt-2">
+        <h3 className="text-xs font-bold text-gray-900 uppercase tracking-widest bg-gray-100 p-2 border-l-4 border-gray-900">
+          SECTION 3: SOCIAL HISTORY, SAFETY ASSESSMENT & ADDITIONAL NOTES
+        </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div className="p-3 bg-[#F7F2E9]/60 rounded-xl border border-[#EAE1D2]">
-            <span className="font-bold text-[#2C2A2A]">Relationship Status: </span>
-            <span>{relationshipStatus.trim() || 'Not specified'}</span>
+        <div className="grid grid-cols-2 gap-3 text-xs">
+          <div className="p-3 border border-gray-400">
+            <span className="font-bold uppercase text-gray-800">Relationship Status: </span>
+            <span className="font-semibold">{relationshipStatus.trim() || 'Not specified'}</span>
           </div>
-          <div className="p-3 bg-[#F7F2E9]/60 rounded-xl border border-[#EAE1D2]">
-            <span className="font-bold text-[#2C2A2A]">Employment / School: </span>
-            <span>{employmentOrSchool.trim() || 'Not specified'}</span>
+          <div className="p-3 border border-gray-400">
+            <span className="font-bold uppercase text-gray-800">Employment / Schooling: </span>
+            <span className="font-semibold">{employmentOrSchool.trim() || 'Not specified'}</span>
           </div>
         </div>
 
         {(familySocialHistory || substanceUseQuestions) && (
-          <div className="space-y-3 text-xs">
+          <div className="space-y-2 text-xs">
             {familySocialHistory && (
-              <div className="p-3 bg-[#F7F2E9]/60 rounded-xl border border-[#EAE1D2]">
-                <span className="font-bold text-[#2C2A2A]">Family / Social Background: </span>
-                <p className="mt-1 whitespace-pre-wrap">{familySocialHistory}</p>
+              <div className="p-3 border border-gray-400">
+                <p className="font-bold uppercase text-gray-800">Family & Social History:</p>
+                <p className="whitespace-pre-wrap mt-1">{familySocialHistory}</p>
               </div>
             )}
             {substanceUseQuestions && (
-              <div className="p-3 bg-[#F7F2E9]/60 rounded-xl border border-[#EAE1D2]">
-                <span className="font-bold text-[#2C2A2A]">Substance Use Background: </span>
-                <p className="mt-1 whitespace-pre-wrap">{substanceUseQuestions}</p>
+              <div className="p-3 border border-gray-400">
+                <p className="font-bold uppercase text-gray-800">Substance Use Background:</p>
+                <p className="whitespace-pre-wrap mt-1">{substanceUseQuestions}</p>
               </div>
             )}
           </div>
         )}
 
-        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-xs text-slate-900">
-          <p className="font-bold uppercase tracking-wider text-slate-800">Safety Screening Assessment:</p>
-          <p>• Suicidal Ideation in Past Month: <strong>{suicidalIdeation ? 'YES' : 'No'}</strong></p>
-          <p>• History of Self-Harm: <strong>{selfHarm ? 'YES' : 'No'}</strong></p>
+        <div className="p-3 border border-gray-900 bg-gray-50 text-xs space-y-1">
+          <p className="font-bold uppercase tracking-wider text-gray-900">3.1 Safety Screening Assessment Record:</p>
+          <p>• Suicidal Ideation Reported in Past Month: <strong>{suicidalIdeation ? 'YES (HIGH PRIORITY CLINICAL FLAG)' : 'NO'}</strong></p>
+          <p>• Self-Harm History Reported: <strong>{selfHarm ? 'YES' : 'NO'}</strong></p>
           {safetyDetails && (
-            <p className="pt-1"><strong>Safety Details:</strong> {safetyDetails}</p>
+            <p className="pt-1 border-t border-gray-300"><strong>Safety Assessment Details:</strong> {safetyDetails}</p>
           )}
         </div>
 
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-[#2C2A2A]/80">Additional Client Notes</p>
-          <div className="mt-1 p-3 bg-[#F7F2E9]/60 rounded-xl border border-[#EAE1D2] text-sm text-[#2C2A2A] whitespace-pre-wrap">
-            {additionalNotes.trim() || <span className="italic text-[#2C2A2A]/50">None provided</span>}
+        <div className="space-y-1">
+          <p className="text-xs font-bold text-gray-800 uppercase">3.2 Additional Client Disclosures & Notes:</p>
+          <div className="p-3 border border-gray-400 text-xs min-h-[40px] whitespace-pre-wrap">
+            {additionalNotes.trim() || <span className="italic text-gray-500">[No additional notes recorded]</span>}
           </div>
         </div>
       </div>
 
-      {/* Signature Acknowledgment Footer */}
-      <div className="pt-6 border-t border-[#EAE1D2] text-xs space-y-4">
-        <p className="text-[#2C2A2A]/80 italic">
-          I confirm that the information recorded in this questionnaire is accurate and complete to the best of my knowledge.
-        </p>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-2">
-          <div>
-            <p className="font-semibold text-[#2C2A2A]">Client Electronic Signature: <span className="font-serif italic text-base text-[#4A5741]">{clientName}</span></p>
+      {/* FORMAL LEGAL & CLINICAL ATTESTATION BLOCK */}
+      <div className="pt-6 border-t-2 border-gray-900 space-y-6 break-inside-avoid page-break-inside-avoid">
+        <div className="p-4 border border-gray-900 bg-gray-50 text-xs space-y-2">
+          <h4 className="font-bold uppercase tracking-wider text-gray-900">LEGAL & CLINICAL ATTESTATION STATEMENT</h4>
+          <p className="text-gray-800 leading-relaxed italic">
+            "I, the undersigned client (or legal parent/guardian), hereby declare and attest under penalty of perjury and misrepresentation that all information, clinical history, and disclosures provided in this Initial Intake Questionnaire are true, accurate, and complete to the best of my knowledge. I acknowledge that this completed record forms a legal and clinical component of my permanent healthcare file with Family Trust Therapy."
+          </p>
+        </div>
+
+        {/* DUAL PHYSICAL SIGNATURE LINES */}
+        <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-8 text-xs font-sans">
+          {/* Client / Guardian Signature */}
+          <div className="space-y-6">
+            <div className="border-b-2 border-gray-900 pb-1">
+              <span className="block text-[10px] uppercase font-bold text-gray-600">Client / Parent / Legal Guardian Physical Signature</span>
+              <div className="h-8 flex items-end">
+                <span className="font-serif italic text-sm text-gray-900">{clientName}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-2 border-b border-gray-400 pb-1">
+                <span className="block text-[10px] uppercase text-gray-600">Printed Legal Name</span>
+                <span className="font-semibold text-gray-900">{clientName}</span>
+              </div>
+              <div className="border-b border-gray-400 pb-1">
+                <span className="block text-[10px] uppercase text-gray-600">Date Signed</span>
+                <span className="font-semibold text-gray-900">{new Date().toLocaleDateString('en-US')}</span>
+              </div>
+            </div>
           </div>
-          <div>
-            <p className="text-[11px] text-[#2C2A2A]/70">Signed On: {new Date().toLocaleDateString('en-US')}</p>
+
+          {/* Clinician / Therapist Signature Block */}
+          <div className="space-y-6">
+            <div className="border-b-2 border-gray-900 pb-1">
+              <span className="block text-[10px] uppercase font-bold text-gray-600">Licensed Therapist / Witness Signature</span>
+              <div className="h-8"></div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-2 border-b border-gray-400 pb-1">
+                <span className="block text-[10px] uppercase text-gray-600">Therapist Name & Credentials</span>
+                <span className="text-gray-400 italic">[ Clinical Reviewer ]</span>
+              </div>
+              <div className="border-b border-gray-400 pb-1">
+                <span className="block text-[10px] uppercase text-gray-600">Review Date</span>
+                <span className="text-gray-400 italic">____/____/20__</span>
+              </div>
+            </div>
           </div>
+        </div>
+
+        {/* HIPAA & CONFIDENTIALITY FOOTNOTE */}
+        <div className="pt-4 border-t border-gray-300 text-[10px] text-gray-600 text-center space-y-0.5 uppercase tracking-wider">
+          <p className="font-bold">CONFIDENTIAL HEALTHCARE DOCUMENT • SUBJECT TO STATE & FEDERAL HIPAA PRIVACY LAWS</p>
+          <p>Family Trust Therapy • Attachment Matters, LLC • Authorized Clinical & Legal Use Only</p>
         </div>
       </div>
     </div>
