@@ -192,7 +192,7 @@ export const ConsentSigner: React.FC = () => {
 
               {/* If already signed -> Show immutable snapshot info */}
               {isAlreadySigned(selectedTemplate.id) ? (
-                <div className="p-5 bg-green-50/60 border border-green-200 rounded-xl space-y-2 text-xs text-green-900">
+                <div className="official-print-document p-5 bg-green-50/60 border border-green-200 rounded-xl space-y-2 text-xs text-green-900">
                   <p className="font-semibold text-sm">Signed Document Metadata</p>
                   <p><strong>Signed By:</strong> {getSignedDocForTemplate(selectedTemplate.id)?.clientTypedName}</p>
                   <p><strong>Timestamp:</strong> {getSignedDocForTemplate(selectedTemplate.id)?.signedAtISO}</p>

@@ -162,7 +162,7 @@ export const IntakeFormRunner: React.FC = () => {
   };
 
   const renderPrintableDocument = () => (
-    <div className="bg-white border-2 border-gray-900 rounded-none p-8 sm:p-12 shadow-none space-y-6 font-sans text-gray-900 print:border-none print:shadow-none print:p-0 print:m-0 print-card">
+    <div className="official-print-document bg-white border-2 border-gray-900 rounded-none p-8 sm:p-12 shadow-none space-y-6 font-sans text-gray-900 print:border-none print:shadow-none print:p-0 print:m-0 print-card">
       {/* Official Practice Letterhead & Document Header */}
       <div className="border-b-2 border-gray-900 pb-4 space-y-2">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2">
