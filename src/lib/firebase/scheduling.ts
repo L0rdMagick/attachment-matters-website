@@ -28,6 +28,15 @@ export const DEFAULT_AVAILABILITY_RULES: AvailabilityRules = {
   },
   appointmentTypes: [
     {
+      id: 'intake_90',
+      name: 'Initial Intake & Clinical Assessment',
+      durationMinutes: 90,
+      priceInCents: 22000,
+      bufferBeforeMinutes: 10,
+      bufferAfterMinutes: 10,
+      format: 'either'
+    },
+    {
       id: 'ind_50',
       name: 'Individual Therapy Session',
       durationMinutes: 50,
@@ -37,10 +46,28 @@ export const DEFAULT_AVAILABILITY_RULES: AvailabilityRules = {
       format: 'either'
     },
     {
-      id: 'intake_90',
-      name: 'Initial Intake Assessment',
-      durationMinutes: 90,
-      priceInCents: 22000,
+      id: 'fam_50',
+      name: 'Family & Relational Therapy Session',
+      durationMinutes: 50,
+      priceInCents: 17500,
+      bufferBeforeMinutes: 5,
+      bufferAfterMinutes: 5,
+      format: 'either'
+    },
+    {
+      id: 'parent_50',
+      name: 'Parent Consultation & Co-Parenting Coaching',
+      durationMinutes: 50,
+      priceInCents: 16000,
+      bufferBeforeMinutes: 5,
+      bufferAfterMinutes: 5,
+      format: 'either'
+    },
+    {
+      id: 'court_60',
+      name: 'Court-Involved / Custody Consultation Session',
+      durationMinutes: 60,
+      priceInCents: 20000,
       bufferBeforeMinutes: 10,
       bufferAfterMinutes: 10,
       format: 'either'
@@ -57,11 +84,25 @@ export const DEFAULT_AVAILABILITY_RULES: AvailabilityRules = {
 /**
  * Fetch availability rules for a therapist
  */
-export async function getAvailabilityRules(therapistId: string): Promise<AvailabilityRules> {
-  const docRef = doc(db, 'availabilityRules', therapistId);
-  const snap = await getDoc(docRef);
-  if (snap.exists()) {
-    return snap.data() as AvailabilityRules;
+export async function getAvailabilityRules(therapistId: string = 'default'): Promise<AvailabilityRules> {
+  try {
+    const docRef = doc(db, 'availabilityRules', therapistId);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const data = snap.data() as Partial<AvailabilityRules>;
+      const appointmentTypes = (Array.isArray(data.appointmentTypes) && data.appointmentTypes.length > 0)
+        ? data.appointmentTypes
+        : DEFAULT_AVAILABILITY_RULES.appointmentTypes;
+
+      return {
+        ...DEFAULT_AVAILABILITY_RULES,
+        ...data,
+        appointmentTypes,
+        therapistId
+      };
+    }
+  } catch (err) {
+    console.error("Error fetching availability rules from Firestore:", err);
   }
   return { ...DEFAULT_AVAILABILITY_RULES, therapistId };
 }

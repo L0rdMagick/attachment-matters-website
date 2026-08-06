@@ -26,7 +26,9 @@ export const AppointmentBookingModal: React.FC = () => {
         ]);
         setRules(r);
         setMyAppointments(appts);
-        if (r.appointmentTypes.length > 0) setSelectedType(r.appointmentTypes[0]);
+        if (r.appointmentTypes && r.appointmentTypes.length > 0) {
+          setSelectedType(r.appointmentTypes[0]);
+        }
       } catch (err) {
         console.error("Failed to load booking system", err);
       } finally {
@@ -42,7 +44,25 @@ export const AppointmentBookingModal: React.FC = () => {
   ];
 
   const handleBook = async () => {
-    if (!user || !selectedType || !selectedTimeSlot) return;
+    if (rules?.allowClientSelfScheduling === false) {
+      setMessage({
+        type: 'error',
+        text: 'Online self-scheduling is currently disabled by practice administrators. Please contact your therapist directly.'
+      });
+      return;
+    }
+
+    if (!selectedType) {
+      setMessage({ type: 'error', text: 'Please select an appointment type.' });
+      return;
+    }
+
+    if (!selectedTimeSlot) {
+      setMessage({ type: 'error', text: 'Please select an available time slot before booking.' });
+      return;
+    }
+
+    if (!user) return;
     setBooking(true);
     setMessage(null);
 
@@ -132,16 +152,16 @@ export const AppointmentBookingModal: React.FC = () => {
             </label>
             <select
               id="bk-type"
-              value={selectedType?.id}
+              value={selectedType?.id || ''}
               onChange={(e) => {
-                const found = rules?.appointmentTypes.find((t) => t.id === e.target.value);
+                const found = rules?.appointmentTypes?.find((t) => t.id === e.target.value);
                 if (found) setSelectedType(found);
               }}
-              className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white"
+              className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white font-medium text-[#2C2A2A]"
             >
-              {rules?.appointmentTypes.map((t) => (
+              {rules?.appointmentTypes?.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.name} ({t.durationMinutes} mins - ${(t.priceInCents / 100).toFixed(2)})
+                  {t.name} ({t.durationMinutes} mins — ${(t.priceInCents / 100).toFixed(2)})
                 </option>
               ))}
             </select>
