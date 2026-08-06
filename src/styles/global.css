@@ -2,3 +2,30 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #1a1a1a !important;
+  }
+  .no-print,
+  header,
+  footer,
+  nav {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  main {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .print-card {
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

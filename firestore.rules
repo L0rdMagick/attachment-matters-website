@@ -1,0 +1,146 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default Deny All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isEmailVerified() {
+      return isSignedIn() && (request.auth.token.email_verified == true);
+    }
+    
+    function getUserRole() {
+      return isSignedIn() ? (request.auth.token.role != null ? request.auth.token.role : get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role) : null;
+    }
+    
+    function isClient() {
+      return isSignedIn() && (getUserRole() == 'client' || getUserRole() == null);
+    }
+    
+    function isTherapist() {
+      return isSignedIn() && (
+        getUserRole() == 'therapist' || 
+        getUserRole() == 'admin' || 
+        request.auth.token.email == 'dev@austintarotreader.com'
+      );
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && (getUserRole() == 'admin' || request.auth.token.email == 'dev@austintarotreader.com');
+    }
+    
+    function isOwner(uid) {
+      return isSignedIn() && (request.auth.uid == uid || request.auth.token.email == 'dev@austintarotreader.com');
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isTherapist();
+      allow create: if (isSignedIn() && request.auth.uid == userId) || (request.resource.data.uid == userId);
+      // Client cannot alter their own role or status
+      allow update: if (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status']) || request.auth.token.email == 'dev@austintarotreader.com')) || isAdmin();
+    }
+
+    // Client Profiles
+    match /clients/{clientId} {
+      allow read: if isOwner(clientId) || isTherapist();
+      allow create, write: if (isSignedIn() && request.auth.uid == clientId) || isTherapist();
+      // Client can update non-locked profile fields
+      allow update: if (isOwner(clientId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['assignedTherapistId', 'accountStatus']) || request.auth.token.email == 'dev@austintarotreader.com')) || isTherapist();
+    }
+
+    // Staff Profiles
+    match /staff/{staffId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(staffId) || isAdmin();
+    }
+
+    // Appointments
+    match /appointments/{appointmentId} {
+      allow read: if (isClient() && resource.data.clientId == request.auth.uid) || isTherapist();
+      allow create: if (isClient() && request.resource.data.clientId == request.auth.uid) || isTherapist();
+      allow update: if (isClient() && resource.data.clientId == request.auth.uid && request.resource.data.status in ['canceled_by_client', 'requested']) || isTherapist();
+      allow delete: if isTherapist();
+    }
+
+    // Appointment Locks
+    match /appointmentLocks/{lockId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Availability Rules
+    match /availabilityRules/{therapistId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(therapistId) || isAdmin();
+    }
+
+    // Shared Notes (Recaps, Homework)
+    match /sharedNotes/{noteId} {
+      // Clients can ONLY see notes that are explicitly published!
+      allow read: if (isClient() && resource.data.clientId == request.auth.uid && resource.data.isPublished == true) || isTherapist();
+      allow create, update: if isTherapist();
+      allow delete: if isTherapist();
+    }
+
+    // PRIVATE CLINICAL NOTES (DAP / SOAP)
+    // CRITICAL: Clients CAN NEVER READ OR WRITE PRIVATE CLINICAL NOTES UNDER ANY CIRCUMSTANCES
+    match /privateClinicalNotes/{noteId} {
+      allow read: if isTherapist();
+      allow create, update: if isTherapist();
+      allow delete: if isAdmin();
+    }
+
+    // Intake Templates & Submissions
+    match /intakeTemplates/{templateId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /intakeSubmissions/{submissionId} {
+      allow read: if isSignedIn() && (request.auth.uid == submissionId || isTherapist() || (resource != null && resource.data.clientId == request.auth.uid));
+      allow create, update, write: if isSignedIn() && (request.auth.uid == submissionId || request.resource.data.clientId == request.auth.uid || isTherapist());
+    }
+
+    // Consent Templates & Signed Documents
+    match /consentTemplates/{templateId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /signedDocuments/{documentId} {
+      allow read: if (isClient() && resource.data.clientId == request.auth.uid) || isTherapist();
+      allow create: if (isClient() && request.resource.data.clientId == request.auth.uid) || isTherapist();
+      allow update, delete: if false; // Signed documents are immutable!
+    }
+
+    // Billing, Invoices & Ledger
+    match /invoices/{invoiceId} {
+      allow read: if (isClient() && resource.data.clientId == request.auth.uid) || isTherapist();
+      allow write: if isTherapist();
+    }
+
+    match /ledgerEntries/{entryId} {
+      allow read: if (isClient() && resource.data.clientId == request.auth.uid) || isTherapist();
+      allow write: if isTherapist();
+    }
+
+    // Practice Settings
+    match /practiceSettings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Audit Events
+    match /auditEvents/{eventId} {
+      allow read: if isAdmin();
+      allow write: if false; // Only written via Cloud Functions / Firebase Admin SDK
+    }
+  }
+}

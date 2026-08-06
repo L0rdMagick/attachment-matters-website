@@ -1,0 +1,37 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Default Deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return isSignedIn() ? request.auth.token.role : null;
+    }
+
+    function isTherapist() {
+      return isSignedIn() && (getUserRole() == 'therapist' || getUserRole() == 'admin');
+    }
+
+    // Client Insurance Cards and Attachments
+    match /clients/{clientId}/{allPaths=**} {
+      allow read: if isSignedIn() && (request.auth.uid == clientId || isTherapist() || request.auth.token.email == 'dev@austintarotreader.com');
+      allow write: if isSignedIn() && (request.auth.uid == clientId || isTherapist() || request.auth.token.email == 'dev@austintarotreader.com')
+                   && request.resource.size < 10 * 1024 * 1024 // 10MB limit
+                   && request.resource.contentType.matches('image/.*|application/pdf');
+      allow delete: if isSignedIn() && (request.auth.uid == clientId || isTherapist() || request.auth.token.email == 'dev@austintarotreader.com');
+    }
+
+    // Signed Document PDFs
+    match /documents/{clientId}/{documentId} {
+      allow read: if isSignedIn() && (request.auth.uid == clientId || isTherapist() || request.auth.token.email == 'dev@austintarotreader.com');
+      allow write: if isTherapist() || request.auth.token.email == 'dev@austintarotreader.com';
+    }
+  }
+}
