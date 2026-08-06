@@ -154,7 +154,9 @@ const MainPortalContent: React.FC = () => {
           {activeTab === 'appointments' && <AppointmentBookingModal />}
           {activeTab === 'documents' && (
             <div className="space-y-8">
-              <ConsentSigner />
+              <div className="no-print print:hidden">
+                <ConsentSigner />
+              </div>
               <IntakeFormRunner />
             </div>
           )}
