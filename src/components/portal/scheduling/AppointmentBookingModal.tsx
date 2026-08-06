@@ -1,33 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { getAvailabilityRules, bookAppointmentWithLock, getAppointments, updateAppointmentStatus } from '../../../lib/firebase/scheduling';
+import { getAvailabilityRules, bookAppointmentWithLock, getAppointments, updateAppointmentStatus, DEFAULT_AVAILABILITY_RULES } from '../../../lib/firebase/scheduling';
 import type { AvailabilityRules, AppointmentType, AppointmentData } from '../../../types/scheduling';
 
 export const AppointmentBookingModal: React.FC = () => {
   const { user } = useAuth();
-  const [rules, setRules] = useState<AvailabilityRules | null>(null);
+  const [rules, setRules] = useState<AvailabilityRules>(DEFAULT_AVAILABILITY_RULES);
   const [myAppointments, setMyAppointments] = useState<AppointmentData[]>([]);
-  const [selectedType, setSelectedType] = useState<AppointmentType | null>(null);
+  const [selectedType, setSelectedType] = useState<AppointmentType | null>(DEFAULT_AVAILABILITY_RULES.appointmentTypes[0] || null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [format, setFormat] = useState<'telehealth' | 'in_person'>('telehealth');
   
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [booking, setBooking] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    if (!user) return;
     async function loadData() {
       try {
         const [r, appts] = await Promise.all([
           getAvailabilityRules('default'),
-          getAppointments({ clientId: user!.uid })
+          user ? getAppointments({ clientId: user.uid }) : Promise.resolve([])
         ]);
-        setRules(r);
-        setMyAppointments(appts);
-        if (r.appointmentTypes && r.appointmentTypes.length > 0) {
-          setSelectedType(r.appointmentTypes[0]);
+        if (r && r.appointmentTypes && r.appointmentTypes.length > 0) {
+          setRules(r);
+          setSelectedType((prev) => prev || r.appointmentTypes[0]);
+        }
+        if (appts) {
+          setMyAppointments(appts);
         }
       } catch (err) {
         console.error("Failed to load booking system", err);
