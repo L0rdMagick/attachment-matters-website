@@ -46,28 +46,45 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
   };
 
   useEffect(() => {
-    if (isStaff) {
-      getClientsDirectory().then((list) => {
-        setClientList(list);
-        if (!selectedClientId && list.length > 0) {
-          setSelectedClientId(targetClientId || list[0].uid);
-        }
-      }).catch(err => console.error("Failed to fetch clients for billing", err));
-    }
+    getClientsDirectory().then((list) => {
+      setClientList(list);
+      if (isStaff && !selectedClientId && list.length > 0) {
+        setSelectedClientId(targetClientId || list[0].uid);
+      }
+    }).catch(err => console.error("Failed to fetch clients for billing", err));
   }, [isStaff, targetClientId]);
 
   useEffect(() => {
-    if (!activeClientId) {
+    if (!activeClientId && !user?.uid) {
       setLoading(false);
       return;
     }
+    const targetId = activeClientId || user?.uid;
+    if (!targetId) return;
+
     async function loadBilling() {
       setLoading(true);
       try {
-        const [invs, ledger] = await Promise.all([
-          getInvoicesForClient(activeClientId!),
-          getLedgerForClient(activeClientId!)
+        let [invs, ledger] = await Promise.all([
+          getInvoicesForClient(targetId),
+          getLedgerForClient(targetId)
         ]);
+
+        // Fallback for clients: if 0 invoices found by uid, match by email in clientList
+        if (invs.length === 0 && !isStaff && user?.email && clientList.length > 0) {
+          const matched = clientList.find((c) => c.email?.toLowerCase() === user.email?.toLowerCase());
+          if (matched && matched.uid !== targetId) {
+            const [altInvs, altLedger] = await Promise.all([
+              getInvoicesForClient(matched.uid),
+              getLedgerForClient(matched.uid)
+            ]);
+            if (altInvs.length > 0) {
+              invs = altInvs;
+              ledger = altLedger;
+            }
+          }
+        }
+
         setInvoices(invs);
         setLedgerEntries(ledger);
       } catch (err) {
@@ -77,7 +94,7 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
       }
     }
     loadBilling();
-  }, [activeClientId]);
+  }, [activeClientId, user?.uid, user?.email, clientList, isStaff]);
 
   const handleCreateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();

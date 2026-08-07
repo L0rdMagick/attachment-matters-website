@@ -90,7 +90,7 @@ service cloud.firestore {
     // Shared Notes (Recaps, Homework)
     match /sharedNotes/{noteId} {
       // Clients can ONLY see notes that are explicitly published!
-      allow read: if (isClient() && resource.data.clientId == request.auth.uid && resource.data.isPublished == true) || isTherapist();
+      allow read: if (isSignedIn() && resource.data.clientId == request.auth.uid && resource.data.isPublished == true) || isTherapist();
       allow create, update: if isTherapist();
       allow delete: if isTherapist();
     }
@@ -121,19 +121,19 @@ service cloud.firestore {
     }
 
     match /signedDocuments/{documentId} {
-      allow read: if (isClient() && resource.data.clientId == request.auth.uid) || isTherapist();
-      allow create: if (isClient() && request.resource.data.clientId == request.auth.uid) || isTherapist();
+      allow read: if (isSignedIn() && resource.data.clientId == request.auth.uid) || isTherapist();
+      allow create: if (isSignedIn() && request.resource.data.clientId == request.auth.uid) || isTherapist();
       allow update, delete: if false; // Signed documents are immutable!
     }
 
     // Billing, Invoices & Ledger
     match /invoices/{invoiceId} {
-      allow read: if (isClient() && resource.data.clientId == request.auth.uid) || isTherapist();
+      allow read: if (isSignedIn() && resource.data.clientId == request.auth.uid) || isTherapist();
       allow write: if isTherapist();
     }
 
     match /ledgerEntries/{entryId} {
-      allow read: if (isClient() && resource.data.clientId == request.auth.uid) || isTherapist();
+      allow read: if (isSignedIn() && resource.data.clientId == request.auth.uid) || isTherapist();
       allow write: if isTherapist();
     }
 
