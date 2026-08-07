@@ -22,7 +22,9 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
   const [showNewInv, setShowNewInv] = useState(false);
   const [invDesc, setInvDesc] = useState('');
   const [invAmount, setInvAmount] = useState('');
-  const [invDueDate, setInvDueDate] = useState('');
+  const [invDueDate, setInvDueDate] = useState(new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]);
+  const [submittingInv, setSubmittingInv] = useState(false);
+  const [invMessage, setInvMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Payment Form State
   const [selectedInvForPay, setSelectedInvForPay] = useState<InvoiceData | null>(null);
@@ -66,13 +68,19 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
 
   const handleCreateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeClientId || !invAmount) return;
+    const targetId = targetClientId || selectedClientId || activeClientId;
+    if (!targetId || !invAmount) {
+      setInvMessage({ type: 'error', text: 'Please select a client and enter a valid dollar amount.' });
+      return;
+    }
     const amountCents = Math.round(parseFloat(invAmount) * 100);
     const invoiceNum = `INV-${Date.now().toString().slice(-6)}`;
+    setSubmittingInv(true);
+    setInvMessage(null);
 
     try {
       const invId = await createInvoice({
-        clientId: activeClientId,
+        clientId: targetId,
         invoiceNumber: invoiceNum,
         description: invDesc || 'Therapy Services Session',
         totalCents: amountCents,
@@ -83,7 +91,7 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
 
       // Also record initial charge entry in ledger
       await recordLedgerTransaction({
-        clientId: activeClientId,
+        clientId: targetId,
         invoiceId: invId,
         type: 'charge',
         amountCents,
@@ -93,16 +101,20 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
 
       // Refresh
       const [invs, ledger] = await Promise.all([
-        getInvoicesForClient(activeClientId),
-        getLedgerForClient(activeClientId)
+        getInvoicesForClient(targetId),
+        getLedgerForClient(targetId)
       ]);
       setInvoices(invs);
       setLedgerEntries(ledger);
       setShowNewInv(false);
       setInvDesc('');
       setInvAmount('');
-    } catch (err) {
+      setInvMessage({ type: 'success', text: `Invoice ${invoiceNum} created and assigned successfully!` });
+    } catch (err: any) {
       console.error("Failed to create invoice", err);
+      setInvMessage({ type: 'error', text: err.message || "Failed to create invoice. Please check network/permissions." });
+    } finally {
+      setSubmittingInv(false);
     }
   };
 
@@ -162,6 +174,14 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
         </div>
       </div>
 
+      {invMessage && (
+        <div className={`p-4 rounded-xl text-xs font-semibold border ${
+          invMessage.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'
+        }`}>
+          {invMessage.text}
+        </div>
+      )}
+
       {isStaff && !targetClientId && (
         <div className="bg-white border border-[#EAE1D2] rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <label htmlFor="staff-client-select" className="text-xs font-semibold uppercase text-[#2C2A2A]">
@@ -203,6 +223,26 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
           <h3 className="text-lg font-serif text-[#2C2A2A] font-medium border-b border-[#EAE1D2] pb-2">
             Create Client Invoice
           </h3>
+
+          {!targetClientId && (
+            <div>
+              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
+                Assign Invoice To Client
+              </label>
+              <select
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
+                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white font-medium text-[#2C2A2A]"
+              >
+                {clientList.map((c) => (
+                  <option key={c.uid} value={c.uid}>
+                    {c.legalFirstName} {c.legalLastName} ({c.email || 'No Email'})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Description</label>
@@ -248,9 +288,10 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-[#BF5B33] text-white text-xs font-semibold rounded-xl"
+              disabled={submittingInv}
+              className="px-4 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl disabled:opacity-50 transition"
             >
-              Issue Invoice
+              {submittingInv ? 'Issuing Invoice...' : 'Issue Invoice'}
             </button>
           </div>
         </form>
