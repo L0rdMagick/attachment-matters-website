@@ -71,24 +71,31 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-1">
-          <p className="text-xs font-semibold uppercase text-[#4A5741]">Sessions Scheduled</p>
-          <p className="text-3xl font-serif font-bold text-[#2C2A2A]">{todayAppointments.length}</p>
-        </div>
+      {(() => {
+        const activeScheduledCount = todayAppointments.filter(a => a.status === 'confirmed' || a.status === 'requested').length;
+        const completedCount = todayAppointments.filter(a => a.status === 'completed').length;
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-1">
+              <p className="text-xs font-semibold uppercase text-[#4A5741]">Sessions Scheduled</p>
+              <p className="text-3xl font-serif font-bold text-[#2C2A2A]">{activeScheduledCount}</p>
+              <p className="text-[11px] text-gray-500">{completedCount} completed sessions</p>
+            </div>
 
-        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-1">
-          <p className="text-xs font-semibold uppercase text-[#4A5741]">Intakes Pending Review</p>
-          <p className="text-3xl font-serif font-bold text-[#BF5B33]">{pendingIntakes.length}</p>
-        </div>
+            <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-1">
+              <p className="text-xs font-semibold uppercase text-[#4A5741]">Intakes Pending Review</p>
+              <p className="text-3xl font-serif font-bold text-[#BF5B33]">{pendingIntakes.length}</p>
+            </div>
 
-        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-1">
-          <p className="text-xs font-semibold uppercase text-[#4A5741]">Google Calendar Sync</p>
-          <p className="text-sm font-semibold text-green-700 flex items-center gap-1.5 mt-2">
-            <span className="w-2 h-2 rounded-full bg-green-600 animate-pulse"></span> 2-Way Sync Active
-          </p>
-        </div>
-      </div>
+            <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-1">
+              <p className="text-xs font-semibold uppercase text-[#4A5741]">Google Calendar Sync</p>
+              <p className="text-sm font-semibold text-green-700 flex items-center gap-1.5 mt-2">
+                <span className="w-2 h-2 rounded-full bg-green-600 animate-pulse"></span> 2-Way Sync Active
+              </p>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Pending Intakes Section */}
       {pendingIntakes.length > 0 && (

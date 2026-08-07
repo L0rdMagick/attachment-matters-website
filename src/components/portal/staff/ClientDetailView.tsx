@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { getClientProfile } from '../../../lib/firebase/clients';
 import { getSignedDocuments } from '../../../lib/firebase/consent';
 import { getIntakeSubmission, reviewIntakeSubmission } from '../../../lib/firebase/intake';
+import { getAppointments, updateAppointmentStatus } from '../../../lib/firebase/scheduling';
 import type { ClientProfileData } from '../../../types/client';
 import type { SignedDocumentData } from '../../../types/consent';
 import type { IntakeSubmissionData } from '../../../types/intake';
+import type { AppointmentData, AppointmentStatus } from '../../../types/scheduling';
 
 interface ClientDetailViewProps {
   clientId: string;
@@ -27,6 +29,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
   const [client, setClient] = useState<ClientProfileData | null>(null);
   const [signedDocs, setSignedDocs] = useState<SignedDocumentData[]>([]);
   const [intakeData, setIntakeData] = useState<IntakeSubmissionData | null>(null);
+  const [clientAppointments, setClientAppointments] = useState<AppointmentData[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<SignedDocumentData | null>(null);
   const [activeTab, setActiveTab] = useState<ChartTab>('overview');
   const [loading, setLoading] = useState(true);
@@ -40,14 +43,16 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
   useEffect(() => {
     async function loadClient() {
       try {
-        const [data, docs, intake] = await Promise.all([
+        const [data, docs, intake, appts] = await Promise.all([
           getClientProfile(clientId),
           getSignedDocuments(clientId),
-          getIntakeSubmission(clientId)
+          getIntakeSubmission(clientId),
+          getAppointments({ clientId })
         ]);
         setClient(data);
         setSignedDocs(docs);
         setIntakeData(intake);
+        setClientAppointments(appts);
         if (docs.length > 0) {
           setSelectedDoc(docs[0]);
         }
@@ -135,6 +140,19 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
     { id: 'files', label: 'Insurance Cards & Files' },
     { id: 'audit', label: 'Audit History' }
   ];
+
+  const handleStatusChangeInChart = async (apptId: string, status: AppointmentStatus) => {
+    try {
+      await updateAppointmentStatus(apptId, status);
+      const appts = await getAppointments({ clientId });
+      setClientAppointments(appts);
+    } catch (err) {
+      console.error("Failed to update appointment status", err);
+    }
+  };
+
+  const upcomingAppts = clientAppointments.filter(a => a.status === 'confirmed' || a.status === 'requested');
+  const pastAppts = clientAppointments.filter(a => a.status === 'completed' || a.status.startsWith('canceled'));
 
   return (
     <div className="space-y-6 font-sans">
@@ -300,6 +318,96 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* APPOINTMENTS TAB */}
+        {activeTab === 'appointments' && (
+          <div className="space-y-6 text-sm text-[#2C2A2A]">
+            <div className="border-b border-[#EAE1D2] pb-3">
+              <h3 className="text-xl font-serif font-medium">Client Appointments & Clinical History</h3>
+              <p className="text-xs text-[#2C2A2A]/70 mt-1">
+                View upcoming scheduled sessions and historical completed appointments.
+              </p>
+            </div>
+
+            {/* Upcoming Appointments */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase text-[#4A5741] tracking-wider">
+                Upcoming & Active Sessions ({upcomingAppts.length})
+              </h4>
+              {upcomingAppts.length === 0 ? (
+                <div className="bg-[#F7F2E9] p-4 rounded-xl border border-[#EAE1D2] text-xs text-gray-600 text-center">
+                  No active upcoming appointments scheduled for this client.
+                </div>
+              ) : (
+                upcomingAppts.map((appt) => (
+                  <div key={appt.id} className="p-4 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2] flex justify-between items-center text-xs">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm">{appt.appointmentTypeName}</span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          appt.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
+                        }`}>
+                          {appt.status.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <p className="mt-1">
+                        <strong>Time:</strong> {new Date(appt.startISO).toLocaleString()} | <strong>Format:</strong> <span className="capitalize">{appt.format}</span>
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleStatusChangeInChart(appt.id!, 'completed')}
+                        className="px-3 py-1.5 bg-[#4A5741] text-white font-semibold rounded-lg hover:bg-[#384232] transition"
+                      >
+                        ✓ Mark Completed
+                      </button>
+                      <button
+                        onClick={() => handleStatusChangeInChart(appt.id!, 'canceled_by_practice')}
+                        className="px-3 py-1.5 border border-red-300 text-red-700 font-semibold rounded-lg hover:bg-red-50 transition"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Completed & Past Appointments History */}
+            <div className="space-y-3 pt-4 border-t border-[#EAE1D2]">
+              <h4 className="text-xs font-semibold uppercase text-[#4A5741] tracking-wider">
+                Completed & Past Session History ({pastAppts.length})
+              </h4>
+              {pastAppts.length === 0 ? (
+                <div className="bg-[#F7F2E9] p-4 rounded-xl border border-[#EAE1D2] text-xs text-gray-600 text-center">
+                  No completed or past session history for this client.
+                </div>
+              ) : (
+                pastAppts.map((appt) => (
+                  <div key={appt.id} className="p-4 bg-white rounded-xl border border-[#EAE1D2] flex justify-between items-center text-xs">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm">{appt.appointmentTypeName}</span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          appt.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-gray-100 text-gray-700 border border-gray-200'
+                        }`}>
+                          {appt.status.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <p className="mt-1">
+                        <strong>Date:</strong> {new Date(appt.startISO).toLocaleString()} | <strong>Format:</strong> <span className="capitalize">{appt.format}</span>
+                      </p>
+                    </div>
+                    <div className="font-mono font-semibold text-gray-700">
+                      ${(appt.priceInCents / 100).toFixed(2)}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
