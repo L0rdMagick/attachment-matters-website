@@ -40,6 +40,15 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
   const [revisionNotesInput, setRevisionNotesInput] = useState('');
   const [showRevisionForm, setShowRevisionForm] = useState(false);
 
+  // Admin Schedule Appointment Modal State (Must be declared at top level before conditional returns)
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [schedType, setSchedType] = useState(DEFAULT_AVAILABILITY_RULES.appointmentTypes[0]);
+  const [schedDate, setSchedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [schedTime, setSchedTime] = useState('09:00');
+  const [schedFormat, setSchedFormat] = useState<'telehealth' | 'in_person'>('telehealth');
+  const [schedBooking, setSchedBooking] = useState(false);
+  const [schedMessage, setSchedMessage] = useState<string | null>(null);
+
   useEffect(() => {
     async function loadClient() {
       try {
@@ -153,15 +162,6 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
 
   const upcomingAppts = clientAppointments.filter(a => a.status === 'confirmed' || a.status === 'requested');
   const pastAppts = clientAppointments.filter(a => a.status === 'completed' || a.status.startsWith('canceled'));
-
-  // Admin Schedule Appointment Modal State
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [schedType, setSchedType] = useState(DEFAULT_AVAILABILITY_RULES.appointmentTypes[0]);
-  const [schedDate, setSchedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [schedTime, setSchedTime] = useState('09:00');
-  const [schedFormat, setSchedFormat] = useState<'telehealth' | 'in_person'>('telehealth');
-  const [schedBooking, setSchedBooking] = useState(false);
-  const [schedMessage, setSchedMessage] = useState<string | null>(null);
 
   const handleScheduleAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
