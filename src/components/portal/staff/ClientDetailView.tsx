@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getClientProfile } from '../../../lib/firebase/clients';
 import { getSignedDocuments } from '../../../lib/firebase/consent';
 import { getIntakeSubmission, reviewIntakeSubmission } from '../../../lib/firebase/intake';
-import { getAppointments, updateAppointmentStatus } from '../../../lib/firebase/scheduling';
+import { getAppointments, updateAppointmentStatus, bookAppointmentWithLock, DEFAULT_AVAILABILITY_RULES } from '../../../lib/firebase/scheduling';
 import type { ClientProfileData } from '../../../types/client';
 import type { SignedDocumentData } from '../../../types/consent';
 import type { IntakeSubmissionData } from '../../../types/intake';
@@ -154,6 +154,51 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
   const upcomingAppts = clientAppointments.filter(a => a.status === 'confirmed' || a.status === 'requested');
   const pastAppts = clientAppointments.filter(a => a.status === 'completed' || a.status.startsWith('canceled'));
 
+  // Admin Schedule Appointment Modal State
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [schedType, setSchedType] = useState(DEFAULT_AVAILABILITY_RULES.appointmentTypes[0]);
+  const [schedDate, setSchedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [schedTime, setSchedTime] = useState('09:00');
+  const [schedFormat, setSchedFormat] = useState<'telehealth' | 'in_person'>('telehealth');
+  const [schedBooking, setSchedBooking] = useState(false);
+  const [schedMessage, setSchedMessage] = useState<string | null>(null);
+
+  const handleScheduleAppointment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!client) return;
+    setSchedBooking(true);
+    setSchedMessage(null);
+    const startISO = `${schedDate}T${schedTime}:00`;
+    const endISO = new Date(new Date(startISO).getTime() + (schedType?.durationMinutes || 50) * 60000).toISOString();
+
+    try {
+      await bookAppointmentWithLock({
+        clientId: client.uid,
+        therapistId: 'default_therapist',
+        appointmentTypeId: schedType.id,
+        appointmentTypeName: schedType.name,
+        startISO,
+        endISO,
+        timezone: 'America/Chicago',
+        format: schedFormat,
+        locationOrLink: schedFormat === 'telehealth' ? 'https://familytrusttherapy.com/telehealth-room' : '123 Practice Way, Suite 100',
+        status: 'confirmed',
+        priceInCents: schedType.priceInCents,
+        syncStatus: 'pending'
+      });
+
+      const appts = await getAppointments({ clientId: client.uid });
+      setClientAppointments(appts);
+      setShowScheduleModal(false);
+      alert(`Appointment for ${client.legalFirstName} ${client.legalLastName} scheduled successfully!`);
+    } catch (err: any) {
+      console.error(err);
+      setSchedMessage(err.message || "Failed to schedule appointment due to lock collision.");
+    } finally {
+      setSchedBooking(false);
+    }
+  };
+
   return (
     <div className="space-y-6 font-sans">
       {/* Top Banner & Client Summary */}
@@ -178,7 +223,10 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
           <span className="text-xs px-3 py-1.5 rounded-full font-semibold bg-[#4A5741]/10 text-[#4A5741] border border-[#4A5741]/20">
             Account Status: {client.accountStatus || 'Active'}
           </span>
-          <button className="px-4 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl shadow-sm transition">
+          <button
+            onClick={() => setShowScheduleModal(true)}
+            className="px-4 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl shadow-sm transition"
+          >
             + Schedule Appointment
           </button>
         </div>
@@ -751,12 +799,133 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
           </div>
         )}
 
-        {activeTab !== 'overview' && activeTab !== 'contact' && activeTab !== 'files' && activeTab !== 'documents' && activeTab !== 'intake' && activeTab !== 'private-clinical-notes' && (
+        {activeTab !== 'overview' && activeTab !== 'contact' && activeTab !== 'files' && activeTab !== 'documents' && activeTab !== 'intake' && activeTab !== 'private-clinical-notes' && activeTab !== 'appointments' && (
           <div className="text-xs text-[#2C2A2A]/70">
             Active chart tab: <strong className="capitalize">{activeTab.replace('-', ' ')}</strong>. Functional module binder active.
           </div>
         )}
       </div>
+
+      {/* Admin Schedule Appointment Popup Modal */}
+      {showScheduleModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto font-sans">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-[#EAE1D2]">
+            <div className="flex justify-between items-center border-b border-[#EAE1D2] pb-3">
+              <h3 className="text-lg font-serif font-medium text-[#2C2A2A]">
+                Schedule Appointment for {client.legalFirstName} {client.legalLastName}
+              </h3>
+              <button
+                onClick={() => setShowScheduleModal(false)}
+                className="text-gray-400 hover:text-gray-600 font-bold text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            {schedMessage && (
+              <div className="p-3 bg-red-50 text-red-800 border border-red-200 rounded-xl text-xs font-medium">
+                {schedMessage}
+              </div>
+            )}
+
+            <form onSubmit={handleScheduleAppointment} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
+                  Select Appointment Type
+                </label>
+                <select
+                  value={schedType.id}
+                  onChange={(e) => {
+                    const found = DEFAULT_AVAILABILITY_RULES.appointmentTypes.find(t => t.id === e.target.value);
+                    if (found) setSchedType(found);
+                  }}
+                  className="w-full p-2.5 rounded-xl border border-[#EAE1D2] bg-white text-xs text-[#2C2A2A] font-medium"
+                >
+                  {DEFAULT_AVAILABILITY_RULES.appointmentTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name} ({type.durationMinutes} min • ${(type.priceInCents / 100).toFixed(2)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={schedDate}
+                    onChange={(e) => setSchedDate(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
+                    Start Time Slot
+                  </label>
+                  <select
+                    value={schedTime}
+                    onChange={(e) => setSchedTime(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] bg-white text-xs text-[#2C2A2A] font-medium"
+                  >
+                    {['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'].map((slot) => (
+                      <option key={slot} value={slot}>
+                        {slot}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
+                  Service Format
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSchedFormat('telehealth')}
+                    className={`py-2 rounded-xl text-xs font-semibold border transition ${
+                      schedFormat === 'telehealth' ? 'bg-[#BF5B33] text-white border-[#BF5B33]' : 'bg-[#F7F2E9] text-[#2C2A2A] border-[#EAE1D2]'
+                    }`}
+                  >
+                    💻 Telehealth
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSchedFormat('in_person')}
+                    className={`py-2 rounded-xl text-xs font-semibold border transition ${
+                      schedFormat === 'in_person' ? 'bg-[#BF5B33] text-white border-[#BF5B33]' : 'bg-[#F7F2E9] text-[#2C2A2A] border-[#EAE1D2]'
+                    }`}
+                  >
+                    🏢 In-Person Office
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-[#EAE1D2]">
+                <button
+                  type="button"
+                  onClick={() => setShowScheduleModal(false)}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 text-xs font-semibold rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={schedBooking}
+                  className="px-5 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl shadow-sm disabled:opacity-50 transition"
+                >
+                  {schedBooking ? 'Booking...' : 'Book & Confirm Appointment'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
