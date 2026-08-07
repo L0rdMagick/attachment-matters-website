@@ -11,6 +11,7 @@ export const AppointmentBookingModal: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [format, setFormat] = useState<'telehealth' | 'in_person'>('telehealth');
+  const [apptTab, setApptTab] = useState<'upcoming' | 'history'>('upcoming');
   
   const [loading, setLoading] = useState(false);
   const [booking, setBooking] = useState(false);
@@ -38,6 +39,10 @@ export const AppointmentBookingModal: React.FC = () => {
     }
     loadData();
   }, [user]);
+
+  const upcomingClientAppts = myAppointments.filter(a => a.status === 'confirmed' || a.status === 'requested');
+  const historyClientAppts = myAppointments.filter(a => a.status === 'completed' || a.status.startsWith('canceled'));
+  const displayedClientAppts = apptTab === 'upcoming' ? upcomingClientAppts : historyClientAppts;
 
   // Generate available slots for selected date (mock calculation for demo)
   const availableSlots = [
@@ -227,22 +232,49 @@ export const AppointmentBookingModal: React.FC = () => {
 
         {/* Existing Appointments List */}
         <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-4">
-          <h3 className="text-lg font-serif text-[#2C2A2A] font-medium border-b border-[#EAE1D2] pb-2">
-            My Scheduled Appointments
-          </h3>
+          <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-2">
+            <h3 className="text-lg font-serif text-[#2C2A2A] font-medium">
+              My Appointments
+            </h3>
+            <div className="flex bg-[#F7F2E9] p-1 rounded-xl border border-[#EAE1D2] text-[11px] font-semibold">
+              <button
+                type="button"
+                onClick={() => setApptTab('upcoming')}
+                className={`px-2.5 py-1 rounded-lg transition ${
+                  apptTab === 'upcoming' ? 'bg-[#BF5B33] text-white shadow-sm' : 'text-[#2C2A2A]/70 hover:text-[#2C2A2A]'
+                }`}
+              >
+                Scheduled ({upcomingClientAppts.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setApptTab('history')}
+                className={`px-2.5 py-1 rounded-lg transition ${
+                  apptTab === 'history' ? 'bg-[#BF5B33] text-white shadow-sm' : 'text-[#2C2A2A]/70 hover:text-[#2C2A2A]'
+                }`}
+              >
+                Completed & History ({historyClientAppts.length})
+              </button>
+            </div>
+          </div>
 
-          {myAppointments.length === 0 ? (
-            <p className="text-xs text-[#2C2A2A]/60 py-6 text-center">No upcoming or past appointments found.</p>
+          {displayedClientAppts.length === 0 ? (
+            <p className="text-xs text-[#2C2A2A]/60 py-6 text-center">
+              {apptTab === 'upcoming' ? 'No active upcoming appointments currently scheduled.' : 'No completed or past appointment history.'}
+            </p>
           ) : (
             <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
-              {myAppointments.map((appt) => (
+              {displayedClientAppts.map((appt) => (
                 <div key={appt.id} className="p-4 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2] space-y-1 text-xs text-[#2C2A2A]">
                   <div className="flex justify-between items-center">
                     <span className="font-semibold text-sm">{appt.appointmentTypeName}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                      appt.status === 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                      appt.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' :
+                      appt.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                      appt.status === 'requested' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                      'bg-gray-100 text-gray-700'
                     }`}>
-                      {appt.status.replace('_', ' ')}
+                      {appt.status.replace(/_/g, ' ')}
                     </span>
                   </div>
                   <p><strong>Date & Time:</strong> {new Date(appt.startISO).toLocaleString()}</p>
