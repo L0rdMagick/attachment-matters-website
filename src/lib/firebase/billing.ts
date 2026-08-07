@@ -54,43 +54,48 @@ export async function recordLedgerTransaction(entry: Omit<LedgerEntryData, 'id'>
   const entryRef = doc(collection(db, 'ledgerEntries'));
 
   await runTransaction(db, async (transaction) => {
-    // Record immutable ledger entry
+    // 1. ALL READS FIRST
+    let currentInv: InvoiceData | null = null;
+    let invRef: any = null;
+
+    if (entry.invoiceId) {
+      invRef = doc(db, 'invoices', entry.invoiceId);
+      const invDoc = await transaction.get(invRef);
+      if (invDoc.exists()) {
+        currentInv = invDoc.data() as InvoiceData;
+      }
+    }
+
+    // 2. ALL WRITES AFTER READS
     transaction.set(entryRef, {
       ...entry,
       createdAt: serverTimestamp()
     });
 
-    // If tied to an invoice, recalculate invoice balance atomically
-    if (entry.invoiceId) {
-      const invRef = doc(db, 'invoices', entry.invoiceId);
-      const invDoc = await transaction.get(invRef);
+    if (currentInv && invRef) {
+      let newBalance = currentInv.balanceCents;
 
-      if (invDoc.exists()) {
-        const currentInv = invDoc.data() as InvoiceData;
-        let newBalance = currentInv.balanceCents;
-
-        if (entry.type === 'payment' || entry.type === 'partial_payment' || entry.type === 'credit') {
-          newBalance -= entry.amountCents;
-        } else if (entry.type === 'refund' || entry.type === 'charge' || entry.type === 'cancellation_fee') {
-          newBalance += entry.amountCents;
-        }
-
-        let newStatus: InvoiceStatus = currentInv.status;
-        if (newBalance <= 0) {
-          newStatus = 'paid';
-          newBalance = 0;
-        } else if (newBalance < currentInv.totalCents) {
-          newStatus = 'partially_paid';
-        } else {
-          newStatus = 'unpaid';
-        }
-
-        transaction.update(invRef, {
-          balanceCents: newBalance,
-          status: newStatus,
-          updatedAt: serverTimestamp()
-        });
+      if (entry.type === 'payment' || entry.type === 'partial_payment' || entry.type === 'credit') {
+        newBalance -= entry.amountCents;
+      } else if (entry.type === 'refund' || entry.type === 'charge' || entry.type === 'cancellation_fee') {
+        newBalance += entry.amountCents;
       }
+
+      let newStatus: InvoiceStatus = currentInv.status;
+      if (newBalance <= 0) {
+        newStatus = 'paid';
+        newBalance = 0;
+      } else if (newBalance < currentInv.totalCents) {
+        newStatus = 'partially_paid';
+      } else {
+        newStatus = 'unpaid';
+      }
+
+      transaction.update(invRef, {
+        balanceCents: newBalance,
+        status: newStatus,
+        updatedAt: serverTimestamp()
+      });
     }
   });
 

@@ -32,6 +32,19 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
   const [payMethod, setPayMethod] = useState<'credit_card_token' | 'check' | 'cash' | 'hsa_fsa'>('credit_card_token');
   const [payRef, setPayRef] = useState('');
 
+  // Single Invoice PDF Modal View
+  const [viewSingleInvoice, setViewSingleInvoice] = useState<InvoiceData | null>(null);
+
+  const getClientName = (cid: string) => {
+    const found = clientList.find((c) => c.uid === cid);
+    return found ? `${found.legalFirstName} ${found.legalLastName}` : 'Assigned Client';
+  };
+
+  const getClientEmail = (cid: string) => {
+    const found = clientList.find((c) => c.uid === cid);
+    return found?.email || '';
+  };
+
   useEffect(() => {
     if (isStaff) {
       getClientsDirectory().then((list) => {
@@ -109,7 +122,7 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
       setShowNewInv(false);
       setInvDesc('');
       setInvAmount('');
-      setInvMessage({ type: 'success', text: `Invoice ${invoiceNum} created and assigned successfully!` });
+      setInvMessage({ type: 'success', text: `Invoice ${invoiceNum} created and assigned successfully to ${getClientName(targetId)}!` });
     } catch (err: any) {
       console.error("Failed to create invoice", err);
       setInvMessage({ type: 'error', text: err.message || "Failed to create invoice. Please check network/permissions." });
@@ -369,6 +382,7 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
               <thead className="bg-[#F7F2E9] uppercase tracking-wider font-semibold border-b border-[#EAE1D2]">
                 <tr>
                   <th className="py-3 px-4">Invoice #</th>
+                  {isStaff && <th className="py-3 px-4">Assigned Client</th>}
                   <th className="py-3 px-4">Description</th>
                   <th className="py-3 px-4">Due Date</th>
                   <th className="py-3 px-4">Total</th>
@@ -380,7 +394,14 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
               <tbody className="divide-y divide-[#EAE1D2]">
                 {invoices.map((inv) => (
                   <tr key={inv.id} className="hover:bg-[#F7F2E9]/40 transition">
-                    <td className="py-3.5 px-4 font-mono font-semibold">{inv.invoiceNumber}</td>
+                    <td className="py-3.5 px-4 font-mono font-semibold text-[#BF5B33] cursor-pointer hover:underline" onClick={() => setViewSingleInvoice(inv)}>
+                      {inv.invoiceNumber}
+                    </td>
+                    {isStaff && (
+                      <td className="py-3.5 px-4 font-medium text-[#2C2A2A]">
+                        {getClientName(inv.clientId)}
+                      </td>
+                    )}
                     <td className="py-3.5 px-4">{inv.description}</td>
                     <td className="py-3.5 px-4">{inv.dueDate}</td>
                     <td className="py-3.5 px-4 font-semibold">${(inv.totalCents / 100).toFixed(2)}</td>
@@ -402,7 +423,7 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
                         </button>
                       )}
                       <button
-                        onClick={() => window.print()}
+                        onClick={() => setViewSingleInvoice(inv)}
                         className="ml-2 px-2.5 py-1 border border-[#EAE1D2] text-[#2C2A2A] font-semibold rounded-lg text-xs hover:bg-[#F7F2E9]"
                       >
                         🖨️ PDF
@@ -439,6 +460,107 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
           </div>
         )}
       </div>
+
+      {/* Single Invoice PDF Modal View */}
+      {viewSingleInvoice && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-8 shadow-2xl space-y-6 relative border border-[#EAE1D2]">
+            {/* Modal Actions */}
+            <div className="flex justify-between items-center border-b border-[#EAE1D2] pb-4 no-print">
+              <span className="text-xs font-semibold uppercase text-gray-500">Official Invoice Receipt</span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 bg-[#BF5B33] text-white text-xs font-semibold rounded-xl hover:bg-[#a64e2b] transition flex items-center gap-1.5"
+                >
+                  🖨️ Print Single Invoice PDF
+                </button>
+                <button
+                  onClick={() => setViewSingleInvoice(null)}
+                  className="px-4 py-2 border border-[#EAE1D2] text-xs font-semibold rounded-xl hover:bg-gray-50"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            {/* Invoice Printable Document Body */}
+            <div className="space-y-6 text-[#2C2A2A]">
+              {/* Header */}
+              <div className="flex justify-between items-start border-b border-[#EAE1D2] pb-4">
+                <div>
+                  <h1 className="text-2xl font-serif font-bold text-[#2C2A2A]">Family Trust Therapy</h1>
+                  <p className="text-xs text-gray-600 mt-0.5">Attachment Matters, LLC • Durango, CO 81301</p>
+                  <p className="text-xs text-gray-600">Tel: (505) 920-6351 • Email: info@familytrusttherapy.com</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xl font-mono font-bold text-[#BF5B33]">{viewSingleInvoice.invoiceNumber}</span>
+                  <p className="text-xs text-gray-500 mt-1">Due Date: {viewSingleInvoice.dueDate}</p>
+                </div>
+              </div>
+
+              {/* Client Info */}
+              <div className="bg-[#F7F2E9] p-4 rounded-xl border border-[#EAE1D2] flex justify-between text-xs">
+                <div>
+                  <span className="font-bold uppercase text-[#4A5741] block mb-1">Billed To:</span>
+                  <p className="font-semibold text-sm text-[#2C2A2A]">{getClientName(viewSingleInvoice.clientId)}</p>
+                  {getClientEmail(viewSingleInvoice.clientId) && (
+                    <p className="text-gray-600">{getClientEmail(viewSingleInvoice.clientId)}</p>
+                  )}
+                </div>
+                <div className="text-right">
+                  <span className="font-bold uppercase text-[#4A5741] block mb-1">Payment Status:</span>
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                    viewSingleInvoice.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    {viewSingleInvoice.status.replace('_', ' ')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Itemized Line Items */}
+              <div className="border border-[#EAE1D2] rounded-xl overflow-hidden text-xs">
+                <table className="w-full text-left">
+                  <thead className="bg-[#F7F2E9] border-b border-[#EAE1D2] uppercase font-semibold">
+                    <tr>
+                      <th className="py-2.5 px-4">Item Description</th>
+                      <th className="py-2.5 px-4 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="py-3 px-4 font-medium">{viewSingleInvoice.description}</td>
+                      <td className="py-3 px-4 text-right font-mono font-semibold">${(viewSingleInvoice.totalCents / 100).toFixed(2)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Financial Totals */}
+              <div className="flex justify-end pt-2 text-xs">
+                <div className="w-64 space-y-2 bg-[#F7F2E9] p-4 rounded-xl border border-[#EAE1D2]">
+                  <div className="flex justify-between text-gray-700">
+                    <span>Invoice Total:</span>
+                    <span className="font-semibold">${(viewSingleInvoice.totalCents / 100).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-700">
+                    <span>Amount Paid:</span>
+                    <span className="font-semibold">${((viewSingleInvoice.totalCents - viewSingleInvoice.balanceCents) / 100).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-[#EAE1D2] pt-2 font-bold text-sm text-[#BF5B33]">
+                    <span>Balance Due:</span>
+                    <span>${(viewSingleInvoice.balanceCents / 100).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-center text-[11px] text-gray-500 border-t border-[#EAE1D2] pt-4">
+                Thank you for trusting Family Trust Therapy with your care.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
