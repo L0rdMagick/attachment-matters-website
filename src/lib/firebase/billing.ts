@@ -77,8 +77,15 @@ export async function recordLedgerTransaction(entry: Omit<LedgerEntryData, 'id'>
 
       if (entry.type === 'payment' || entry.type === 'partial_payment' || entry.type === 'credit') {
         newBalance -= entry.amountCents;
-      } else if (entry.type === 'refund' || entry.type === 'charge' || entry.type === 'cancellation_fee') {
+      } else if (entry.type === 'refund' || entry.type === 'cancellation_fee') {
         newBalance += entry.amountCents;
+      } else if (entry.type === 'charge') {
+        // If initial charge for invoice, cap/align at totalCents
+        if (newBalance >= currentInv.totalCents) {
+          newBalance = currentInv.totalCents;
+        } else {
+          newBalance = Math.min(currentInv.totalCents, newBalance + entry.amountCents);
+        }
       }
 
       let newStatus: InvoiceStatus = currentInv.status;
