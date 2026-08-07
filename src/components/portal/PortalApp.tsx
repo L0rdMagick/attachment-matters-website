@@ -24,7 +24,7 @@ import { TherapistCalendar } from './scheduling/TherapistCalendar';
 
 // Phase 4 Modules
 import { SharedNotesView } from './notes/SharedNotesView';
-import { PrivateClinicalNotesEditor } from './notes/PrivateClinicalNotesEditor';
+import { PrivateClinicalNotesView } from './notes/PrivateClinicalNotesView';
 import { LedgerManager } from './billing/LedgerManager';
 
 type AuthScreen = 'login' | 'register' | 'forgot';
@@ -188,16 +188,7 @@ const MainPortalContent: React.FC = () => {
             <ClientDirectory onSelectClient={(id) => setSelectedClientId(id)} />
           )
         )}
-        {activeTab === 'clinical-notes' && (
-          <div className="space-y-4">
-            <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm">
-              <h2 className="text-2xl font-serif text-[#2C2A2A] font-medium">Private Clinical Notes (DAP/SOAP)</h2>
-              <p className="text-xs text-[#2C2A2A]/70 mt-1">
-                Select a client from the Client Directory to open their confidential clinical chart and document DAP notes.
-              </p>
-            </div>
-          </div>
-        )}
+        {activeTab === 'clinical-notes' && <PrivateClinicalNotesView />}
         {activeTab === 'shared-notes' && <SharedNotesView />}
         {activeTab === 'billing' && <LedgerManager />}
         {activeTab === 'intake-templates' && (

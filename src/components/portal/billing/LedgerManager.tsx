@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { getInvoicesForClient, getLedgerForClient, createInvoice, recordLedgerTransaction } from '../../../lib/firebase/billing';
+import { getClientsDirectory } from '../../../lib/firebase/clients';
 import type { InvoiceData, LedgerEntryData, LedgerEntryType } from '../../../types/billing';
+import type { ClientProfileData } from '../../../types/client';
 
 export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetClientId }) => {
   const { user, role } = useAuth();
-  const clientId = targetClientId || user?.uid;
   const isStaff = role === 'therapist' || role === 'admin';
+
+  const [clientList, setClientList] = useState<ClientProfileData[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>(targetClientId || '');
+
+  const activeClientId = targetClientId || (isStaff ? selectedClientId : user?.uid);
 
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntryData[]>([]);
@@ -25,12 +31,27 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
   const [payRef, setPayRef] = useState('');
 
   useEffect(() => {
-    if (!clientId) return;
+    if (isStaff) {
+      getClientsDirectory().then((list) => {
+        setClientList(list);
+        if (!selectedClientId && list.length > 0) {
+          setSelectedClientId(targetClientId || list[0].uid);
+        }
+      }).catch(err => console.error("Failed to fetch clients for billing", err));
+    }
+  }, [isStaff, targetClientId]);
+
+  useEffect(() => {
+    if (!activeClientId) {
+      setLoading(false);
+      return;
+    }
     async function loadBilling() {
+      setLoading(true);
       try {
         const [invs, ledger] = await Promise.all([
-          getInvoicesForClient(clientId!),
-          getLedgerForClient(clientId!)
+          getInvoicesForClient(activeClientId!),
+          getLedgerForClient(activeClientId!)
         ]);
         setInvoices(invs);
         setLedgerEntries(ledger);
@@ -41,17 +62,17 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
       }
     }
     loadBilling();
-  }, [clientId]);
+  }, [activeClientId]);
 
   const handleCreateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clientId || !invAmount) return;
+    if (!activeClientId || !invAmount) return;
     const amountCents = Math.round(parseFloat(invAmount) * 100);
     const invoiceNum = `INV-${Date.now().toString().slice(-6)}`;
 
     try {
       const invId = await createInvoice({
-        clientId,
+        clientId: activeClientId,
         invoiceNumber: invoiceNum,
         description: invDesc || 'Therapy Services Session',
         totalCents: amountCents,
@@ -62,7 +83,7 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
 
       // Also record initial charge entry in ledger
       await recordLedgerTransaction({
-        clientId,
+        clientId: activeClientId,
         invoiceId: invId,
         type: 'charge',
         amountCents,
@@ -72,8 +93,8 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
 
       // Refresh
       const [invs, ledger] = await Promise.all([
-        getInvoicesForClient(clientId),
-        getLedgerForClient(clientId)
+        getInvoicesForClient(activeClientId),
+        getLedgerForClient(activeClientId)
       ]);
       setInvoices(invs);
       setLedgerEntries(ledger);
@@ -87,12 +108,12 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
 
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clientId || !selectedInvForPay || !payAmount || !user) return;
+    if (!activeClientId || !selectedInvForPay || !payAmount || !user) return;
     const amountCents = Math.round(parseFloat(payAmount) * 100);
 
     try {
       await recordLedgerTransaction({
-        clientId,
+        clientId: activeClientId,
         invoiceId: selectedInvForPay.id,
         type: 'payment',
         amountCents,
@@ -104,8 +125,8 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
 
       // Refresh
       const [invs, ledger] = await Promise.all([
-        getInvoicesForClient(clientId),
-        getLedgerForClient(clientId)
+        getInvoicesForClient(activeClientId),
+        getLedgerForClient(activeClientId)
       ]);
       setInvoices(invs);
       setLedgerEntries(ledger);
@@ -140,6 +161,30 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
           </p>
         </div>
       </div>
+
+      {isStaff && !targetClientId && (
+        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <label htmlFor="staff-client-select" className="text-xs font-semibold uppercase text-[#2C2A2A]">
+            Select Client to View/Issue Invoices:
+          </label>
+          <select
+            id="staff-client-select"
+            value={selectedClientId}
+            onChange={(e) => setSelectedClientId(e.target.value)}
+            className="p-2.5 rounded-xl border border-[#EAE1D2] text-xs font-medium bg-white text-[#2C2A2A] max-w-sm w-full outline-none focus:ring-2 focus:ring-[#BF5B33]/20"
+          >
+            {clientList.length === 0 ? (
+              <option value="">No clients found</option>
+            ) : (
+              clientList.map((c) => (
+                <option key={c.uid} value={c.uid}>
+                  {c.legalFirstName} {c.legalLastName} ({c.email || 'No Email'})
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+      )}
 
       {isStaff && (
         <div className="flex justify-end">

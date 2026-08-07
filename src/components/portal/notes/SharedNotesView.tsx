@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { getSharedNotesForClient, saveSharedNote, publishSharedNote } from '../../../lib/firebase/notes';
+import { getClientsDirectory } from '../../../lib/firebase/clients';
 import type { SharedNoteData } from '../../../types/notes';
+import type { ClientProfileData } from '../../../types/client';
 
 export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetClientId }) => {
   const { user, role } = useAuth();
-  const clientId = targetClientId || user?.uid;
   const isTherapist = role === 'therapist' || role === 'admin';
+
+  const [clientList, setClientList] = useState<ClientProfileData[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>(targetClientId || '');
+
+  const activeClientId = targetClientId || (isTherapist ? selectedClientId : user?.uid);
 
   const [notes, setNotes] = useState<SharedNoteData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -14,10 +20,25 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!clientId) return;
+    if (isTherapist) {
+      getClientsDirectory().then((list) => {
+        setClientList(list);
+        if (!selectedClientId && list.length > 0) {
+          setSelectedClientId(targetClientId || list[0].uid);
+        }
+      }).catch(err => console.error("Failed to load clients for shared notes", err));
+    }
+  }, [isTherapist, targetClientId]);
+
+  useEffect(() => {
+    if (!activeClientId) {
+      setLoading(false);
+      return;
+    }
     async function loadNotes() {
+      setLoading(true);
       try {
-        const data = await getSharedNotesForClient(clientId!, isTherapist);
+        const data = await getSharedNotesForClient(activeClientId!, isTherapist);
         setNotes(data);
       } catch (err) {
         console.error("Failed to load shared notes", err);
@@ -26,20 +47,20 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
       }
     }
     loadNotes();
-  }, [clientId, isTherapist]);
+  }, [activeClientId, isTherapist]);
 
   const handleSaveNote = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingNote || !clientId || !user) return;
+    if (!editingNote || !activeClientId || !user) return;
     setSaving(true);
 
     try {
       await saveSharedNote({
         ...editingNote,
-        clientId,
+        clientId: activeClientId,
         therapistId: user.uid
       });
-      const updated = await getSharedNotesForClient(clientId, isTherapist);
+      const updated = await getSharedNotesForClient(activeClientId, isTherapist);
       setNotes(updated);
       setEditingNote(null);
     } catch (err) {
@@ -50,9 +71,10 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
   };
 
   const handlePublish = async (noteId: string) => {
+    if (!activeClientId) return;
     try {
       await publishSharedNote(noteId);
-      const updated = await getSharedNotesForClient(clientId!, isTherapist);
+      const updated = await getSharedNotesForClient(activeClientId, isTherapist);
       setNotes(updated);
     } catch (err) {
       console.error("Failed to publish note", err);
@@ -82,6 +104,30 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
           </button>
         )}
       </div>
+
+      {isTherapist && !targetClientId && (
+        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <label htmlFor="staff-shared-client-select" className="text-xs font-semibold uppercase text-[#2C2A2A]">
+            Select Client for Shared Summaries & Homework:
+          </label>
+          <select
+            id="staff-shared-client-select"
+            value={selectedClientId}
+            onChange={(e) => setSelectedClientId(e.target.value)}
+            className="p-2.5 rounded-xl border border-[#EAE1D2] text-xs font-medium bg-white text-[#2C2A2A] max-w-sm w-full outline-none focus:ring-2 focus:ring-[#BF5B33]/20"
+          >
+            {clientList.length === 0 ? (
+              <option value="">No clients found</option>
+            ) : (
+              clientList.map((c) => (
+                <option key={c.uid} value={c.uid}>
+                  {c.legalFirstName} {c.legalLastName} ({c.email || 'No Email'})
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+      )}
 
       {/* Editor Modal / Form for Therapist */}
       {isTherapist && editingNote && (
