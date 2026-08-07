@@ -4,6 +4,8 @@ export interface SharedNoteData {
   therapistId: string;
   title: string;
   sessionDate?: string;
+  startDate?: string;
+  endDate?: string;
   recapSummary: string;
   homeworkAssigned?: string;
   goalsForNextSession?: string;

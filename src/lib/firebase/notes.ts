@@ -5,6 +5,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   serverTimestamp,
@@ -56,6 +57,11 @@ export async function publishSharedNote(noteId: string) {
     publishedAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
+}
+
+export async function deleteSharedNote(noteId: string) {
+  const docRef = doc(db, 'sharedNotes', noteId);
+  await deleteDoc(docRef);
 }
 
 /**

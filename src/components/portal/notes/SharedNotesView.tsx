@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { getSharedNotesForClient, saveSharedNote, publishSharedNote } from '../../../lib/firebase/notes';
+import { getSharedNotesForClient, saveSharedNote, publishSharedNote, deleteSharedNote } from '../../../lib/firebase/notes';
 import { getClientsDirectory } from '../../../lib/firebase/clients';
 import type { SharedNoteData } from '../../../types/notes';
 import type { ClientProfileData } from '../../../types/client';
@@ -81,6 +81,18 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
     }
   };
 
+  const handleDeleteNote = async (noteId: string) => {
+    if (!activeClientId) return;
+    if (!confirm("Are you sure you want to delete this shared summary?")) return;
+    try {
+      await deleteSharedNote(noteId);
+      const updated = await getSharedNotesForClient(activeClientId, isTherapist);
+      setNotes(updated);
+    } catch (err) {
+      console.error("Failed to delete shared note", err);
+    }
+  };
+
   if (loading) {
     return <div className="p-8 text-center bg-white border border-[#EAE1D2] rounded-2xl">Loading shared session summaries...</div>;
   }
@@ -97,7 +109,14 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
 
         {isTherapist && (
           <button
-            onClick={() => setEditingNote({ title: '', recapSummary: '', homeworkAssigned: '', goalsForNextSession: '' })}
+            onClick={() => setEditingNote({
+              title: '',
+              recapSummary: '',
+              homeworkAssigned: '',
+              goalsForNextSession: '',
+              startDate: new Date().toISOString().split('T')[0],
+              endDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
+            })}
             className="px-4 py-2 bg-[#BF5B33] text-white font-semibold text-xs rounded-xl shadow-sm hover:bg-[#a64e2b] transition"
           >
             + Create Shared Note
@@ -136,16 +155,37 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
             {editingNote.id ? 'Edit Shared Summary' : 'New Shared Session Summary'}
           </h3>
 
-          <div>
-            <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Title / Focus</label>
-            <input
-              type="text"
-              required
-              value={editingNote.title || ''}
-              onChange={(e) => setEditingNote({ ...editingNote, title: e.target.value })}
-              className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-              placeholder="e.g. Grounding Exercises & Cognitive Restructuring"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="sm:col-span-1">
+              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Start Date</label>
+              <input
+                type="date"
+                required
+                value={editingNote.startDate || ''}
+                onChange={(e) => setEditingNote({ ...editingNote, startDate: e.target.value })}
+                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+              />
+            </div>
+            <div className="sm:col-span-1">
+              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Goal Due Date (End Date)</label>
+              <input
+                type="date"
+                value={editingNote.endDate || ''}
+                onChange={(e) => setEditingNote({ ...editingNote, endDate: e.target.value })}
+                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+              />
+            </div>
+            <div className="sm:col-span-1">
+              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Title / Focus</label>
+              <input
+                type="text"
+                required
+                value={editingNote.title || ''}
+                onChange={(e) => setEditingNote({ ...editingNote, title: e.target.value })}
+                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                placeholder="e.g. Grounding Exercises & Co-Regulation"
+              />
+            </div>
           </div>
 
           <div>
@@ -159,7 +199,7 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Homework / Exercises</label>
               <textarea
@@ -193,7 +233,7 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
               disabled={saving}
               className="px-4 py-2 bg-[#BF5B33] text-white text-xs font-semibold rounded-xl shadow-sm"
             >
-              {saving ? 'Saving Draft...' : 'Save Draft'}
+              {saving ? 'Saving...' : 'Save Summary'}
             </button>
           </div>
         </form>
@@ -208,9 +248,16 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
         ) : (
           notes.map((note) => (
             <div key={note.id} className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-3">
-              <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-3">
-                <h3 className="text-lg font-serif font-medium text-[#2C2A2A]">{note.title}</h3>
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#EAE1D2] pb-3 gap-2">
+                <div>
+                  <h3 className="text-lg font-serif font-medium text-[#2C2A2A]">{note.title}</h3>
+                  <div className="flex items-center gap-2 mt-1 text-[11px] text-gray-500">
+                    {note.startDate && <span>📅 Start: <strong>{note.startDate}</strong></span>}
+                    {note.endDate && <span className="text-[#BF5B33]">🎯 Goal Due: <strong>{note.endDate}</strong></span>}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
                   {!note.isPublished ? (
                     <span className="px-2.5 py-1 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full uppercase">
                       Draft (Hidden from Client)
@@ -228,6 +275,23 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
                     >
                       📢 Publish to Client
                     </button>
+                  )}
+
+                  {isTherapist && (
+                    <>
+                      <button
+                        onClick={() => setEditingNote(note)}
+                        className="px-3 py-1 border border-[#EAE1D2] text-[#2C2A2A] text-xs font-semibold rounded-lg hover:bg-[#F7F2E9] transition"
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteNote(note.id!)}
+                        className="px-3 py-1 bg-red-50 text-red-700 text-xs font-semibold rounded-lg hover:bg-red-100 transition"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
