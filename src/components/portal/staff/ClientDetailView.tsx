@@ -7,6 +7,7 @@ import type { ClientProfileData } from '../../../types/client';
 import type { SignedDocumentData } from '../../../types/consent';
 import type { IntakeSubmissionData } from '../../../types/intake';
 import type { AppointmentData, AppointmentStatus } from '../../../types/scheduling';
+import { PrivateClinicalNotesView } from '../notes/PrivateClinicalNotesView';
 
 interface ClientDetailViewProps {
   clientId: string;
@@ -495,7 +496,18 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                 <p className="text-[11px] text-[#2C2A2A]/50 mt-1">Client intake status: Not Started.</p>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="official-print-document space-y-6">
+                {/* Print Document Official Header */}
+                <div className="hidden print:block p-6 border-b-2 border-[#BF5B33] mb-6">
+                  <h1 className="text-2xl font-serif font-bold text-[#2C2A2A]">Family Trust Therapy</h1>
+                  <p className="text-xs font-semibold text-[#4A5741] uppercase tracking-wider">Official Confidential Client Intake Packet Document</p>
+                  <div className="mt-4 pt-3 border-t border-gray-200 grid grid-cols-2 gap-4 text-xs">
+                    <p><strong>Client Name:</strong> {client.legalFirstName} {client.legalLastName}</p>
+                    <p><strong>Date of Birth:</strong> {client.dateOfBirth || 'N/A'}</p>
+                    <p><strong>Submission Status:</strong> {intakeData?.status ? intakeData.status.toUpperCase() : client.intakeStatus.toUpperCase()}</p>
+                    <p><strong>Submitted Date:</strong> {intakeData?.submittedAt ? new Date(intakeData.submittedAt).toLocaleDateString() : 'N/A'}</p>
+                  </div>
+                </div>
                 {/* Therapist Review Controls Banner */}
                 <div className="bg-[#F7F2E9] p-5 rounded-2xl border border-[#EAE1D2] space-y-4 no-print print:hidden">
                   <h4 className="font-semibold text-xs uppercase tracking-wider text-[#4A5741]">Therapist Intake Packet Review Actions</h4>
@@ -792,10 +804,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
 
         {activeTab === 'private-clinical-notes' && (
           <div className="space-y-4">
-            <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs font-semibold">
-              🔒 <strong>PRIVATE CLINICAL NOTES SECTION:</strong> Protected health information in this tab is strictly prohibited from client access.
-            </div>
-            <p className="text-xs text-[#2C2A2A]/70">DAP / SOAP Clinical Notes Editor initialized for staff documentation.</p>
+            <PrivateClinicalNotesView targetClientId={client.uid} />
           </div>
         )}
 

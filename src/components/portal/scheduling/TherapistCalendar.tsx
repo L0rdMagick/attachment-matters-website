@@ -65,9 +65,13 @@ export const TherapistCalendar: React.FC = () => {
     const startISO = `${schedDate}T${schedTime}:00`;
     const endISO = new Date(new Date(startISO).getTime() + (schedType?.durationMinutes || 50) * 60000).toISOString();
 
+    const selectedClientObj = clientList.find(c => c.uid === selectedClientId);
+
     try {
       await bookAppointmentWithLock({
         clientId: selectedClientId,
+        clientName: selectedClientObj ? `${selectedClientObj.legalFirstName} ${selectedClientObj.legalLastName}` : undefined,
+        clientEmail: selectedClientObj?.email || undefined,
         therapistId: 'default_therapist',
         appointmentTypeId: schedType.id,
         appointmentTypeName: schedType.name,
@@ -174,27 +178,35 @@ export const TherapistCalendar: React.FC = () => {
           </p>
         ) : (
           <div className="space-y-3">
-            {displayedAppts.map((a) => (
-              <div key={a.id} className="p-4 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2] flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs text-[#2C2A2A]">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm">{a.appointmentTypeName}</span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                      a.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' :
-                      a.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
-                      a.status === 'requested' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {a.status.replace(/_/g, ' ')}
-                    </span>
+            {displayedAppts.map((a) => {
+              const matchedClient = clientList.find(c => c.uid === a.clientId);
+              const displayName = a.clientName || (matchedClient ? `${matchedClient.legalFirstName} ${matchedClient.legalLastName}` : `Client ID: ${a.clientId.slice(0, 8)}...`);
+              const displayEmail = a.clientEmail || matchedClient?.email;
+
+              return (
+                <div key={a.id} className="p-4 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2] flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs text-[#2C2A2A]">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-sm">{a.appointmentTypeName}</span>
+                      <span className="bg-[#BF5B33]/15 text-[#BF5B33] px-2.5 py-0.5 rounded-md font-bold text-xs">
+                        👤 Client: {displayName} {displayEmail ? `(${displayEmail})` : ''}
+                      </span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        a.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' :
+                        a.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                        a.status === 'requested' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {a.status.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <p className="mt-1">
+                      <strong>Time:</strong> {new Date(a.startISO).toLocaleString()} | <strong>Format:</strong> <span className="capitalize">{a.format}</span>
+                    </p>
+                    <p className="text-[11px] text-[#4A5741] mt-0.5">
+                      🔒 GCal Title: "Reserved Appointment" (Privacy Protected)
+                    </p>
                   </div>
-                  <p className="mt-1">
-                    <strong>Time:</strong> {new Date(a.startISO).toLocaleString()} | <strong>Format:</strong> <span className="capitalize">{a.format}</span>
-                  </p>
-                  <p className="text-[11px] text-[#4A5741] mt-0.5">
-                    🔒 GCal Title: "Reserved Appointment" (Privacy Protected)
-                  </p>
-                </div>
 
                 <div className="flex items-center gap-2 shrink-0">
                   {a.status !== 'completed' && (
@@ -214,8 +226,8 @@ export const TherapistCalendar: React.FC = () => {
                     </button>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

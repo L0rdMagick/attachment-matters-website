@@ -47,6 +47,8 @@ export type AppointmentStatus =
 export interface AppointmentData {
   id?: string;
   clientId: string;
+  clientName?: string;
+  clientEmail?: string;
   therapistId: string;
   appointmentTypeId: string;
   appointmentTypeName: string;

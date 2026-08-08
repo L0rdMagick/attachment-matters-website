@@ -28,7 +28,6 @@
   .official-print-document,
   .official-print-document * {
     visibility: visible !important;
-    display: block !important;
   }
   
   .official-print-document {
@@ -37,7 +36,7 @@
     top: 0 !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 20px !important;
     border: none !important;
     box-shadow: none !important;
     background-color: #ffffff !important;

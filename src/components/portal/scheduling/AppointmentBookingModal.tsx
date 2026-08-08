@@ -77,6 +77,8 @@ export const AppointmentBookingModal: React.FC = () => {
 
     const appointmentPayload: Omit<AppointmentData, 'id'> = {
       clientId: user.uid,
+      clientName: user.displayName || user.email || 'Client',
+      clientEmail: user.email || undefined,
       therapistId: 'default_therapist',
       appointmentTypeId: selectedType.id,
       appointmentTypeName: selectedType.name,
