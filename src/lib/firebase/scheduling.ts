@@ -348,9 +348,17 @@ export async function bookAppointmentWithLock(appointment: Omit<AppointmentData,
       createdAt: serverTimestamp()
     });
 
+    // Filter out undefined properties because Firestore transaction.set throws on undefined values
+    const cleanAppointmentData: Record<string, any> = {};
+    for (const [key, val] of Object.entries(appointment)) {
+      if (val !== undefined) {
+        cleanAppointmentData[key] = val;
+      }
+    }
+
     // Create appointment record
     transaction.set(newApptRef, {
-      ...appointment,
+      ...cleanAppointmentData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
