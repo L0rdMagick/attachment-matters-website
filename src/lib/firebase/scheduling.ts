@@ -153,6 +153,24 @@ export function getAvailableTimeSlots(
     };
   }
 
+  const nowMs = Date.now();
+
+  // 1. Enforce Max Advance Booking Window (0 - 100 Days)
+  const maxAdvanceDays = rules.maxAdvanceDays ?? 60;
+  const maxAdvanceMs = nowMs + maxAdvanceDays * 86400000;
+  const targetDateMs = new Date(`${dateStr}T23:59:59`).getTime();
+
+  if (targetDateMs > maxAdvanceMs) {
+    return {
+      slots: [],
+      reason: `Online booking is only permitted up to ${maxAdvanceDays} day${maxAdvanceDays === 1 ? '' : 's'} in advance per practice policy.`
+    };
+  }
+
+  // 2. Enforce Minimum Lead Notice Window (Hours/Days)
+  const minNoticeHours = rules.minNoticeHours ?? 24;
+  const minNoticeMs = nowMs + minNoticeHours * 3600000;
+
   const [startHour, startMin] = dayConfig.startTime.split(':').map(Number);
   const [endHour, endMin] = dayConfig.endTime.split(':').map(Number);
 
@@ -170,6 +188,11 @@ export function getAvailableTimeSlots(
     const slotStartMs = new Date(slotStartISO).getTime();
     const slotEndMs = slotStartMs + durationMinutes * 60000;
 
+    // Check if slot falls within minimum lead notice period
+    if (slotStartMs < minNoticeMs) {
+      continue;
+    }
+
     // Check for overlap with existing confirmed/requested appointments
     const hasOverlap = existingAppointments.some((appt) => {
       if (appt.status !== 'confirmed' && appt.status !== 'requested') return false;
@@ -181,6 +204,14 @@ export function getAvailableTimeSlots(
     if (!hasOverlap) {
       validSlots.push(slotTimeStr);
     }
+  }
+
+  if (validSlots.length === 0) {
+    const minNoticeDays = (minNoticeHours / 24).toFixed(1).replace('.0', '');
+    return {
+      slots: [],
+      reason: `No available slots on this date (minimum notice requirement is ${minNoticeDays} day${minNoticeDays === '1' ? '' : 's'} / ${minNoticeHours} hrs).`
+    };
   }
 
   return { slots: validSlots };

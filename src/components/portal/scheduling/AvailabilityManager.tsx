@@ -152,10 +152,10 @@ export const AvailabilityManager: React.FC = () => {
         {/* Practice Timezone & Rules */}
         <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
           <h3 className="text-xl font-serif text-[#2C2A2A] font-medium border-b border-[#EAE1D2] pb-3">
-            3. Practice Timezone & Booking Deadlines
+            3. Practice Timezone & Booking Parameters (0 - 100 Days)
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-semibold uppercase text-[#2C2A2A]">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-semibold uppercase text-[#2C2A2A]">
             <div>
               <label htmlFor="av-tz" className="block mb-1">Practice Timezone</label>
               <select
@@ -164,38 +164,83 @@ export const AvailabilityManager: React.FC = () => {
                 onChange={(e) => setRules({ ...rules, timezone: e.target.value })}
                 className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs normal-case bg-white"
               >
+                <option value="America/Denver">America/Denver (Mountain MT)</option>
                 <option value="America/Chicago">America/Chicago (Central CT)</option>
                 <option value="America/New_York">America/New_York (Eastern ET)</option>
-                <option value="America/Denver">America/Denver (Mountain MT)</option>
                 <option value="America/Los_Angeles">America/Los_Angeles (Pacific PT)</option>
+                <option value="America/Anchorage">America/Anchorage (Alaska AK)</option>
+                <option value="Pacific/Honolulu">Pacific/Honolulu (Hawaii HST)</option>
               </select>
             </div>
 
             <div>
-              <label htmlFor="av-[#notice]" className="block mb-1">Minimum Booking Notice</label>
-              <select
-                id="av-notice"
-                value={rules.minNoticeHours}
-                onChange={(e) => setRules({ ...rules, minNoticeHours: parseInt(e.target.value) })}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs normal-case bg-white"
-              >
-                <option value="12">12 Hours Notice</option>
-                <option value="24">24 Hours Notice (Recommended)</option>
-                <option value="48">48 Hours Notice</option>
-              </select>
+              <label htmlFor="av-max-advance" className="block mb-1">
+                Max Advance Booking (Days)
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="av-max-advance"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={rules.maxAdvanceDays ?? 60}
+                  onChange={(e) => {
+                    const val = Math.max(0, Math.min(100, parseInt(e.target.value) || 0));
+                    setRules({ ...rules, maxAdvanceDays: val });
+                  }}
+                  className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white"
+                  placeholder="e.g. 60"
+                />
+                <span className="text-[11px] text-[#2C2A2A]/70 normal-case whitespace-nowrap">Days Ahead</span>
+              </div>
             </div>
 
             <div>
-              <label htmlFor="av-[#cancel]" className="block mb-1">Cancellation Deadline</label>
-              <select
-                id="av-cancel"
-                value={rules.cancellationNoticeHours}
-                onChange={(e) => setRules({ ...rules, cancellationNoticeHours: parseInt(e.target.value) })}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs normal-case bg-white"
-              >
-                <option value="24">24 Hours Notice</option>
-                <option value="48">48 Hours Notice</option>
-              </select>
+              <label htmlFor="av-notice-days" className="block mb-1">
+                Min Booking Notice (Days)
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="av-notice-days"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={Math.floor((rules.minNoticeHours || 24) / 24)}
+                  onChange={(e) => {
+                    const days = Math.max(0, Math.min(100, parseInt(e.target.value) || 0));
+                    setRules({ ...rules, minNoticeHours: days * 24 });
+                  }}
+                  className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white"
+                  placeholder="e.g. 1"
+                />
+                <span className="text-[11px] text-[#2C2A2A]/70 normal-case whitespace-nowrap">
+                  ({rules.minNoticeHours || 24} hrs)
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="av-cancel-days" className="block mb-1">
+                Cancellation Deadline (Days)
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="av-cancel-days"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={Math.floor((rules.cancellationNoticeHours || 24) / 24)}
+                  onChange={(e) => {
+                    const days = Math.max(0, Math.min(100, parseInt(e.target.value) || 0));
+                    setRules({ ...rules, cancellationNoticeHours: days * 24 });
+                  }}
+                  className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white"
+                  placeholder="e.g. 1"
+                />
+                <span className="text-[11px] text-[#2C2A2A]/70 normal-case whitespace-nowrap">
+                  ({rules.cancellationNoticeHours || 24} hrs)
+                </span>
+              </div>
             </div>
           </div>
         </div>

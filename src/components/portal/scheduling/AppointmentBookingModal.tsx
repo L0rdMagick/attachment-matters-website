@@ -116,12 +116,27 @@ export const AppointmentBookingModal: React.FC = () => {
     }
   };
 
-  const handleCancelAppointment = async (apptId: string) => {
+  const handleCancelAppointment = async (appt: AppointmentData) => {
+    const cancelNoticeHours = rules?.cancellationNoticeHours ?? 24;
+    const cancelNoticeMs = cancelNoticeHours * 3600000;
+    const apptStartMs = new Date(appt.startISO).getTime();
+    const timeUntilApptMs = apptStartMs - Date.now();
+
+    if (timeUntilApptMs < cancelNoticeMs) {
+      const cancelNoticeDays = (cancelNoticeHours / 24).toFixed(1).replace('.0', '');
+      setMessage({
+        type: 'error',
+        text: `Self-service cancellation is restricted within ${cancelNoticeDays} day${cancelNoticeDays === '1' ? '' : 's'} (${cancelNoticeHours} hrs) of scheduled appointment time per practice policy. Please contact Family Trust Therapy directly to cancel.`
+      });
+      return;
+    }
+
     if (!confirm("Are you sure you want to cancel this appointment?")) return;
     try {
-      await updateAppointmentStatus(apptId, 'canceled_by_client', 'Canceled by client via portal');
+      await updateAppointmentStatus(appt.id!, 'canceled_by_client', 'Canceled by client via portal');
       const updated = await getAppointments({ clientId: user!.uid });
       setMyAppointments(updated);
+      setMessage({ type: 'success', text: 'Appointment canceled successfully.' });
     } catch (err) {
       console.error("Failed to cancel appointment", err);
     }
@@ -294,7 +309,7 @@ export const AppointmentBookingModal: React.FC = () => {
                   {appt.status === 'confirmed' || appt.status === 'requested' ? (
                     <div className="pt-2 flex justify-end">
                       <button
-                        onClick={() => handleCancelAppointment(appt.id!)}
+                        onClick={() => handleCancelAppointment(appt)}
                         className="text-[11px] font-semibold text-red-600 hover:underline"
                       >
                         Cancel Appointment
