@@ -31,18 +31,32 @@ export async function getSharedNotesForClient(clientId: string, isTherapist: boo
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as SharedNoteData));
 }
 
+function sanitizePayload<T extends object>(data: T): Record<string, any> {
+  const clean: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined) {
+      clean[key] = value;
+    }
+  }
+  return clean;
+}
+
 export async function saveSharedNote(note: Partial<SharedNoteData>): Promise<string> {
-  if (note.id) {
-    const docRef = doc(db, 'sharedNotes', note.id);
+  const cleanData = sanitizePayload(note);
+  const noteId = cleanData.id;
+  delete cleanData.id;
+
+  if (noteId) {
+    const docRef = doc(db, 'sharedNotes', noteId);
     await updateDoc(docRef, {
-      ...note,
+      ...cleanData,
       updatedAt: serverTimestamp()
     });
-    return note.id;
+    return noteId;
   } else {
     const docRef = await addDoc(collection(db, 'sharedNotes'), {
-      ...note,
-      isPublished: note.isPublished || false,
+      ...cleanData,
+      isPublished: cleanData.isPublished || false,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
@@ -76,16 +90,20 @@ export async function getPrivateClinicalNotesForClient(clientId: string): Promis
 }
 
 export async function savePrivateClinicalNote(note: Partial<PrivateClinicalNoteData>): Promise<string> {
-  if (note.id) {
-    const docRef = doc(db, 'privateClinicalNotes', note.id);
+  const cleanData = sanitizePayload(note);
+  const noteId = cleanData.id;
+  delete cleanData.id;
+
+  if (noteId) {
+    const docRef = doc(db, 'privateClinicalNotes', noteId);
     await updateDoc(docRef, {
-      ...note,
+      ...cleanData,
       updatedAt: serverTimestamp()
     });
-    return note.id;
+    return noteId;
   } else {
     const docRef = await addDoc(collection(db, 'privateClinicalNotes'), {
-      ...note,
+      ...cleanData,
       isFinalized: false,
       amendments: [],
       createdAt: serverTimestamp(),

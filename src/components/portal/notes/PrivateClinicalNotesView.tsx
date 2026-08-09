@@ -75,7 +75,10 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
 
   const handleSaveNote = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeClientId || !user) return;
+    if (!activeClientId || !user) {
+      alert("Error: Client ID or user authentication is missing.");
+      return;
+    }
     setSaving(true);
 
     try {
@@ -84,10 +87,14 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
         therapistId: user.uid,
         sessionDateISO: sessionDate,
         format: noteFormat,
-        isFinalized: false,
-        dap: noteFormat === 'DAP' ? { data: dapData, assessment: dapAssessment, plan: dapPlan } : undefined,
-        soap: noteFormat === 'SOAP' ? { subjective: soapSubjective, objective: soapObjective, assessment: soapAssessment, plan: soapPlan } : undefined
+        isFinalized: false
       };
+
+      if (noteFormat === 'DAP') {
+        payload.dap = { data: dapData, assessment: dapAssessment, plan: dapPlan };
+      } else if (noteFormat === 'SOAP') {
+        payload.soap = { subjective: soapSubjective, objective: soapObjective, assessment: soapAssessment, plan: soapPlan };
+      }
 
       await savePrivateClinicalNote(payload);
       const updated = await getPrivateClinicalNotesForClient(activeClientId);
@@ -102,8 +109,9 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
       setSoapObjective('');
       setSoapAssessment('');
       setSoapPlan('');
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to save clinical note", err);
+      alert(`Failed to save private clinical note: ${err.message || 'Unknown error'}`);
     } finally {
       setSaving(false);
     }
