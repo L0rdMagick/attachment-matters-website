@@ -140,7 +140,9 @@ export function getAvailableTimeSlots(
   dateStr: string,
   rules: AvailabilityRules,
   existingAppointments: AppointmentData[],
-  durationMinutes: number = 50
+  durationMinutes: number = 50,
+  bufferBeforeMinutes: number = 0,
+  bufferAfterMinutes: number = 0
 ): { slots: string[]; reason?: string } {
   const dayKey = getDayOfWeekKey(dateStr);
   const dayConfig = rules.workingDays[dayKey];
@@ -185,20 +187,24 @@ export function getAvailableTimeSlots(
     const m = current % 60;
     const slotTimeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     const slotStartISO = `${dateStr}T${slotTimeStr}:00`;
-    const slotStartMs = new Date(slotStartISO).getTime();
-    const slotEndMs = slotStartMs + durationMinutes * 60000;
+    const sessionStartMs = new Date(slotStartISO).getTime();
+    const sessionEndMs = sessionStartMs + durationMinutes * 60000;
+
+    // Full block including pre & post session buffers
+    const blockedStartMs = sessionStartMs - bufferBeforeMinutes * 60000;
+    const blockedEndMs = sessionEndMs + bufferAfterMinutes * 60000;
 
     // Check if slot falls within minimum lead notice period
-    if (slotStartMs < minNoticeMs) {
+    if (sessionStartMs < minNoticeMs) {
       continue;
     }
 
-    // Check for overlap with existing confirmed/requested appointments
+    // Check for overlap with existing confirmed/requested appointments (including buffer times)
     const hasOverlap = existingAppointments.some((appt) => {
       if (appt.status !== 'confirmed' && appt.status !== 'requested') return false;
       const apptStartMs = new Date(appt.startISO).getTime();
       const apptEndMs = new Date(appt.endISO).getTime();
-      return slotStartMs < apptEndMs && slotEndMs > apptStartMs;
+      return blockedStartMs < apptEndMs && blockedEndMs > apptStartMs;
     });
 
     if (!hasOverlap) {
@@ -225,7 +231,9 @@ export function checkTherapistSlotAvailability(
   timeStr: string,
   durationMinutes: number,
   rules: AvailabilityRules,
-  existingAppointments: AppointmentData[]
+  existingAppointments: AppointmentData[],
+  bufferBeforeMinutes: number = 0,
+  bufferAfterMinutes: number = 0
 ): { isAvailable: boolean; reason?: string } {
   const dayKey = getDayOfWeekKey(dateStr);
   const dayConfig = rules.workingDays[dayKey];
@@ -254,15 +262,17 @@ export function checkTherapistSlotAvailability(
     };
   }
 
-  // Check overlap with existing appointments
-  const slotStartMs = new Date(`${dateStr}T${timeStr}:00`).getTime();
-  const slotEndMs = slotStartMs + durationMinutes * 60000;
+  // Check overlap with existing appointments (accounting for pre/post buffers)
+  const sessionStartMs = new Date(`${dateStr}T${timeStr}:00`).getTime();
+  const sessionEndMs = sessionStartMs + durationMinutes * 60000;
+  const blockedStartMs = sessionStartMs - bufferBeforeMinutes * 60000;
+  const blockedEndMs = sessionEndMs + bufferAfterMinutes * 60000;
 
   const conflict = existingAppointments.find((appt) => {
     if (appt.status !== 'confirmed' && appt.status !== 'requested') return false;
     const apptStartMs = new Date(appt.startISO).getTime();
     const apptEndMs = new Date(appt.endISO).getTime();
-    return slotStartMs < apptEndMs && slotEndMs > apptStartMs;
+    return blockedStartMs < apptEndMs && blockedEndMs > apptStartMs;
   });
 
   if (conflict) {

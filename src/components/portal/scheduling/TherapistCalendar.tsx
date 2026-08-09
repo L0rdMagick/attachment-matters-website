@@ -72,7 +72,9 @@ export const TherapistCalendar: React.FC = () => {
       schedTime,
       schedType?.durationMinutes || 50,
       rules,
-      appointments
+      appointments,
+      schedType?.bufferBeforeMinutes || 0,
+      schedType?.bufferAfterMinutes || 0
     );
 
     if (!availCheck.isAvailable) {

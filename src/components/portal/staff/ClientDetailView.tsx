@@ -181,7 +181,9 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
       schedTime,
       schedType?.durationMinutes || 50,
       rules,
-      clientAppointments
+      clientAppointments,
+      schedType?.bufferBeforeMinutes || 0,
+      schedType?.bufferAfterMinutes || 0
     );
 
     if (!availCheck.isAvailable) {

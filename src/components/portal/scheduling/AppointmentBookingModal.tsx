@@ -49,7 +49,9 @@ export const AppointmentBookingModal: React.FC = () => {
     selectedDate,
     rules,
     myAppointments,
-    selectedType?.durationMinutes || 50
+    selectedType?.durationMinutes || 50,
+    selectedType?.bufferBeforeMinutes || 0,
+    selectedType?.bufferAfterMinutes || 0
   );
 
   const handleBook = async () => {
@@ -181,7 +183,11 @@ export const AppointmentBookingModal: React.FC = () => {
               value={selectedType?.id || ''}
               onChange={(e) => {
                 const found = rules?.appointmentTypes?.find((t) => t.id === e.target.value);
-                if (found) setSelectedType(found);
+                if (found) {
+                  setSelectedType(found);
+                  if (found.format === 'telehealth') setFormat('telehealth');
+                  else if (found.format === 'in_person') setFormat('in_person');
+                }
               }}
               className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white font-medium text-[#2C2A2A]"
             >
@@ -210,10 +216,11 @@ export const AppointmentBookingModal: React.FC = () => {
                 id="bk-fmt"
                 value={format}
                 onChange={(e) => setFormat(e.target.value as any)}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white"
+                disabled={selectedType?.format === 'telehealth' || selectedType?.format === 'in_person'}
+                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white disabled:opacity-75"
               >
-                <option value="telehealth">Telehealth (Video)</option>
-                <option value="in_person">In Person (Office)</option>
+                {selectedType?.format !== 'in_person' && <option value="telehealth">Telehealth (Video)</option>}
+                {selectedType?.format !== 'telehealth' && <option value="in_person">In Person (Office)</option>}
               </select>
             </div>
           </div>
