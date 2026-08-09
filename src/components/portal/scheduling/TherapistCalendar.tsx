@@ -129,6 +129,16 @@ export const TherapistCalendar: React.FC = () => {
     rescheduleApptType?.bufferAfterMinutes || 0
   );
 
+  const rescheduleAvailCheck = (rescheduleModalAppt && rescheduleSlot) ? checkTherapistSlotAvailability(
+    rescheduleDate,
+    rescheduleSlot,
+    rescheduleApptType?.durationMinutes || 50,
+    rules,
+    appointments.filter(a => a.id !== rescheduleModalAppt.id),
+    rescheduleApptType?.bufferBeforeMinutes || 0,
+    rescheduleApptType?.bufferAfterMinutes || 0
+  ) : { isAvailable: true };
+
   const handleConfirmReschedule = async () => {
     if (!rescheduleModalAppt || !rescheduleSlot) return;
     setRescheduling(true);

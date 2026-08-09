@@ -72,7 +72,7 @@ service cloud.firestore {
     match /appointments/{appointmentId} {
       allow read: if (isSignedIn() && resource.data.clientId == request.auth.uid) || isTherapist();
       allow create: if (isSignedIn() && request.resource.data.clientId == request.auth.uid) || isTherapist();
-      allow update: if (isSignedIn() && resource.data.clientId == request.auth.uid && request.resource.data.status in ['canceled_by_client', 'requested']) || isTherapist();
+      allow update: if (isSignedIn() && resource.data.clientId == request.auth.uid && request.resource.data.status in ['canceled_by_client', 'requested', 'rescheduled', 'confirmed']) || isTherapist();
       allow delete: if isTherapist();
     }
 
