@@ -770,12 +770,16 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                 <select
                   value={schedType.id}
                   onChange={(e) => {
-                    const found = DEFAULT_AVAILABILITY_RULES.appointmentTypes.find(t => t.id === e.target.value);
-                    if (found) setSchedType(found);
+                    const found = rules.appointmentTypes.find(t => t.id === e.target.value);
+                    if (found) {
+                      setSchedType(found);
+                      if (found.format === 'telehealth') setSchedFormat('telehealth');
+                      else if (found.format === 'in_person') setSchedFormat('in_person');
+                    }
                   }}
                   className="w-full p-2.5 rounded-xl border border-[#EAE1D2] bg-white text-xs text-[#2C2A2A] font-medium"
                 >
-                  {DEFAULT_AVAILABILITY_RULES.appointmentTypes.map((type) => (
+                  {rules.appointmentTypes.map((type) => (
                     <option key={type.id} value={type.id}>
                       {type.name} ({type.durationMinutes} min • ${(type.priceInCents / 100).toFixed(2)})
                     </option>
