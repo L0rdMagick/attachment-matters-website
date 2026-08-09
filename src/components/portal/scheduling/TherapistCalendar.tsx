@@ -145,6 +145,7 @@ export const TherapistCalendar: React.FC = () => {
     try {
       const startISO = `${rescheduleDate}T${rescheduleSlot}:00`;
       const dur = rescheduleApptType?.durationMinutes || 50;
+      const endISO = new Date(new Date(startISO).getTime() + dur * 60000).toISOString();
       const existingNotes = rescheduleModalAppt.notes || '';
       const extraNote = rescheduleNote.trim();
       let finalNotes: string | undefined = existingNotes || undefined;
