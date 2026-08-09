@@ -107,7 +107,7 @@ const MainPortalContent: React.FC = () => {
 
   // Quick Role Switcher Banner for Owner / Dev
   const RoleSwitcherBanner = () => (
-    <div className="bg-[#2C2A2A] text-white px-4 py-2 text-xs font-sans border-b border-[#EAE1D2]/20">
+    <div className="bg-[#2C2A2A] text-white px-4 py-2 text-xs font-sans border-b border-[#EAE1D2]/20 no-print print:hidden">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <span className="font-semibold text-[#EAE1D2]">
           ⚙️ Practice Owner / Admin Access ({user.email})

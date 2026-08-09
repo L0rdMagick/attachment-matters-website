@@ -8,6 +8,7 @@ import type { SignedDocumentData } from '../../../types/consent';
 import type { IntakeSubmissionData } from '../../../types/intake';
 import type { AppointmentData, AppointmentStatus } from '../../../types/scheduling';
 import { PrivateClinicalNotesView } from '../notes/PrivateClinicalNotesView';
+import { PrintableIntakeDocument } from '../intake/PrintableIntakeDocument';
 
 interface ClientDetailViewProps {
   clientId: string;
@@ -203,7 +204,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
   return (
     <div className="space-y-6 font-sans">
       {/* Top Banner & Client Summary */}
-      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 no-print print:hidden">
         <div>
           <button onClick={onBack} className="text-xs text-[#BF5B33] hover:underline font-semibold mb-2 block">
             ← Back to Directory
@@ -234,7 +235,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
       </div>
 
       {/* Chart Navigation Tabs */}
-      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-2 shadow-sm overflow-x-auto flex space-x-1">
+      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-2 shadow-sm overflow-x-auto flex space-x-1 no-print print:hidden">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const isPrivate = tab.id === 'private-clinical-notes';
@@ -464,7 +465,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
         {/* INTAKE PACKET TAB (FULL ADMIN VIEWER & REVIEWER) */}
         {activeTab === 'intake' && (
           <div className="space-y-6 text-sm text-[#2C2A2A]">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#EAE1D2] pb-4 gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#EAE1D2] pb-4 gap-2 no-print print:hidden">
               <div>
                 <h3 className="text-xl font-serif font-medium">Initial Client Intake Questionnaire Packet</h3>
                 <p className="text-xs text-[#2C2A2A]/70 mt-0.5">
@@ -496,18 +497,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                 <p className="text-[11px] text-[#2C2A2A]/50 mt-1">Client intake status: Not Started.</p>
               </div>
             ) : (
-              <div className="official-print-document space-y-6">
-                {/* Print Document Official Header */}
-                <div className="hidden print:block p-6 border-b-2 border-[#BF5B33] mb-6">
-                  <h1 className="text-2xl font-serif font-bold text-[#2C2A2A]">Family Trust Therapy</h1>
-                  <p className="text-xs font-semibold text-[#4A5741] uppercase tracking-wider">Official Confidential Client Intake Packet Document</p>
-                  <div className="mt-4 pt-3 border-t border-gray-200 grid grid-cols-2 gap-4 text-xs">
-                    <p><strong>Client Name:</strong> {client.legalFirstName} {client.legalLastName}</p>
-                    <p><strong>Date of Birth:</strong> {client.dateOfBirth || 'N/A'}</p>
-                    <p><strong>Submission Status:</strong> {intakeData?.status ? intakeData.status.toUpperCase() : client.intakeStatus.toUpperCase()}</p>
-                    <p><strong>Submitted Date:</strong> {intakeData?.submittedAt ? new Date(intakeData.submittedAt).toLocaleDateString() : 'N/A'}</p>
-                  </div>
-                </div>
+              <div className="space-y-6">
                 {/* Therapist Review Controls Banner */}
                 <div className="bg-[#F7F2E9] p-5 rounded-2xl border border-[#EAE1D2] space-y-4 no-print print:hidden">
                   <h4 className="font-semibold text-xs uppercase tracking-wider text-[#4A5741]">Therapist Intake Packet Review Actions</h4>
@@ -549,68 +539,11 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                   )}
                 </div>
 
-                {/* Section 1: Reasons & Goals */}
-                <div className="bg-white border border-[#EAE1D2] rounded-xl p-5 space-y-4">
-                  <h4 className="font-serif text-lg font-medium border-b border-[#EAE1D2] pb-2">Section 1: Reason for Therapy & Goals</h4>
-                  <div>
-                    <p className="text-xs font-semibold text-[#4A5741] uppercase">What brings client to therapy:</p>
-                    <p className="mt-1 bg-[#F7F2E9] p-3 rounded-lg border border-[#EAE1D2] whitespace-pre-wrap">{intakeData.reasonForTherapy || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-[#4A5741] uppercase">Current Symptoms & Concerns:</p>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {intakeData.currentSymptoms && intakeData.currentSymptoms.length > 0 ? (
-                        intakeData.currentSymptoms.map((sym) => (
-                          <span key={sym} className="px-3 py-1 bg-[#4A5741]/10 text-[#4A5741] rounded-full text-xs font-semibold border border-[#4A5741]/20">
-                            {sym}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-xs italic text-[#2C2A2A]/60">None selected</span>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-[#4A5741] uppercase">Primary Therapy Goals:</p>
-                    <p className="mt-1 bg-[#F7F2E9] p-3 rounded-lg border border-[#EAE1D2] whitespace-pre-wrap">{intakeData.therapyGoals || 'N/A'}</p>
-                  </div>
-                </div>
-
-                {/* Section 2: Medical & Counseling History */}
-                <div className="bg-white border border-[#EAE1D2] rounded-xl p-5 space-y-4">
-                  <h4 className="font-serif text-lg font-medium border-b border-[#EAE1D2] pb-2">Section 2: Treatment & Medical History</h4>
-                  <p><strong>Previous Counseling:</strong> {intakeData.previousCounseling ? 'Yes' : 'No'}</p>
-                  {intakeData.previousCounselingDetails && (
-                    <p className="bg-[#F7F2E9] p-3 rounded-lg border border-[#EAE1D2]"><strong>Details:</strong> {intakeData.previousCounselingDetails}</p>
-                  )}
-                  <p><strong>Current Medications:</strong> {intakeData.currentMedications || 'None listed'}</p>
-                  <p><strong>Relevant Medical Conditions:</strong> {intakeData.medicalHistoryNotes || 'None listed'}</p>
-                </div>
-
-                {/* Section 3: Social History & Safety Screening */}
-                <div className="bg-white border border-[#EAE1D2] rounded-xl p-5 space-y-4">
-                  <h4 className="font-serif text-lg font-medium border-b border-[#EAE1D2] pb-2">Section 3: Social History & Safety Screening</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <p><strong>Relationship Status:</strong> {intakeData.relationshipStatus || 'N/A'}</p>
-                    <p><strong>Employment / School:</strong> {intakeData.employmentOrSchool || 'N/A'}</p>
-                  </div>
-                  {intakeData.safetyScreeningAnswers && (
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-1 text-xs text-amber-950">
-                      <p className="font-semibold uppercase tracking-wider text-amber-900">Safety Screening Answers:</p>
-                      <p>• Suicidal Ideation in Past Month: <strong>{intakeData.safetyScreeningAnswers.suicidalIdeationPastMonth ? 'YES (High Priority Risk Flag)' : 'No'}</strong></p>
-                      <p>• History of Self-Harm: <strong>{intakeData.safetyScreeningAnswers.selfHarmHistory ? 'YES' : 'No'}</strong></p>
-                      {intakeData.safetyScreeningAnswers.safetyDetails && (
-                        <p className="pt-1"><strong>Details:</strong> {intakeData.safetyScreeningAnswers.safetyDetails}</p>
-                      )}
-                    </div>
-                  )}
-                  {intakeData.additionalNotes && (
-                    <div>
-                      <p className="text-xs font-semibold text-[#4A5741] uppercase">Additional Notes from Client:</p>
-                      <p className="mt-1 bg-[#F7F2E9] p-3 rounded-lg border border-[#EAE1D2] whitespace-pre-wrap">{intakeData.additionalNotes}</p>
-                    </div>
-                  )}
-                </div>
+                <PrintableIntakeDocument
+                  clientName={`${client.legalFirstName} ${client.legalLastName}`}
+                  clientEmail={client.email || ''}
+                  intakeData={intakeData}
+                />
               </div>
             )}
           </div>
