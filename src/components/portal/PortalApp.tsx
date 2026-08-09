@@ -16,6 +16,7 @@ import { ClientDirectory } from './staff/ClientDirectory';
 import { ClientDetailView } from './staff/ClientDetailView';
 import { IntakeFormRunner } from './intake/IntakeFormRunner';
 import { ConsentSigner } from './consent/ConsentSigner';
+import { TemplateManagerView } from './templates/TemplateManagerView';
 
 // Phase 3 Modules
 import { AppointmentBookingModal } from './scheduling/AppointmentBookingModal';
@@ -191,11 +192,7 @@ const MainPortalContent: React.FC = () => {
         {activeTab === 'clinical-notes' && <PrivateClinicalNotesView />}
         {activeTab === 'shared-notes' && <SharedNotesView />}
         {activeTab === 'billing' && <LedgerManager />}
-        {activeTab === 'intake-templates' && (
-          <div className="space-y-8">
-            <ConsentSigner />
-          </div>
-        )}
+        {activeTab === 'intake-templates' && <TemplateManagerView />}
       </StaffLayout>
     </>
   );
