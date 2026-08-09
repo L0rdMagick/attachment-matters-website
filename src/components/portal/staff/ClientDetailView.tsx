@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { getClientProfile } from '../../../lib/firebase/clients';
 import { getSignedDocuments } from '../../../lib/firebase/consent';
 import { getIntakeSubmission, reviewIntakeSubmission } from '../../../lib/firebase/intake';
-import { getAppointments, updateAppointmentStatus, bookAppointmentWithLock, DEFAULT_AVAILABILITY_RULES } from '../../../lib/firebase/scheduling';
+import { getAppointments, updateAppointmentStatus, bookAppointmentWithLock, getAvailabilityRules, checkTherapistSlotAvailability, DEFAULT_AVAILABILITY_RULES } from '../../../lib/firebase/scheduling';
 import type { ClientProfileData } from '../../../types/client';
 import type { SignedDocumentData } from '../../../types/consent';
 import type { IntakeSubmissionData } from '../../../types/intake';
-import type { AppointmentData, AppointmentStatus } from '../../../types/scheduling';
+import type { AppointmentData, AppointmentStatus, AvailabilityRules } from '../../../types/scheduling';
 import { PrivateClinicalNotesView } from '../notes/PrivateClinicalNotesView';
 import { PrintableIntakeDocument } from '../intake/PrintableIntakeDocument';
 import { PrintableSignedConsentDocument } from '../consent/PrintableSignedConsentDocument';
@@ -33,6 +33,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
   const [signedDocs, setSignedDocs] = useState<SignedDocumentData[]>([]);
   const [intakeData, setIntakeData] = useState<IntakeSubmissionData | null>(null);
   const [clientAppointments, setClientAppointments] = useState<AppointmentData[]>([]);
+  const [rules, setRules] = useState<AvailabilityRules>(DEFAULT_AVAILABILITY_RULES);
   const [selectedDoc, setSelectedDoc] = useState<SignedDocumentData | null>(null);
   const [activeTab, setActiveTab] = useState<ChartTab>('overview');
   const [loading, setLoading] = useState(true);
@@ -55,16 +56,18 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
   useEffect(() => {
     async function loadClient() {
       try {
-        const [data, docs, intake, appts] = await Promise.all([
+        const [data, docs, intake, appts, r] = await Promise.all([
           getClientProfile(clientId),
           getSignedDocuments(clientId),
           getIntakeSubmission(clientId),
-          getAppointments({ clientId })
+          getAppointments({ clientId }),
+          getAvailabilityRules('default')
         ]);
         setClient(data);
         setSignedDocs(docs);
         setIntakeData(intake);
         setClientAppointments(appts);
+        if (r) setRules(r);
         if (docs.length > 0) {
           setSelectedDoc(docs[0]);
         }
@@ -171,18 +174,40 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
     if (!client) return;
     setSchedBooking(true);
     setSchedMessage(null);
+
+    // Check practice settings availability
+    const availCheck = checkTherapistSlotAvailability(
+      schedDate,
+      schedTime,
+      schedType?.durationMinutes || 50,
+      rules,
+      clientAppointments
+    );
+
+    if (!availCheck.isAvailable) {
+      const proceed = confirm(
+        `⚠️ OVERRIDE PRACTICE AVAILABILITY WARNING:\n\n${availCheck.reason}\n\nDo you want to override your practice settings and schedule this session anyway?`
+      );
+      if (!proceed) {
+        setSchedBooking(false);
+        return;
+      }
+    }
+
     const startISO = `${schedDate}T${schedTime}:00`;
     const endISO = new Date(new Date(startISO).getTime() + (schedType?.durationMinutes || 50) * 60000).toISOString();
 
     try {
       await bookAppointmentWithLock({
         clientId: client.uid,
+        clientName: `${client.legalFirstName} ${client.legalLastName}`,
+        clientEmail: client.email || undefined,
         therapistId: 'default_therapist',
         appointmentTypeId: schedType.id,
         appointmentTypeName: schedType.name,
         startISO,
         endISO,
-        timezone: 'America/Chicago',
+        timezone: rules.timezone || 'America/Chicago',
         format: schedFormat,
         locationOrLink: schedFormat === 'telehealth' ? 'https://familytrusttherapy.com/telehealth-room' : '123 Practice Way, Suite 100',
         status: 'confirmed',

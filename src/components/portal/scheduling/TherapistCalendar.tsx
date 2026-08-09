@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { getAppointments, updateAppointmentStatus, bookAppointmentWithLock, DEFAULT_AVAILABILITY_RULES } from '../../../lib/firebase/scheduling';
+import { getAppointments, updateAppointmentStatus, bookAppointmentWithLock, getAvailabilityRules, checkTherapistSlotAvailability, DEFAULT_AVAILABILITY_RULES } from '../../../lib/firebase/scheduling';
 import { getClientsDirectory } from '../../../lib/firebase/clients';
-import type { AppointmentData, AppointmentStatus } from '../../../types/scheduling';
+import type { AppointmentData, AppointmentStatus, AvailabilityRules } from '../../../types/scheduling';
 import type { ClientProfileData } from '../../../types/client';
 
 export const TherapistCalendar: React.FC = () => {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<AppointmentData[]>([]);
   const [clientList, setClientList] = useState<ClientProfileData[]>([]);
+  const [rules, setRules] = useState<AvailabilityRules>(DEFAULT_AVAILABILITY_RULES);
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month' | 'agenda'>('agenda');
   const [statusTab, setStatusTab] = useState<'upcoming' | 'history'>('upcoming');
   const [loading, setLoading] = useState(true);
@@ -26,12 +27,14 @@ export const TherapistCalendar: React.FC = () => {
   useEffect(() => {
     async function loadAppts() {
       try {
-        const [data, clients] = await Promise.all([
+        const [data, clients, r] = await Promise.all([
           getAppointments({ therapistId: 'default_therapist' }),
-          getClientsDirectory()
+          getClientsDirectory(),
+          getAvailabilityRules(user?.uid || 'default')
         ]);
         setAppointments(data);
         setClientList(clients);
+        if (r) setRules(r);
         if (clients.length > 0) {
           setSelectedClientId(clients[0].uid);
         }
@@ -42,7 +45,7 @@ export const TherapistCalendar: React.FC = () => {
       }
     }
     loadAppts();
-  }, []);
+  }, [user]);
 
   const handleStatusChange = async (apptId: string, newStatus: AppointmentStatus) => {
     try {
@@ -62,6 +65,26 @@ export const TherapistCalendar: React.FC = () => {
     }
     setSchedBooking(true);
     setSchedMessage(null);
+
+    // Check practice settings availability
+    const availCheck = checkTherapistSlotAvailability(
+      schedDate,
+      schedTime,
+      schedType?.durationMinutes || 50,
+      rules,
+      appointments
+    );
+
+    if (!availCheck.isAvailable) {
+      const proceed = confirm(
+        `⚠️ OVERRIDE PRACTICE AVAILABILITY WARNING:\n\n${availCheck.reason}\n\nDo you want to override your practice settings and schedule this session anyway?`
+      );
+      if (!proceed) {
+        setSchedBooking(false);
+        return;
+      }
+    }
+
     const startISO = `${schedDate}T${schedTime}:00`;
     const endISO = new Date(new Date(startISO).getTime() + (schedType?.durationMinutes || 50) * 60000).toISOString();
 
@@ -77,7 +100,7 @@ export const TherapistCalendar: React.FC = () => {
         appointmentTypeName: schedType.name,
         startISO,
         endISO,
-        timezone: 'America/Chicago',
+        timezone: rules.timezone || 'America/Chicago',
         format: schedFormat,
         locationOrLink: schedFormat === 'telehealth' ? 'https://familytrusttherapy.com/telehealth-room' : '123 Practice Way, Suite 100',
         status: 'confirmed',

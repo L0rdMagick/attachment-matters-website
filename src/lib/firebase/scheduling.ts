@@ -113,6 +113,135 @@ export async function getAvailabilityRules(therapistId: string = 'default'): Pro
 export async function saveAvailabilityRules(rules: AvailabilityRules) {
   const docRef = doc(db, 'availabilityRules', rules.therapistId);
   await setDoc(docRef, rules, { merge: true });
+
+  // Also update default document so client booking immediately reflects practice hours
+  if (rules.therapistId !== 'default') {
+    const defaultRef = doc(db, 'availabilityRules', 'default');
+    await setDoc(defaultRef, { ...rules, therapistId: 'default' }, { merge: true });
+  }
+}
+
+/**
+ * Helper to get day-of-week key for a 'YYYY-MM-DD' string
+ */
+export function getDayOfWeekKey(dateStr: string): 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const dateObj = new Date(year, month - 1, day);
+  const days: ('sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday')[] = [
+    'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'
+  ];
+  return days[dateObj.getDay()];
+}
+
+/**
+ * Dynamically calculate available time slots for a given date matching therapist practice rules
+ */
+export function getAvailableTimeSlots(
+  dateStr: string,
+  rules: AvailabilityRules,
+  existingAppointments: AppointmentData[],
+  durationMinutes: number = 50
+): { slots: string[]; reason?: string } {
+  const dayKey = getDayOfWeekKey(dateStr);
+  const dayConfig = rules.workingDays[dayKey];
+
+  if (!dayConfig || !dayConfig.enabled) {
+    const formattedDay = dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
+    return {
+      slots: [],
+      reason: `Practice is closed on ${formattedDay}s according to practice settings.`
+    };
+  }
+
+  const [startHour, startMin] = dayConfig.startTime.split(':').map(Number);
+  const [endHour, endMin] = dayConfig.endTime.split(':').map(Number);
+
+  const dayStartMinutes = startHour * 60 + startMin;
+  const dayEndMinutes = endHour * 60 + endMin;
+
+  const validSlots: string[] = [];
+  const stepMinutes = 30; // Generate slots every 30 mins
+
+  for (let current = dayStartMinutes; current + durationMinutes <= dayEndMinutes; current += stepMinutes) {
+    const h = Math.floor(current / 60);
+    const m = current % 60;
+    const slotTimeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const slotStartISO = `${dateStr}T${slotTimeStr}:00`;
+    const slotStartMs = new Date(slotStartISO).getTime();
+    const slotEndMs = slotStartMs + durationMinutes * 60000;
+
+    // Check for overlap with existing confirmed/requested appointments
+    const hasOverlap = existingAppointments.some((appt) => {
+      if (appt.status !== 'confirmed' && appt.status !== 'requested') return false;
+      const apptStartMs = new Date(appt.startISO).getTime();
+      const apptEndMs = new Date(appt.endISO).getTime();
+      return slotStartMs < apptEndMs && slotEndMs > apptStartMs;
+    });
+
+    if (!hasOverlap) {
+      validSlots.push(slotTimeStr);
+    }
+  }
+
+  return { slots: validSlots };
+}
+
+/**
+ * Evaluates whether a proposed therapist booking is available in practice settings
+ */
+export function checkTherapistSlotAvailability(
+  dateStr: string,
+  timeStr: string,
+  durationMinutes: number,
+  rules: AvailabilityRules,
+  existingAppointments: AppointmentData[]
+): { isAvailable: boolean; reason?: string } {
+  const dayKey = getDayOfWeekKey(dateStr);
+  const dayConfig = rules.workingDays[dayKey];
+  const formattedDay = dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
+
+  if (!dayConfig || !dayConfig.enabled) {
+    return {
+      isAvailable: false,
+      reason: `Your practice settings show that ${formattedDay}s are currently closed / disabled for appointments.`
+    };
+  }
+
+  const [tHour, tMin] = timeStr.split(':').map(Number);
+  const slotStartMin = tHour * 60 + tMin;
+  const slotEndMin = slotStartMin + durationMinutes;
+
+  const [sHour, sMin] = dayConfig.startTime.split(':').map(Number);
+  const [eHour, eMin] = dayConfig.endTime.split(':').map(Number);
+  const dayStartMin = sHour * 60 + sMin;
+  const dayEndMin = eHour * 60 + eMin;
+
+  if (slotStartMin < dayStartMin || slotEndMin > dayEndMin) {
+    return {
+      isAvailable: false,
+      reason: `The requested time (${timeStr}) is outside your configured practice working hours for ${formattedDay}s (${dayConfig.startTime} - ${dayConfig.endTime}).`
+    };
+  }
+
+  // Check overlap with existing appointments
+  const slotStartMs = new Date(`${dateStr}T${timeStr}:00`).getTime();
+  const slotEndMs = slotStartMs + durationMinutes * 60000;
+
+  const conflict = existingAppointments.find((appt) => {
+    if (appt.status !== 'confirmed' && appt.status !== 'requested') return false;
+    const apptStartMs = new Date(appt.startISO).getTime();
+    const apptEndMs = new Date(appt.endISO).getTime();
+    return slotStartMs < apptEndMs && slotEndMs > apptStartMs;
+  });
+
+  if (conflict) {
+    return {
+      isAvailable: false,
+      reason: `This time slot conflicts with an existing appointment for ${conflict.clientName || 'another client'} (${new Date(conflict.startISO).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}).`
+    };
+  }
+
+  return { isAvailable: true };
 }
 
 /**

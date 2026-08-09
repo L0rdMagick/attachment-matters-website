@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { getAvailabilityRules, bookAppointmentWithLock, getAppointments, updateAppointmentStatus, DEFAULT_AVAILABILITY_RULES } from '../../../lib/firebase/scheduling';
+import { getAvailabilityRules, bookAppointmentWithLock, getAppointments, updateAppointmentStatus, getAvailableTimeSlots, DEFAULT_AVAILABILITY_RULES } from '../../../lib/firebase/scheduling';
 import type { AvailabilityRules, AppointmentType, AppointmentData } from '../../../types/scheduling';
 
 export const AppointmentBookingModal: React.FC = () => {
@@ -44,10 +44,13 @@ export const AppointmentBookingModal: React.FC = () => {
   const historyClientAppts = myAppointments.filter(a => a.status === 'completed' || a.status.startsWith('canceled'));
   const displayedClientAppts = apptTab === 'upcoming' ? upcomingClientAppts : historyClientAppts;
 
-  // Generate available slots for selected date (mock calculation for demo)
-  const availableSlots = [
-    '09:00', '10:00', '11:00', '13:00', '14:00', '15:00'
-  ];
+  // Dynamically calculate open time slots matching therapist practice rules
+  const { slots: availableSlots, reason: closedReason } = getAvailableTimeSlots(
+    selectedDate,
+    rules,
+    myAppointments,
+    selectedType?.durationMinutes || 50
+  );
 
   const handleBook = async () => {
     if (rules?.allowClientSelfScheduling === false) {
@@ -204,23 +207,29 @@ export const AppointmentBookingModal: React.FC = () => {
             <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-2">
               Available Time Slots ({rules?.timezone})
             </label>
-            <div className="grid grid-cols-3 gap-2">
-              {availableSlots.map((slot) => {
-                const isSelected = selectedTimeSlot === slot;
-                return (
-                  <button
-                    key={slot}
-                    type="button"
-                    onClick={() => setSelectedTimeSlot(slot)}
-                    className={`py-2 rounded-xl text-xs font-semibold transition border ${
-                      isSelected ? 'bg-[#BF5B33] text-white border-[#BF5B33]' : 'bg-[#F7F2E9] text-[#2C2A2A] border-[#EAE1D2] hover:bg-[#EAE1D2]/60'
-                    }`}
-                  >
-                    {slot}
-                  </button>
-                );
-              })}
-            </div>
+            {availableSlots.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2">
+                {availableSlots.map((slot) => {
+                  const isSelected = selectedTimeSlot === slot;
+                  return (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => setSelectedTimeSlot(slot)}
+                      className={`py-2 rounded-xl text-xs font-semibold transition border ${
+                        isSelected ? 'bg-[#BF5B33] text-white border-[#BF5B33]' : 'bg-[#F7F2E9] text-[#2C2A2A] border-[#EAE1D2] hover:bg-[#EAE1D2]/60'
+                      }`}
+                    >
+                      {slot}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-xl text-amber-900 text-xs font-semibold text-center">
+                {closedReason || 'No available appointment time slots on this date. Please select a different day.'}
+              </div>
+            )}
           </div>
 
           <button
