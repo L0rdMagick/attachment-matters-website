@@ -552,7 +552,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
         {/* SIGNED CONSENT DOCUMENTS TAB */}
         {activeTab === 'documents' && (
           <div className="space-y-6 text-sm text-[#2C2A2A]">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#EAE1D2] pb-4 gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#EAE1D2] pb-4 gap-2 no-print print:hidden">
               <div>
                 <h3 className="text-xl font-serif font-medium">Practice Consent Forms & Signed Agreements</h3>
                 <p className="text-xs text-[#2C2A2A]/70 mt-0.5">
@@ -577,8 +577,8 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* List of Signed Documents */}
-                <div className="space-y-3">
+                {/* List of Signed Documents (Hidden on Print) */}
+                <div className="space-y-3 no-print print:hidden">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-[#4A5741]">Submitted Agreements</h4>
                   {signedDocs.map((doc) => {
                     const isSelected = selectedDoc?.id === doc.id;
@@ -609,14 +609,15 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                   })}
                 </div>
 
-                {/* Detailed Signed Document Viewer */}
+                {/* Detailed Signed Document Viewer & Official Printable Document */}
                 <div className="md:col-span-2">
                   {selectedDoc ? (
-                    <div className="bg-[#F7F2E9]/60 border border-[#EAE1D2] rounded-2xl p-6 space-y-5">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#EAE1D2] pb-3 gap-2">
+                    <div className="official-print-document bg-white border-2 border-gray-900 rounded-none p-6 sm:p-10 shadow-none space-y-6 font-sans text-gray-900 print:border-none print:shadow-none print:p-0 print:m-0 print-card">
+                      {/* Controls bar - Hidden on print */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-300 pb-3 gap-2 no-print print:hidden">
                         <div>
-                          <h4 className="text-lg font-serif font-medium text-[#2C2A2A]">{selectedDoc.documentTitle}</h4>
-                          <p className="text-xs text-[#4A5741]">Version {selectedDoc.templateVersion} • Legal Agreement</p>
+                          <h4 className="text-lg font-serif font-medium text-gray-900">{selectedDoc.documentTitle}</h4>
+                          <p className="text-xs text-gray-600">Version {selectedDoc.templateVersion} • Legal Agreement</p>
                         </div>
                         <button
                           onClick={() => window.print()}
@@ -626,30 +627,127 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                         </button>
                       </div>
 
-                      {/* Metadata Box */}
-                      <div className="bg-white p-4 rounded-xl border border-[#EAE1D2] space-y-1.5 text-xs">
-                        <p><strong>Signer Legal Name:</strong> {selectedDoc.clientTypedName}</p>
-                        <p><strong>Signed Timestamp (ISO):</strong> {selectedDoc.signedAtISO}</p>
-                        <p><strong>Unique Immutable Audit Hash:</strong> <code className="bg-[#F7F2E9] px-2 py-0.5 rounded border border-[#EAE1D2] font-mono text-[11px]">{selectedDoc.documentHash}</code></p>
+                      {/* Official Practice Letterhead (Print & Screen Document Header) */}
+                      <div className="border-b-2 border-gray-900 pb-4 space-y-2">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2">
+                          <div>
+                            <h1 className="text-xl sm:text-2xl font-serif font-bold tracking-tight text-gray-900 uppercase">
+                              FAMILY TRUST THERAPY & CLINICAL SERVICES
+                            </h1>
+                            <p className="text-xs text-gray-700 font-medium">
+                              Attachment Matters, LLC • Durango, CO 81301 • Tel: (505) 920-6351 • Email: info@familytrusttherapy.com
+                            </p>
+                          </div>
+                          <div className="text-left sm:text-right">
+                            <span className="inline-block px-3 py-1 bg-gray-100 border border-gray-900 text-[11px] font-bold tracking-widest uppercase">
+                              IMMUTABLE ARCHIVED E-SIGNED DOCUMENT
+                            </span>
+                          </div>
+                        </div>
+                        <div className="pt-2 text-center border-t border-gray-300">
+                          <h2 className="text-lg font-serif font-bold tracking-wide uppercase text-gray-900">
+                            {selectedDoc.documentTitle}
+                          </h2>
+                          <p className="text-xs text-gray-600 font-medium">Document Template Version: {selectedDoc.templateVersion}</p>
+                        </div>
                       </div>
 
-                      {/* Drawn Signature Canvas Image (If available) */}
-                      {selectedDoc.signatureDataUrl && (
-                        <div className="bg-white p-4 rounded-xl border border-[#EAE1D2] space-y-2">
-                          <p className="text-xs font-semibold text-[#4A5741] uppercase tracking-wider">Client Drawn Signature Image:</p>
-                          <img
-                            src={selectedDoc.signatureDataUrl}
-                            alt="Drawn Signature"
-                            className="h-20 bg-[#F7F2E9] rounded-lg border border-[#EAE1D2] p-2 object-contain"
-                          />
+                      {/* Official Document Metadata Control Box */}
+                      <div className="border border-gray-900 p-4 bg-gray-50/50 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-sans">
+                        <div>
+                          <span className="block font-bold uppercase tracking-wider text-gray-600 text-[10px]">Signer Legal Name</span>
+                          <span className="font-semibold text-sm text-gray-900">{selectedDoc.clientTypedName}</span>
                         </div>
-                      )}
+                        <div>
+                          <span className="block font-bold uppercase tracking-wider text-gray-600 text-[10px]">Client Email</span>
+                          <span className="font-semibold text-gray-900">{client.email || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="block font-bold uppercase tracking-wider text-gray-600 text-[10px]">Signed Date & Time</span>
+                          <span className="font-semibold text-gray-900">{new Date(selectedDoc.signedAtISO).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <div>
+                          <span className="block font-bold uppercase tracking-wider text-gray-600 text-[10px]">Document Status</span>
+                          <span className="font-bold text-emerald-800 uppercase">E-SIGNED & VERIFIED</span>
+                        </div>
+                      </div>
 
-                      {/* Exact Text Snapshot Frozen at Signing Time */}
-                      <div className="space-y-1">
-                        <p className="text-xs font-semibold text-[#4A5741] uppercase tracking-wider">Frozen Legal Text Snapshot:</p>
-                        <div className="bg-white border border-[#EAE1D2] rounded-xl p-4 text-xs font-mono whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto text-[#2C2A2A]">
+                      {/* 1. BODY OF AGREEMENT (FROZEN LEGAL TEXT SNAPSHOT - SHOWN FIRST) */}
+                      <div className="space-y-2">
+                        <h3 className="text-xs font-bold text-gray-900 uppercase tracking-widest bg-gray-100 p-2 border-l-4 border-gray-900">
+                          EXECUTED LEGAL AGREEMENT CONTENT
+                        </h3>
+                        <div className="p-4 border border-gray-400 text-xs font-mono whitespace-pre-wrap leading-relaxed bg-white text-gray-900">
                           {selectedDoc.exactTextSnapshot}
+                        </div>
+                      </div>
+
+                      {/* 2. LEGAL ATTESTATION & SIGNATURE BLOCK (SHOWN BELOW BODY OF TEXT) */}
+                      <div className="pt-4 border-t-2 border-gray-900 space-y-6 break-inside-avoid page-break-inside-avoid">
+                        <div className="p-4 border border-gray-900 bg-gray-50 text-xs space-y-2">
+                          <h4 className="font-bold uppercase tracking-wider text-gray-900">ELECTRONIC SIGNATURE & LEGAL ACKNOWLEDGEMENT</h4>
+                          <p className="text-gray-800 leading-relaxed italic">
+                            "By typing my legal name and/or drawing my electronic signature below, I attest under penalty of perjury that I have read, understood, and voluntarily agree to all terms and conditions set forth in this agreement. I acknowledge that this electronic signature carries the full legal weight of a handwritten signature under state and federal e-sign statutes."
+                          </p>
+                        </div>
+
+                        {/* Dual Signature Section */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-xs font-sans">
+                          {/* Client Signature */}
+                          <div className="space-y-4">
+                            <div className="border-b-2 border-gray-900 pb-2 space-y-2">
+                              <span className="block text-[10px] uppercase font-bold text-gray-600">Client / Guardian Executed Signature</span>
+                              {selectedDoc.signatureDataUrl ? (
+                                <img
+                                  src={selectedDoc.signatureDataUrl}
+                                  alt="Client Drawn Signature"
+                                  className="h-16 object-contain"
+                                />
+                              ) : (
+                                <div className="h-12 flex items-end">
+                                  <span className="font-serif italic text-lg text-gray-900">{selectedDoc.clientTypedName}</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-[11px]">
+                              <div>
+                                <span className="block text-[10px] uppercase text-gray-600">Typed Legal Name</span>
+                                <span className="font-semibold text-gray-900">{selectedDoc.clientTypedName}</span>
+                              </div>
+                              <div>
+                                <span className="block text-[10px] uppercase text-gray-600">Date Signed</span>
+                                <span className="font-semibold text-gray-900">{new Date(selectedDoc.signedAtISO).toLocaleDateString('en-US')}</span>
+                              </div>
+                            </div>
+                            <div>
+                              <span className="block text-[9px] uppercase font-bold text-gray-500">Cryptographic Audit Hash</span>
+                              <code className="text-[10px] font-mono break-all text-gray-700 bg-gray-100 px-1 py-0.5 rounded border border-gray-300 block">{selectedDoc.documentHash}</code>
+                            </div>
+                          </div>
+
+                          {/* Practice / Reviewer Signature */}
+                          <div className="space-y-4">
+                            <div className="border-b-2 border-gray-900 pb-2">
+                              <span className="block text-[10px] uppercase font-bold text-gray-600">Practice Representative / Witness Verification</span>
+                              <div className="h-16"></div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-[11px]">
+                              <div>
+                                <span className="block text-[10px] uppercase text-gray-600">Reviewer Name</span>
+                                <span className="text-gray-500 italic">[ Practice Custodian ]</span>
+                              </div>
+                              <div>
+                                <span className="block text-[10px] uppercase text-gray-600">Archived Date</span>
+                                <span className="text-gray-500 italic">____/____/20__</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* HIPAA Footer */}
+                        <div className="pt-4 border-t border-gray-300 text-[10px] text-gray-600 text-center space-y-0.5 uppercase tracking-wider">
+                          <p className="font-bold">CONFIDENTIAL HEALTHCARE LEGAL RECORD • SUBJECT TO STATE & FEDERAL HIPAA PRIVACY LAWS</p>
+                          <p>Family Trust Therapy • Attachment Matters, LLC • Immutable Cryptographic Archive</p>
                         </div>
                       </div>
                     </div>
