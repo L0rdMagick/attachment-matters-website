@@ -338,8 +338,11 @@ export async function bookAppointmentWithLock(appointment: Omit<AppointmentData,
   return newApptRef.id;
 }
 
+import { createInvoice, recordLedgerTransaction, getInvoicesForClient } from './billing';
+
 /**
  * Update appointment status (Cancel, Reschedule, Complete)
+ * Automatically issues an official invoice and ledger charge entry when an appointment is marked 'completed'
  */
 export async function updateAppointmentStatus(
   appointmentId: string,
@@ -347,6 +350,43 @@ export async function updateAppointmentStatus(
   reason?: string
 ) {
   const docRef = doc(db, 'appointments', appointmentId);
+  
+  if (status === 'completed') {
+    const apptSnap = await getDoc(docRef);
+    if (apptSnap.exists()) {
+      const apptData = apptSnap.data() as AppointmentData;
+      const invoiceNum = `INV-APPT-${appointmentId.slice(-6).toUpperCase()}`;
+
+      // Check if an invoice for this appointment already exists
+      const existingInvs = await getInvoicesForClient(apptData.clientId);
+      const alreadyInvoiced = existingInvs.some((inv) => inv.invoiceNumber === invoiceNum);
+
+      if (!alreadyInvoiced) {
+        const apptDateStr = apptData.startISO ? new Date(apptData.startISO).toLocaleDateString('en-US') : new Date().toLocaleDateString('en-US');
+        const price = apptData.priceInCents || 15000;
+
+        const invId = await createInvoice({
+          clientId: apptData.clientId,
+          invoiceNumber: invoiceNum,
+          description: `${apptData.appointmentTypeName || 'Completed Therapy Session'} (${apptDateStr})`,
+          totalCents: price,
+          balanceCents: price,
+          status: 'unpaid',
+          dueDate: new Date().toISOString().split('T')[0]
+        });
+
+        await recordLedgerTransaction({
+          clientId: apptData.clientId,
+          invoiceId: invId,
+          type: 'charge',
+          amountCents: price,
+          notes: `Completed Session Charge: ${apptData.appointmentTypeName || 'Therapy Session'} (${invoiceNum})`,
+          createdById: 'system'
+        });
+      }
+    }
+  }
+
   await updateDoc(docRef, {
     status,
     ...(reason ? { cancellationReason: reason } : {}),

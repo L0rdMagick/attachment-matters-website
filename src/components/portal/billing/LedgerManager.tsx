@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { getInvoicesForClient, getLedgerForClient, createInvoice, recordLedgerTransaction } from '../../../lib/firebase/billing';
 import { getClientsDirectory } from '../../../lib/firebase/clients';
+import { getAppointments } from '../../../lib/firebase/scheduling';
 import type { InvoiceData, LedgerEntryData, LedgerEntryType } from '../../../types/billing';
 import type { ClientProfileData } from '../../../types/client';
+import type { AppointmentData } from '../../../types/scheduling';
 
 export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetClientId }) => {
   const { user, role } = useAuth();
@@ -16,6 +18,7 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
 
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntryData[]>([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<AppointmentData[]>([]);
   const [loading, setLoading] = useState(true);
 
   // New Invoice Form State
@@ -65,28 +68,32 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
     async function loadBilling() {
       setLoading(true);
       try {
-        let [invs, ledger] = await Promise.all([
+        let [invs, ledger, appts] = await Promise.all([
           getInvoicesForClient(targetId),
-          getLedgerForClient(targetId)
+          getLedgerForClient(targetId),
+          getAppointments({ clientId: targetId })
         ]);
 
         // Fallback for clients: if 0 invoices found by uid, match by email in clientList
         if (invs.length === 0 && !isStaff && user?.email && clientList.length > 0) {
           const matched = clientList.find((c) => c.email?.toLowerCase() === user.email?.toLowerCase());
           if (matched && matched.uid !== targetId) {
-            const [altInvs, altLedger] = await Promise.all([
+            const [altInvs, altLedger, altAppts] = await Promise.all([
               getInvoicesForClient(matched.uid),
-              getLedgerForClient(matched.uid)
+              getLedgerForClient(matched.uid),
+              getAppointments({ clientId: matched.uid })
             ]);
-            if (altInvs.length > 0) {
+            if (altInvs.length > 0 || altAppts.length > 0) {
               invs = altInvs;
               ledger = altLedger;
+              appts = altAppts;
             }
           }
         }
 
         setInvoices(invs);
         setLedgerEntries(ledger);
+        setUpcomingAppointments(appts.filter((a) => a.status === 'confirmed' || a.status === 'requested'));
       } catch (err) {
         console.error("Failed to load billing ledger", err);
       } finally {
@@ -179,7 +186,9 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
     }
   };
 
-  const totalOutstandingBalance = invoices.reduce((sum, inv) => sum + inv.balanceCents, 0);
+  const totalOutstandingBalance = invoices.reduce((sum, inv) => sum + Math.max(0, inv.balanceCents), 0);
+  const totalPendingCharges = upcomingAppointments.reduce((sum, appt) => sum + (appt.priceInCents || 15000), 0);
+  const totalProjectedBalance = totalOutstandingBalance + totalPendingCharges;
 
   if (loading) {
     return <div className="p-8 text-center bg-white border border-[#EAE1D2] rounded-2xl">Loading account ledger & invoices...</div>;
@@ -187,20 +196,41 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
 
   return (
     <div className="space-y-8 font-sans">
-      {/* Header & Balance Card */}
-      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-serif text-[#2C2A2A] font-medium">Billing Ledger & Invoices</h2>
-          <p className="text-xs text-[#2C2A2A]/70 mt-1">
-            Financial statements, payment history, and append-only ledger transaction audit.
-          </p>
+      {/* Header & Balance Summary Cards */}
+      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-[#EAE1D2] pb-6">
+          <div>
+            <h2 className="text-3xl font-serif text-[#2C2A2A] font-medium">Billing Ledger & Financial Account</h2>
+            <p className="text-xs text-[#2C2A2A]/70 mt-1">
+              Track upcoming session charges, official invoiced balances, payment receipts, and transaction audit trails.
+            </p>
+          </div>
         </div>
 
-        <div className="bg-[#F7F2E9] border border-[#EAE1D2] p-4 rounded-xl text-right">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[#4A5741]">Outstanding Balance</p>
-          <p className="text-2xl font-serif font-bold text-[#BF5B33]">
-            ${(totalOutstandingBalance / 100).toFixed(2)}
-          </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-[#F7F2E9] border border-[#EAE1D2] p-4 rounded-xl text-left">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#4A5741]">Invoiced Balance Due</p>
+            <p className="text-2xl font-serif font-bold text-[#BF5B33]">
+              ${(totalOutstandingBalance / 100).toFixed(2)}
+            </p>
+            <p className="text-[10px] text-gray-500 mt-0.5">Currently issued unpaid invoices</p>
+          </div>
+
+          <div className="bg-[#F7F2E9] border border-[#EAE1D2] p-4 rounded-xl text-left">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Pending Session Charges</p>
+            <p className="text-2xl font-serif font-bold text-amber-700">
+              ${(totalPendingCharges / 100).toFixed(2)}
+            </p>
+            <p className="text-[10px] text-gray-500 mt-0.5">{upcomingAppointments.length} upcoming scheduled session{upcomingAppointments.length === 1 ? '' : 's'}</p>
+          </div>
+
+          <div className="bg-[#4A5741] p-4 rounded-xl text-left text-white shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-200">Total Projected Balance</p>
+            <p className="text-2xl font-serif font-bold text-white">
+              ${(totalProjectedBalance / 100).toFixed(2)}
+            </p>
+            <p className="text-[10px] text-emerald-100 mt-0.5">Invoiced + pending upcoming charges</p>
+          </div>
         </div>
       </div>
 
@@ -388,9 +418,78 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
         </form>
       )}
 
+      {/* Upcoming Scheduled Sessions & Pending Charges */}
+      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#EAE1D2] pb-3 gap-2">
+          <div>
+            <h3 className="text-xl font-serif font-medium text-[#2C2A2A]">
+              Upcoming Scheduled Sessions & Pending Charges
+            </h3>
+            <p className="text-xs text-[#2C2A2A]/70 mt-0.5">
+              Unbilled estimated fees for reserved future appointments. Charges automatically convert into official invoices upon session completion.
+            </p>
+          </div>
+          <span className="px-3 py-1 bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold rounded-full w-fit">
+            Pending: ${(totalPendingCharges / 100).toFixed(2)}
+          </span>
+        </div>
+
+        {upcomingAppointments.length === 0 ? (
+          <p className="text-xs text-[#2C2A2A]/60 py-4 text-center">No upcoming scheduled appointments with pending charges.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#F7F2E9] uppercase tracking-wider font-semibold border-b border-[#EAE1D2]">
+                <tr>
+                  <th className="py-3 px-4">Scheduled Session Date</th>
+                  {isStaff && <th className="py-3 px-4">Client</th>}
+                  <th className="py-3 px-4">Service Type</th>
+                  <th className="py-3 px-4">Format</th>
+                  <th className="py-3 px-4 text-right">Estimated Fee</th>
+                  <th className="py-3 px-4 text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EAE1D2]">
+                {upcomingAppointments.map((appt) => (
+                  <tr key={appt.id} className="hover:bg-[#F7F2E9]/40 transition">
+                    <td className="py-3.5 px-4 font-semibold text-[#2C2A2A]">
+                      {new Date(appt.startISO).toLocaleString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </td>
+                    {isStaff && (
+                      <td className="py-3.5 px-4 font-medium text-[#2C2A2A]">
+                        {appt.clientName || getClientName(appt.clientId)}
+                      </td>
+                    )}
+                    <td className="py-3.5 px-4 font-medium">{appt.appointmentTypeName}</td>
+                    <td className="py-3.5 px-4 capitalize">{appt.format}</td>
+                    <td className="py-3.5 px-4 text-right font-mono font-bold text-amber-700">
+                      ${((appt.priceInCents || 15000) / 100).toFixed(2)}
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        appt.status === 'confirmed' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {appt.status} (Unbilled)
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Invoices List */}
       <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-4">
-        <h3 className="text-xl font-serif font-medium text-[#2C2A2A] border-b border-[#EAE1D2] pb-3">Invoices</h3>
+        <h3 className="text-xl font-serif font-medium text-[#2C2A2A] border-b border-[#EAE1D2] pb-3">Issued Invoices</h3>
         {invoices.length === 0 ? (
           <p className="text-xs text-[#2C2A2A]/60 py-4 text-center">No invoices found.</p>
         ) : (
