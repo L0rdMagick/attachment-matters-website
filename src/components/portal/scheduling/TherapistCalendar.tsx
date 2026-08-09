@@ -153,7 +153,7 @@ export const TherapistCalendar: React.FC = () => {
         finalNotes = existingNotes ? `${existingNotes}\n[Rescheduled Note]: ${extraNote}` : extraNote;
       }
 
-      await rescheduleAppointment(rescheduleModalAppt.id!, startISO, endISO, finalNotes);
+      await rescheduleAppointment(rescheduleModalAppt.id!, startISO, endISO, finalNotes, 'rescheduled');
       const updated = await getAppointments({ therapistId: 'default_therapist' });
       setAppointments(updated);
       setRescheduleModalAppt(null);

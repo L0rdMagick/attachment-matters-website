@@ -401,17 +401,28 @@ export async function rescheduleAppointment(
   appointmentId: string,
   newStartISO: string,
   newEndISO: string,
-  newNotes?: string
+  newNotes?: string,
+  targetStatus: string = 'requested'
 ) {
   const docRef = doc(db, 'appointments', appointmentId);
   const updatePayload: Record<string, any> = {
     startISO: newStartISO,
     endISO: newEndISO,
-    status: 'rescheduled',
+    status: targetStatus,
     updatedAt: serverTimestamp()
   };
   if (newNotes !== undefined) {
     updatePayload.notes = newNotes;
   }
-  await updateDoc(docRef, updatePayload);
+
+  try {
+    await updateDoc(docRef, updatePayload);
+  } catch (err: any) {
+    if (err && (err.code === 'permission-denied' || String(err).includes('permission'))) {
+      updatePayload.status = 'requested';
+      await updateDoc(docRef, updatePayload);
+    } else {
+      throw err;
+    }
+  }
 }
