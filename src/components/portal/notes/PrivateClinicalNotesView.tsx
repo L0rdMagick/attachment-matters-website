@@ -23,7 +23,8 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Note form state
+  // Form state
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [noteFormat, setNoteFormat] = useState<NoteFormat>('DAP');
   const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0]);
@@ -42,6 +43,42 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
   // Amendment modal state
   const [amendNoteId, setAmendNoteId] = useState<string | null>(null);
   const [amendmentReason, setAmendmentReason] = useState('');
+
+  const resetForm = () => {
+    setEditingNoteId(null);
+    setNoteFormat('DAP');
+    setSessionDate(new Date().toISOString().split('T')[0]);
+    setDapData('');
+    setDapAssessment('');
+    setDapPlan('');
+    setSoapSubjective('');
+    setSoapObjective('');
+    setSoapAssessment('');
+    setSoapPlan('');
+  };
+
+  const handleOpenNew = () => {
+    resetForm();
+    setShowEditor(true);
+  };
+
+  const handleEditDraft = (note: PrivateClinicalNoteData) => {
+    if (note.isFinalized) return;
+    setEditingNoteId(note.id);
+    setNoteFormat(note.format);
+    setSessionDate(note.sessionDateISO || new Date().toISOString().split('T')[0]);
+    if (note.format === 'DAP' && note.dap) {
+      setDapData(note.dap.data || '');
+      setDapAssessment(note.dap.assessment || '');
+      setDapPlan(note.dap.plan || '');
+    } else if (note.format === 'SOAP' && note.soap) {
+      setSoapSubjective(note.soap.subjective || '');
+      setSoapObjective(note.soap.objective || '');
+      setSoapAssessment(note.soap.assessment || '');
+      setSoapPlan(note.soap.plan || '');
+    }
+    setShowEditor(true);
+  };
 
   useEffect(() => {
     if (isTherapist) {
@@ -83,6 +120,7 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
 
     try {
       const payload: Partial<PrivateClinicalNoteData> = {
+        id: editingNoteId || undefined,
         clientId: activeClientId,
         therapistId: user.uid,
         sessionDateISO: sessionDate,
@@ -100,15 +138,7 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
       const updated = await getPrivateClinicalNotesForClient(activeClientId);
       setNotes(updated);
       setShowEditor(false);
-      
-      // Reset form
-      setDapData('');
-      setDapAssessment('');
-      setDapPlan('');
-      setSoapSubjective('');
-      setSoapObjective('');
-      setSoapAssessment('');
-      setSoapPlan('');
+      resetForm();
     } catch (err: any) {
       console.error("Failed to save clinical note", err);
       alert(`Failed to save private clinical note: ${err.message || 'Unknown error'}`);
@@ -164,7 +194,7 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
         </div>
 
         <button
-          onClick={() => setShowEditor(true)}
+          onClick={handleOpenNew}
           className="px-4 py-2 bg-[#BF5B33] text-white font-semibold text-xs rounded-xl shadow-sm hover:bg-[#a64e2b] transition"
         >
           + Write New Clinical Note
@@ -196,11 +226,13 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
         </div>
       )}
 
-      {/* New Note Form */}
+      {/* New / Edit Note Form */}
       {showEditor && (
         <form onSubmit={handleSaveNote} className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-3">
-            <h3 className="text-lg font-serif text-[#2C2A2A] font-medium">New Confidential Progress Note</h3>
+            <h3 className="text-lg font-serif text-[#2C2A2A] font-medium">
+              {editingNoteId ? 'Edit Draft Clinical Note' : 'New Confidential Progress Note'}
+            </h3>
             <button type="button" onClick={() => setShowEditor(false)} className="text-xs text-gray-500 hover:text-gray-800">Cancel</button>
           </div>
 
@@ -327,7 +359,7 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
               disabled={saving}
               className="px-5 py-2 bg-[#BF5B33] text-white text-xs font-semibold rounded-xl hover:bg-[#a64e2b] disabled:opacity-50 transition"
             >
-              {saving ? 'Saving Note...' : 'Save Draft Note'}
+              {saving ? 'Saving Note...' : (editingNoteId ? 'Update Draft Note' : 'Save Draft Note')}
             </button>
           </div>
         </form>
@@ -365,12 +397,20 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
 
                 <div className="flex items-center gap-2">
                   {!note.isFinalized && (
-                    <button
-                      onClick={() => handleFinalize(note.id)}
-                      className="px-3 py-1 bg-green-700 text-white text-xs font-medium rounded-lg hover:bg-green-800 transition"
-                    >
-                      Finalize Note
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleEditDraft(note)}
+                        className="px-3 py-1 bg-amber-700 text-white text-xs font-medium rounded-lg hover:bg-amber-800 transition"
+                      >
+                        ✏️ Edit Draft
+                      </button>
+                      <button
+                        onClick={() => handleFinalize(note.id)}
+                        className="px-3 py-1 bg-emerald-700 text-white text-xs font-medium rounded-lg hover:bg-emerald-800 transition"
+                      >
+                        ✓ Finalize Note
+                      </button>
+                    </>
                   )}
                   {note.isFinalized && (
                     <button
