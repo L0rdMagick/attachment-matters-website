@@ -9,7 +9,8 @@ import {
   getDocs,
   serverTimestamp,
   runTransaction,
-  addDoc
+  addDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { db } from './config';
 import type { AvailabilityRules, AppointmentData, AppointmentStatus } from '../../types/scheduling';
@@ -316,7 +317,27 @@ export async function bookAppointmentWithLock(appointment: Omit<AppointmentData,
   await runTransaction(db, async (transaction) => {
     const lockDoc = await transaction.get(lockRef);
     if (lockDoc.exists()) {
-      throw new Error("RESERVATION_LOCK_FAILED: This appointment time slot was just claimed by another client. Please select a different time.");
+      const lockData = lockDoc.data();
+      let isLockActive = true;
+      if (lockData?.appointmentId) {
+        const existingApptRef = doc(db, 'appointments', lockData.appointmentId);
+        const existingApptSnap = await transaction.get(existingApptRef);
+        if (existingApptSnap.exists()) {
+          const existingAppt = existingApptSnap.data();
+          if (
+            existingAppt.status !== 'confirmed' &&
+            existingAppt.status !== 'requested' &&
+            existingAppt.status !== 'rescheduled'
+          ) {
+            isLockActive = false;
+          }
+        } else {
+          isLockActive = false;
+        }
+      }
+      if (isLockActive) {
+        throw new Error("RESERVATION_LOCK_FAILED: This appointment time slot was just claimed by another client. Please select a different time.");
+      }
     }
 
     // Acquire atomic reservation lock
@@ -350,11 +371,25 @@ export async function updateAppointmentStatus(
   reason?: string
 ) {
   const docRef = doc(db, 'appointments', appointmentId);
-  
-  if (status === 'completed') {
-    const apptSnap = await getDoc(docRef);
-    if (apptSnap.exists()) {
-      const apptData = apptSnap.data() as AppointmentData;
+  const apptSnap = await getDoc(docRef);
+
+  if (apptSnap.exists()) {
+    const apptData = apptSnap.data() as AppointmentData;
+
+    // Release/delete reservation lock if completed or canceled
+    if (status === 'completed' || status === 'canceled' || status.startsWith('canceled')) {
+      if (apptData.therapistId && apptData.startISO) {
+        const slotKey = `${apptData.therapistId}_${new Date(apptData.startISO).getTime()}`;
+        const lockRef = doc(db, 'appointmentLocks', slotKey);
+        try {
+          await deleteDoc(lockRef);
+        } catch (e) {
+          console.warn('Failed to release lock document:', e);
+        }
+      }
+    }
+
+    if (status === 'completed') {
       const invoiceNum = `INV-APPT-${appointmentId.slice(-6).toUpperCase()}`;
 
       // Check if an invoice for this appointment already exists
@@ -405,6 +440,21 @@ export async function rescheduleAppointment(
   targetStatus: string = 'requested'
 ) {
   const docRef = doc(db, 'appointments', appointmentId);
+  const apptSnap = await getDoc(docRef);
+
+  if (apptSnap.exists()) {
+    const apptData = apptSnap.data() as AppointmentData;
+    if (apptData.therapistId && apptData.startISO) {
+      const oldSlotKey = `${apptData.therapistId}_${new Date(apptData.startISO).getTime()}`;
+      const oldLockRef = doc(db, 'appointmentLocks', oldSlotKey);
+      try {
+        await deleteDoc(oldLockRef);
+      } catch (e) {
+        console.warn('Failed to release old lock document during reschedule:', e);
+      }
+    }
+  }
+
   const updatePayload: Record<string, any> = {
     startISO: newStartISO,
     endISO: newEndISO,
