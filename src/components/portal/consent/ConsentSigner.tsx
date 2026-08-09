@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { getConsentTemplates, getSignedDocuments, signConsentDocument } from '../../../lib/firebase/consent';
 import type { ConsentTemplateData, SignedDocumentData } from '../../../types/consent';
+import { PrintableSignedConsentDocument } from './PrintableSignedConsentDocument';
 
 export const ConsentSigner: React.FC = () => {
   const { user, profile } = useAuth();
@@ -130,7 +131,7 @@ export const ConsentSigner: React.FC = () => {
   return (
     <div className="space-y-8 font-sans">
       {/* Top Banner */}
-      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm">
+      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm no-print print:hidden">
         <h2 className="text-3xl font-serif text-[#2C2A2A] font-medium">Practice Consent Forms & Agreements</h2>
         <p className="text-xs text-[#2C2A2A]/70 mt-1">
           Review, sign, and download required clinical policies and legal agreements. Signed documents are immutably archived.
@@ -138,7 +139,7 @@ export const ConsentSigner: React.FC = () => {
       </div>
 
       {message && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 text-xs font-semibold">
+        <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 text-xs font-semibold no-print print:hidden">
           {message}
         </div>
       )}
@@ -146,7 +147,7 @@ export const ConsentSigner: React.FC = () => {
       {/* Document Selector & Viewer */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Template Selector List */}
-        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-4 shadow-sm space-y-2">
+        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-4 shadow-sm space-y-2 no-print print:hidden">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-[#4A5741] px-2 mb-3">Required Documents</h3>
           {templates.map((t) => {
             const signed = isAlreadySigned(t.id);
@@ -169,45 +170,30 @@ export const ConsentSigner: React.FC = () => {
           })}
         </div>
 
-        {/* Selected Document Text & Signing Form */}
+        {/* Selected Document Text & Signing Form / Printable View */}
         <div className="md:col-span-2 space-y-6">
           {selectedTemplate && (
-            <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
-              <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-4">
-                <div>
-                  <h3 className="text-2xl font-serif text-[#2C2A2A] font-medium">{selectedTemplate.title}</h3>
-                  <span className="text-xs text-[#4A5741] font-semibold">{selectedTemplate.category} • Version {selectedTemplate.version}</span>
-                </div>
-                {isAlreadySigned(selectedTemplate.id) && (
-                  <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-                    ✅ Signed & Archived
-                  </span>
-                )}
-              </div>
-
-              {/* Exact Document Text Scroll Area */}
-              <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-xl p-5 text-xs text-[#2C2A2A] leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap font-mono">
-                {selectedTemplate.textContent}
-              </div>
-
-              {/* If already signed -> Show immutable snapshot info */}
-              {isAlreadySigned(selectedTemplate.id) ? (
-                <div className="official-print-document p-5 bg-green-50/60 border border-green-200 rounded-xl space-y-2 text-xs text-green-900">
-                  <p className="font-semibold text-sm">Signed Document Metadata</p>
-                  <p><strong>Signed By:</strong> {getSignedDocForTemplate(selectedTemplate.id)?.clientTypedName}</p>
-                  <p><strong>Timestamp:</strong> {getSignedDocForTemplate(selectedTemplate.id)?.signedAtISO}</p>
-                  <p><strong>Audit Hash ID:</strong> <span className="font-mono text-[11px]">{getSignedDocForTemplate(selectedTemplate.id)?.documentHash}</span></p>
-                  <div className="pt-2">
-                    <button
-                      onClick={() => window.print()}
-                      className="px-4 py-2 bg-[#4A5741] hover:bg-[#384232] text-white font-semibold rounded-lg transition"
-                    >
-                      🖨️ Print Immutable Copy
-                    </button>
+            isAlreadySigned(selectedTemplate.id) && getSignedDocForTemplate(selectedTemplate.id) ? (
+              <PrintableSignedConsentDocument
+                clientName={profile?.legalFirstName ? `${profile.legalFirstName} ${profile.legalLastName}` : (user?.email || '')}
+                clientEmail={user?.email || ''}
+                signedDoc={getSignedDocForTemplate(selectedTemplate.id)!}
+              />
+            ) : (
+              <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+                <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-4">
+                  <div>
+                    <h3 className="text-2xl font-serif text-[#2C2A2A] font-medium">{selectedTemplate.title}</h3>
+                    <span className="text-xs text-[#4A5741] font-semibold">{selectedTemplate.category} • Version {selectedTemplate.version}</span>
                   </div>
                 </div>
-              ) : (
-                /* E-Signature Form */
+
+                {/* Exact Document Text Scroll Area */}
+                <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-xl p-5 text-xs text-[#2C2A2A] leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap font-mono">
+                  {selectedTemplate.textContent}
+                </div>
+
+                {/* E-Signature Form */}
                 <form onSubmit={handleSignDocument} className="space-y-4 border-t border-[#EAE1D2] pt-4">
                   <h4 className="text-sm font-semibold uppercase text-[#2C2A2A] tracking-wider">
                     Electronic Signature Verification
@@ -275,8 +261,8 @@ export const ConsentSigner: React.FC = () => {
                     {signing ? 'Signing Document...' : 'Sign & Submit Consent Agreement'}
                   </button>
                 </form>
-              )}
-            </div>
+              </div>
+            )
           )}
         </div>
       </div>

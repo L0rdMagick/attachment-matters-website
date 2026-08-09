@@ -14,7 +14,7 @@ import { TherapistDashboard } from './dashboard/TherapistDashboard';
 import { ClientProfileView } from './client/ClientProfileView';
 import { ClientDirectory } from './staff/ClientDirectory';
 import { ClientDetailView } from './staff/ClientDetailView';
-import { IntakeFormRunner } from './intake/IntakeFormRunner';
+import { ClientDocumentsView } from './client/ClientDocumentsView';
 import { ConsentSigner } from './consent/ConsentSigner';
 import { TemplateManagerView } from './templates/TemplateManagerView';
 
@@ -153,14 +153,7 @@ const MainPortalContent: React.FC = () => {
           {activeTab === 'dashboard' && <ClientDashboard onNavigate={setActiveTab} />}
           {activeTab === 'profile' && <ClientProfileView />}
           {activeTab === 'appointments' && <AppointmentBookingModal />}
-          {activeTab === 'documents' && (
-            <div className="space-y-8">
-              <div className="no-print print:hidden">
-                <ConsentSigner />
-              </div>
-              <IntakeFormRunner />
-            </div>
-          )}
+          {activeTab === 'documents' && <ClientDocumentsView />}
           {activeTab === 'notes' && <SharedNotesView />}
           {activeTab === 'billing' && <LedgerManager />}
         </ClientLayout>
