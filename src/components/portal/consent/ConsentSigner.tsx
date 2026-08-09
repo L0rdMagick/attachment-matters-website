@@ -39,25 +39,48 @@ export const ConsentSigner: React.FC = () => {
     loadData();
   }, [user]);
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Helper to accurately map screen CSS coordinates to canvas buffer pixels (fixes pointer alignment & touch support)
+  const getCoordinates = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const clientX = 'touches' in e && e.touches.length > 0 ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e && e.touches.length > 0 ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+
+    const scaleX = canvas.width / (rect.width || 1);
+    const scaleY = canvas.height / (rect.height || 1);
+
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  };
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    const coords = getCoordinates(e);
     ctx.beginPath();
-    ctx.moveTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+    ctx.moveTo(coords.x, coords.y);
     setIsDrawing(true);
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+    const coords = getCoordinates(e);
+    ctx.lineTo(coords.x, coords.y);
     ctx.strokeStyle = '#2C2A2A';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.stroke();
   };
 
@@ -71,6 +94,14 @@ export const ConsentSigner: React.FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const handleSelectTemplate = (template: ConsentTemplateData) => {
+    setSelectedTemplate(template);
+    setTypedSignature('');
+    setAcknowledged(false);
+    clearCanvas();
+    setMessage(null);
   };
 
   const isAlreadySigned = (templateId: string) => {
@@ -99,7 +130,16 @@ export const ConsentSigner: React.FC = () => {
     try {
       let signatureDataUrl: string | undefined = undefined;
       if (canvasRef.current) {
-        signatureDataUrl = canvasRef.current.toDataURL();
+        // Check if canvas has actual drawn content
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const pixelData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+          const hasPixels = pixelData.some((channel) => channel !== 0);
+          if (hasPixels) {
+            signatureDataUrl = canvas.toDataURL();
+          }
+        }
       }
 
       const docHash = await signConsentDocument(
@@ -155,7 +195,7 @@ export const ConsentSigner: React.FC = () => {
             return (
               <button
                 key={t.id}
-                onClick={() => setSelectedTemplate(t)}
+                onClick={() => handleSelectTemplate(t)}
                 className={`w-full text-left p-3 rounded-xl text-xs font-medium transition flex items-center justify-between ${
                   isSelected ? 'bg-[#4A5741] text-white' : 'bg-[#F7F2E9] text-[#2C2A2A] hover:bg-[#EAE1D2]/60'
                 }`}
@@ -235,7 +275,10 @@ export const ConsentSigner: React.FC = () => {
                       onMouseMove={draw}
                       onMouseUp={stopDrawing}
                       onMouseLeave={stopDrawing}
-                      className="w-full h-28 bg-[#F7F2E9] border border-[#EAE1D2] rounded-xl cursor-crosshair"
+                      onTouchStart={startDrawing}
+                      onTouchMove={draw}
+                      onTouchEnd={stopDrawing}
+                      className="w-full h-28 bg-[#F7F2E9] border border-[#EAE1D2] rounded-xl cursor-crosshair touch-none"
                     />
                   </div>
 
