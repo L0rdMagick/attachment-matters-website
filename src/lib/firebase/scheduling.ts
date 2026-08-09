@@ -201,7 +201,7 @@ export function getAvailableTimeSlots(
 
     // Check for overlap with existing confirmed/requested appointments (including buffer times)
     const hasOverlap = existingAppointments.some((appt) => {
-      if (appt.status !== 'confirmed' && appt.status !== 'requested') return false;
+      if (appt.status !== 'confirmed' && appt.status !== 'requested' && appt.status !== 'rescheduled') return false;
       const apptStartMs = new Date(appt.startISO).getTime();
       const apptEndMs = new Date(appt.endISO).getTime();
       return blockedStartMs < apptEndMs && blockedEndMs > apptStartMs;
@@ -269,7 +269,7 @@ export function checkTherapistSlotAvailability(
   const blockedEndMs = sessionEndMs + bufferAfterMinutes * 60000;
 
   const conflict = existingAppointments.find((appt) => {
-    if (appt.status !== 'confirmed' && appt.status !== 'requested') return false;
+    if (appt.status !== 'confirmed' && appt.status !== 'requested' && appt.status !== 'rescheduled') return false;
     const apptStartMs = new Date(appt.startISO).getTime();
     const apptEndMs = new Date(appt.endISO).getTime();
     return blockedStartMs < apptEndMs && blockedEndMs > apptStartMs;
@@ -407,6 +407,7 @@ export async function rescheduleAppointment(
   const updatePayload: Record<string, any> = {
     startISO: newStartISO,
     endISO: newEndISO,
+    status: 'rescheduled',
     updatedAt: serverTimestamp()
   };
   if (newNotes !== undefined) {

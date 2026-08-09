@@ -49,7 +49,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
     return <div className="p-8 text-center bg-white border border-[#EAE1D2] rounded-2xl">Loading client dashboard...</div>;
   }
 
-  const nextAppointment = appointments.find((a) => a.status === 'confirmed' || a.status === 'requested');
+  const nextAppointment = appointments.find((a) => a.status === 'confirmed' || a.status === 'requested' || a.status === 'rescheduled');
 
   return (
     <div className="space-y-8 font-sans">

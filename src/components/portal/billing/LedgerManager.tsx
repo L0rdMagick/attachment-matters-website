@@ -93,7 +93,7 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
 
         setInvoices(invs);
         setLedgerEntries(ledger);
-        setUpcomingAppointments(appts.filter((a) => a.status === 'confirmed' || a.status === 'requested'));
+        setUpcomingAppointments(appts.filter((a) => a.status === 'confirmed' || a.status === 'requested' || a.status === 'rescheduled'));
       } catch (err) {
         console.error("Failed to load billing ledger", err);
       } finally {

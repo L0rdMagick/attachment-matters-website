@@ -61,7 +61,7 @@ export const AppointmentBookingModal: React.FC = () => {
     loadData();
   }, [user]);
 
-  const upcomingClientAppts = myAppointments.filter(a => a.status === 'confirmed' || a.status === 'requested');
+  const upcomingClientAppts = myAppointments.filter(a => a.status === 'confirmed' || a.status === 'requested' || a.status === 'rescheduled');
   const historyClientAppts = myAppointments.filter(a => a.status === 'completed' || a.status.startsWith('canceled'));
   const displayedClientAppts = apptTab === 'upcoming' ? upcomingClientAppts : historyClientAppts;
 
@@ -203,7 +203,7 @@ export const AppointmentBookingModal: React.FC = () => {
     setRescheduleModalAppt(appt);
     setRescheduleDate(appt.startISO.split('T')[0]);
     setRescheduleSlot(null);
-    setRescheduleNote(appt.notes || '');
+    setRescheduleNote('');
   };
 
   const handleConfirmReschedule = async () => {
@@ -214,7 +214,14 @@ export const AppointmentBookingModal: React.FC = () => {
       const dur = rescheduleApptType?.durationMinutes || 50;
       const endISO = new Date(new Date(startISO).getTime() + dur * 60000).toISOString();
 
-      await rescheduleAppointment(rescheduleModalAppt.id!, startISO, endISO, rescheduleNote.trim() || undefined);
+      const existingNotes = rescheduleModalAppt.notes || '';
+      const extraNote = rescheduleNote.trim();
+      let finalNotes: string | undefined = existingNotes || undefined;
+      if (extraNote) {
+        finalNotes = existingNotes ? `${existingNotes}\n[Rescheduled Note]: ${extraNote}` : extraNote;
+      }
+
+      await rescheduleAppointment(rescheduleModalAppt.id!, startISO, endISO, finalNotes);
       const updated = await getAppointments({ clientId: user!.uid });
       setMyAppointments(updated);
       setRescheduleModalAppt(null);
@@ -407,6 +414,7 @@ export const AppointmentBookingModal: React.FC = () => {
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                       appt.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' :
                       appt.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                      appt.status === 'rescheduled' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' :
                       appt.status === 'requested' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
                       'bg-gray-100 text-gray-700'
                     }`}>
@@ -417,7 +425,7 @@ export const AppointmentBookingModal: React.FC = () => {
                   <p><strong>Format:</strong> <span className="capitalize">{appt.format}</span></p>
 
                   {appt.notes && (
-                    <div className="mt-1 p-2 bg-white/80 rounded-lg border border-[#EAE1D2] text-[11px] italic text-[#2C2A2A]/90">
+                    <div className="mt-1 p-2 bg-white/80 rounded-lg border border-[#EAE1D2] text-[11px] italic text-[#2C2A2A]/90 whitespace-pre-line">
                       <strong>Note:</strong> {appt.notes}
                     </div>
                   )}
@@ -428,7 +436,7 @@ export const AppointmentBookingModal: React.FC = () => {
                     </div>
                   )}
 
-                  {appt.status === 'confirmed' || appt.status === 'requested' ? (
+                  {appt.status === 'confirmed' || appt.status === 'requested' || appt.status === 'rescheduled' ? (
                     <div className="pt-2 flex justify-end gap-3 border-t border-[#EAE1D2]/60 mt-2">
                       <button
                         onClick={() => openRescheduleModal(appt)}
@@ -576,16 +584,27 @@ export const AppointmentBookingModal: React.FC = () => {
                 )}
               </div>
 
+              {rescheduleModalAppt.notes && (
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
+                    Existing Note (Read-Only)
+                  </label>
+                  <div className="p-2.5 bg-gray-50 border border-[#EAE1D2] rounded-xl text-xs text-[#2C2A2A]/90 italic whitespace-pre-line">
+                    {rescheduleModalAppt.notes}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label htmlFor="resched-note" className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
-                  Updated Note (Optional)
+                  Additional Reschedule Note (Optional)
                 </label>
                 <input
                   id="resched-note"
                   type="text"
                   value={rescheduleNote}
                   onChange={(e) => setRescheduleNote(e.target.value)}
-                  placeholder="Note for rescheduled session..."
+                  placeholder="Add an additional note for this reschedule..."
                   className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white text-[#2C2A2A]"
                 />
               </div>

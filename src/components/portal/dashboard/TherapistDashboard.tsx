@@ -72,7 +72,7 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
 
       {/* Metrics Row */}
       {(() => {
-        const activeScheduledCount = todayAppointments.filter(a => a.status === 'confirmed' || a.status === 'requested').length;
+        const activeScheduledCount = todayAppointments.filter(a => a.status === 'confirmed' || a.status === 'requested' || a.status === 'rescheduled').length;
         const completedCount = todayAppointments.filter(a => a.status === 'completed').length;
         return (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">

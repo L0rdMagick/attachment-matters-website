@@ -229,7 +229,7 @@ export const TherapistCalendar: React.FC = () => {
     return <div className="p-8 text-center bg-white border border-[#EAE1D2] rounded-2xl">Loading clinical calendar...</div>;
   }
 
-  const upcomingAppts = appointments.filter(a => a.status === 'confirmed' || a.status === 'requested');
+  const upcomingAppts = appointments.filter(a => a.status === 'confirmed' || a.status === 'requested' || a.status === 'rescheduled');
   const historyAppts = appointments.filter(a => a.status === 'completed' || a.status.startsWith('canceled'));
   const displayedAppts = statusTab === 'upcoming' ? upcomingAppts : historyAppts;
 
@@ -313,6 +313,7 @@ export const TherapistCalendar: React.FC = () => {
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                         a.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' :
                         a.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                        a.status === 'rescheduled' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' :
                         a.status === 'requested' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
                         'bg-gray-100 text-gray-700'
                       }`}>
@@ -323,7 +324,7 @@ export const TherapistCalendar: React.FC = () => {
                       <strong>Time:</strong> {new Date(a.startISO).toLocaleString()} | <strong>Format:</strong> <span className="capitalize">{a.format}</span>
                     </p>
                     {a.notes && (
-                      <p className="text-[11px] bg-white/90 p-2 rounded-lg border border-[#EAE1D2] text-[#2C2A2A] italic mt-1">
+                      <p className="text-[11px] bg-white/90 p-2 rounded-lg border border-[#EAE1D2] text-[#2C2A2A] italic mt-1 whitespace-pre-line">
                         <strong>Note:</strong> {a.notes}
                       </p>
                     )}
@@ -343,7 +344,7 @@ export const TherapistCalendar: React.FC = () => {
                         ✓ Mark Completed
                       </button>
                     )}
-                    {a.status === 'confirmed' || a.status === 'requested' ? (
+                    {a.status === 'confirmed' || a.status === 'requested' || a.status === 'rescheduled' ? (
                       <button
                         onClick={() => openRescheduleModal(a)}
                         className="px-3 py-1.5 bg-[#BF5B33] text-white font-semibold rounded-lg hover:bg-[#a64e2b] transition"
@@ -477,14 +478,34 @@ export const TherapistCalendar: React.FC = () => {
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs text-center font-medium">{rescheduleClosedReason || 'No available slots on this date according to practice rules.'}</div>
                 )}
               </div>
+              {rescheduleSlot && !rescheduleAvailCheck.isAvailable && (
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs font-semibold space-y-1">
+                  <p className="font-bold text-amber-800">⚠️ OVERRIDE PRACTICE AVAILABILITY WARNING:</p>
+                  <p>{rescheduleAvailCheck.reason}</p>
+                  <p className="text-[11px] font-normal text-amber-700">As a practice therapist/admin, you may override this warning and proceed with rescheduling if necessary.</p>
+                </div>
+              )}
+
+              {rescheduleModalAppt.notes && (
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
+                    Existing Note (Read-Only)
+                  </label>
+                  <div className="p-2.5 bg-gray-50 border border-[#EAE1D2] rounded-xl text-xs text-[#2C2A2A]/90 italic whitespace-pre-line">
+                    {rescheduleModalAppt.notes}
+                  </div>
+                </div>
+              )}
               <div>
-                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Updated Session Note (Optional)</label>
-                <input type="text" value={rescheduleNote} onChange={(e) => setRescheduleNote(e.target.value)} placeholder="Note for rescheduled session..." className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white text-[#2C2A2A]" />
+                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Additional Reschedule Note (Optional)</label>
+                <input type="text" value={rescheduleNote} onChange={(e) => setRescheduleNote(e.target.value)} placeholder="Add an additional note for this reschedule..." className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white text-[#2C2A2A]" />
               </div>
             </div>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setRescheduleModalAppt(null)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-[#2C2A2A] font-semibold text-xs rounded-xl transition">Cancel</button>
-              <button type="button" disabled={!rescheduleSlot || rescheduling} onClick={handleConfirmReschedule} className="flex-1 py-2.5 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-semibold text-xs rounded-xl transition disabled:opacity-50">{rescheduling ? 'Rescheduling...' : 'Confirm Reschedule'}</button>
+              <button type="button" disabled={!rescheduleSlot || rescheduling} onClick={handleConfirmReschedule} className="flex-1 py-2.5 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-semibold text-xs rounded-xl transition disabled:opacity-50">
+                {rescheduling ? 'Rescheduling...' : (!rescheduleAvailCheck.isAvailable ? '⚠️ Override & Reschedule' : 'Confirm Reschedule')}
+              </button>
             </div>
           </div>
         </div>

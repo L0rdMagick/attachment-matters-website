@@ -166,7 +166,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
     }
   };
 
-  const upcomingAppts = clientAppointments.filter(a => a.status === 'confirmed' || a.status === 'requested');
+  const upcomingAppts = clientAppointments.filter(a => a.status === 'confirmed' || a.status === 'requested' || a.status === 'rescheduled');
   const pastAppts = clientAppointments.filter(a => a.status === 'completed' || a.status.startsWith('canceled'));
 
   const handleScheduleAppointment = async (e: React.FormEvent) => {
