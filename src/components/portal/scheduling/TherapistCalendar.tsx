@@ -145,9 +145,14 @@ export const TherapistCalendar: React.FC = () => {
     try {
       const startISO = `${rescheduleDate}T${rescheduleSlot}:00`;
       const dur = rescheduleApptType?.durationMinutes || 50;
-      const endISO = new Date(new Date(startISO).getTime() + dur * 60000).toISOString();
+      const existingNotes = rescheduleModalAppt.notes || '';
+      const extraNote = rescheduleNote.trim();
+      let finalNotes: string | undefined = existingNotes || undefined;
+      if (extraNote) {
+        finalNotes = existingNotes ? `${existingNotes}\n[Rescheduled Note]: ${extraNote}` : extraNote;
+      }
 
-      await rescheduleAppointment(rescheduleModalAppt.id!, startISO, endISO, rescheduleNote.trim() || undefined);
+      await rescheduleAppointment(rescheduleModalAppt.id!, startISO, endISO, finalNotes);
       const updated = await getAppointments({ therapistId: 'default_therapist' });
       setAppointments(updated);
       setRescheduleModalAppt(null);

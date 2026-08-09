@@ -199,9 +199,22 @@ export const AppointmentBookingModal: React.FC = () => {
     }
   };
 
+  const [rescheduleModalError, setRescheduleModalError] = useState<string | null>(null);
+
   const openRescheduleModal = (appt: AppointmentData) => {
     setRescheduleModalAppt(appt);
-    setRescheduleDate(appt.startISO.split('T')[0]);
+    setRescheduleModalError(null);
+    const minNoticeHours = rules?.minNoticeHours ?? 24;
+    const minNoticeMs = Date.now() + minNoticeHours * 3600000;
+    const apptDateStr = appt.startISO.split('T')[0];
+    const apptDateMs = new Date(`${apptDateStr}T23:59:59`).getTime();
+
+    if (apptDateMs < minNoticeMs) {
+      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      setRescheduleDate(tomorrow);
+    } else {
+      setRescheduleDate(apptDateStr);
+    }
     setRescheduleSlot(null);
     setRescheduleNote('');
   };
@@ -209,6 +222,7 @@ export const AppointmentBookingModal: React.FC = () => {
   const handleConfirmReschedule = async () => {
     if (!rescheduleModalAppt || !rescheduleSlot) return;
     setRescheduling(true);
+    setRescheduleModalError(null);
     try {
       const startISO = `${rescheduleDate}T${rescheduleSlot}:00`;
       const dur = rescheduleApptType?.durationMinutes || 50;
@@ -234,7 +248,7 @@ export const AppointmentBookingModal: React.FC = () => {
       });
     } catch (err: any) {
       console.error("Failed to reschedule appointment", err);
-      setMessage({ type: 'error', text: err.message || "Failed to reschedule appointment." });
+      setRescheduleModalError(err.message || "Failed to reschedule appointment.");
     } finally {
       setRescheduling(false);
     }
@@ -537,6 +551,12 @@ export const AppointmentBookingModal: React.FC = () => {
             <p className="text-xs text-[#2C2A2A]/80">
               Rescheduling: <strong>{rescheduleModalAppt.appointmentTypeName}</strong> (Currently scheduled for {new Date(rescheduleModalAppt.startISO).toLocaleString()})
             </p>
+
+            {rescheduleModalError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-800 text-xs font-semibold rounded-xl">
+                {rescheduleModalError}
+              </div>
+            )}
 
             <div className="space-y-3">
               <div>
