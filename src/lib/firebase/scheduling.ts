@@ -393,3 +393,24 @@ export async function updateAppointmentStatus(
     updatedAt: serverTimestamp()
   });
 }
+
+/**
+ * Reschedule an appointment to a new startISO and endISO, updating status and optionally notes
+ */
+export async function rescheduleAppointment(
+  appointmentId: string,
+  newStartISO: string,
+  newEndISO: string,
+  newNotes?: string
+) {
+  const docRef = doc(db, 'appointments', appointmentId);
+  const updatePayload: Record<string, any> = {
+    startISO: newStartISO,
+    endISO: newEndISO,
+    updatedAt: serverTimestamp()
+  };
+  if (newNotes !== undefined) {
+    updatePayload.notes = newNotes;
+  }
+  await updateDoc(docRef, updatePayload);
+}

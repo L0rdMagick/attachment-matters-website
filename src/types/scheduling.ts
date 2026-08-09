@@ -58,6 +58,7 @@ export interface AppointmentData {
   format: 'in_person' | 'telehealth';
   locationOrLink?: string;
   status: AppointmentStatus;
+  notes?: string;
   cancellationReason?: string;
   priceInCents: number;
   googleCalendarEventId?: string;

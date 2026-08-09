@@ -103,6 +103,11 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
             <p className="text-xs opacity-80 mt-1">
               📍 Format: <strong className="capitalize">{nextAppointment.format}</strong> — {nextAppointment.locationOrLink}
             </p>
+            {nextAppointment.notes && (
+              <p className="text-xs bg-white/10 p-2 rounded-lg mt-2 italic border border-white/20">
+                📝 Note: {nextAppointment.notes}
+              </p>
+            )}
           </div>
 
           <div className="pt-2 flex gap-3">
