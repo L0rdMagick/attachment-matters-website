@@ -309,14 +309,17 @@ export async function getAppointments(filter: { clientId?: string; therapistId?:
  * Uses a Firestore transaction to acquire an atomic lock document in `appointmentLocks`
  * preventing double-booking race conditions when two clients attempt to reserve the same slot simultaneously.
  */
-export async function bookAppointmentWithLock(appointment: Omit<AppointmentData, 'id'>): Promise<string> {
+export async function bookAppointmentWithLock(
+  appointment: Omit<AppointmentData, 'id'>,
+  allowOverride: boolean = false
+): Promise<string> {
   const slotKey = `${appointment.therapistId}_${new Date(appointment.startISO).getTime()}`;
   const lockRef = doc(db, 'appointmentLocks', slotKey);
   const newApptRef = doc(collection(db, 'appointments'));
 
   await runTransaction(db, async (transaction) => {
     const lockDoc = await transaction.get(lockRef);
-    if (lockDoc.exists()) {
+    if (lockDoc.exists() && !allowOverride) {
       const lockData = lockDoc.data();
       let isLockActive = true;
       if (lockData?.appointmentId) {

@@ -175,13 +175,14 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
     setSchedBooking(true);
     setSchedMessage(null);
 
-    // Check practice settings availability
+    // Check practice settings availability against all therapist appointments
+    const allTherapistAppts = await getAppointments({ therapistId: 'default_therapist' });
     const availCheck = checkTherapistSlotAvailability(
       schedDate,
       schedTime,
       schedType?.durationMinutes || 50,
       rules,
-      clientAppointments,
+      allTherapistAppts,
       schedType?.bufferBeforeMinutes || 0,
       schedType?.bufferAfterMinutes || 0
     );
@@ -215,7 +216,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
         status: 'confirmed',
         priceInCents: schedType.priceInCents,
         syncStatus: 'pending'
-      });
+      }, true);
 
       const appts = await getAppointments({ clientId: client.uid });
       setClientAppointments(appts);

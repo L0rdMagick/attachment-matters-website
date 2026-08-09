@@ -221,7 +221,7 @@ export const TherapistCalendar: React.FC = () => {
         notes: schedNote.trim() || undefined,
         priceInCents: schedType.priceInCents,
         syncStatus: 'pending'
-      });
+      }, true);
 
       const updated = await getAppointments({ therapistId: 'default_therapist' });
       setAppointments(updated);
