@@ -54,18 +54,22 @@ export async function updateClientProfile(
     updatedAt: serverTimestamp()
   }, { merge: true });
 
-  // Create audit event record
-  await addDoc(collection(db, 'auditEvents'), {
-    actorUid,
-    actorRole,
-    targetUid: clientId,
-    action: 'update_client_profile',
-    resourcePath: `clients/${clientId}`,
-    changedFields,
-    previousValues,
-    newValues: updatedData,
-    timestamp: serverTimestamp()
-  });
+  // Create audit event record safely
+  try {
+    await addDoc(collection(db, 'auditEvents'), {
+      actorUid,
+      actorRole,
+      targetUid: clientId,
+      action: 'update_client_profile',
+      resourcePath: `clients/${clientId}`,
+      changedFields,
+      previousValues,
+      newValues: updatedData,
+      timestamp: serverTimestamp()
+    });
+  } catch (err) {
+    console.warn("Audit log creation skipped:", err);
+  }
 
   // Always record practice notification for client profile changes
   const name = (updatedData.legalFirstName ? `${updatedData.legalFirstName} ${updatedData.legalLastName || ''}` : (currentData.legalFirstName ? `${currentData.legalFirstName} ${currentData.legalLastName || ''}` : 'Client')).trim();
