@@ -82,6 +82,8 @@ export async function getSignedDocuments(clientId: string): Promise<SignedDocume
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as SignedDocumentData));
 }
 
+import { createPracticeNotification } from './notifications';
+
 /**
  * Sign & Freeze Consent Document
  */
@@ -121,6 +123,14 @@ export async function signConsentDocument(
     },
     { merge: true }
   );
+
+  await createPracticeNotification({
+    type: 'document_signed',
+    title: '📄 Consent Agreement Signed',
+    message: `${clientTypedName} electronically signed ${template.title}.`,
+    clientId,
+    clientName: clientTypedName
+  });
 
   return documentHash;
 }

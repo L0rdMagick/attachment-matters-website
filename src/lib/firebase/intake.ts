@@ -14,6 +14,8 @@ export async function getIntakeSubmission(clientId: string): Promise<IntakeSubmi
   return null;
 }
 
+import { createPracticeNotification } from './notifications';
+
 /**
  * Save draft or final submission of Intake Form
  */
@@ -46,6 +48,17 @@ export async function saveIntakeSubmission(
     },
     { merge: true }
   );
+
+  if (isFinalSubmit) {
+    const clientName = `${formData.legalFirstName || ''} ${formData.legalLastName || ''}`.trim() || 'Client';
+    await createPracticeNotification({
+      type: 'intake_submitted',
+      title: '📝 Intake Form Submitted',
+      message: `${clientName} submitted their initial clinical intake questionnaire.`,
+      clientId,
+      clientName
+    });
+  }
 }
 
 /**

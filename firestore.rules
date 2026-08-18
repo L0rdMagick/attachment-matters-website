@@ -146,10 +146,14 @@ service cloud.firestore {
       allow write: if false; // Only written via Cloud Functions / Firebase Admin SDK
     }
 
-    // Cancellation Alerts
+    // Cancellation Alerts & Practice Notifications
     match /cancellationAlerts/{alertId} {
       allow read, update, delete: if isTherapist();
       allow create: if isSignedIn();
+    }
+
+    match /practiceNotifications/{notificationId} {
+      allow read, write: if isSignedIn();
     }
   }
 }

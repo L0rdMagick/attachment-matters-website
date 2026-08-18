@@ -10,56 +10,86 @@ interface StaffLayoutProps {
   onTabChange: (tab: string) => void;
 }
 
-interface CancellationNoticeAlert {
+interface PopupNoticeAlert {
   id: string;
-  appointmentId: string;
-  clientId: string;
+  type?: string;
+  title: string;
+  message: string;
   clientName: string;
-  appointmentTypeName: string;
-  startISO: string;
-  reason: string;
-  canceledAt: string;
-  read: boolean;
+  details?: string;
+  createdAt?: any;
+  sourceCollection: 'practiceNotifications' | 'cancellationAlerts';
 }
 
 export const StaffLayout: React.FC<StaffLayoutProps> = ({ children, activeTab, onTabChange }) => {
   const { user, profile, role, logout } = useAuth();
-  const [activeAlert, setActiveAlert] = useState<CancellationNoticeAlert | null>(null);
+  const [activeAlert, setActiveAlert] = useState<PopupNoticeAlert | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    const q = query(
-      collection(db, 'cancellationAlerts'),
+
+    // Listen to practiceNotifications collection for unread notifications
+    const qNotifs = query(
+      collection(db, 'practiceNotifications'),
       where('read', '==', false)
     );
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const docData = snapshot.docs[0];
-          setActiveAlert({ id: docData.id, ...docData.data() } as CancellationNoticeAlert);
-        } else {
-          setActiveAlert(null);
-        }
-      },
-      (err) => {
-        console.warn("Cancellation alert listener notice:", err);
+    const unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
+      if (!snapshot.empty) {
+        const d = snapshot.docs[0];
+        const data = d.data();
+        setActiveAlert({
+          id: d.id,
+          type: data.type,
+          title: data.title || 'Client Portal Notice',
+          message: data.message || '',
+          clientName: data.clientName || 'Client',
+          details: data.details || data.reason || '',
+          createdAt: data.createdAt,
+          sourceCollection: 'practiceNotifications'
+        });
+      } else {
+        // Fallback check on cancellationAlerts
+        const qCancels = query(
+          collection(db, 'cancellationAlerts'),
+          where('read', '==', false)
+        );
+        const unsubCancels = onSnapshot(qCancels, (snap2) => {
+          if (!snap2.empty) {
+            const d2 = snap2.docs[0];
+            const data2 = d2.data();
+            setActiveAlert({
+              id: d2.id,
+              type: 'appointment_canceled',
+              title: '🛑 Appointment Canceled by Client',
+              message: `${data2.clientName || 'Client'} canceled appointment (${data2.appointmentTypeName || 'Therapy Session'}).`,
+              clientName: data2.clientName || 'Client',
+              details: data2.reason || '',
+              createdAt: data2.canceledAt,
+              sourceCollection: 'cancellationAlerts'
+            });
+          } else {
+            setActiveAlert(null);
+          }
+        }, () => {});
+        return () => unsubCancels();
       }
-    );
+    }, (err) => {
+      console.warn("Practice notification listener notice:", err);
+    });
 
-    return () => unsubscribe();
+    return () => unsubNotifs();
   }, [user]);
 
   const handleDismissAlert = async () => {
     if (!activeAlert?.id) return;
     try {
-      await updateDoc(doc(db, 'cancellationAlerts', activeAlert.id), {
+      await updateDoc(doc(db, activeAlert.sourceCollection, activeAlert.id), {
         read: true
       });
       setActiveAlert(null);
     } catch (err) {
-      console.error("Failed to dismiss cancellation alert notice", err);
+      console.error("Failed to dismiss notice", err);
       setActiveAlert(null);
     }
   };
@@ -83,21 +113,24 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children, activeTab, o
         <EmergencyNoticeHeader />
       </div>
 
-      {/* Real-time Client Cancellation Notice Modal */}
+      {/* Real-time Client Activity Pop-up Modal Notice */}
       {activeAlert && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in no-print">
-          <div className="bg-white border-2 border-red-500 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-start justify-between border-b border-red-100 pb-3">
+          <div className="bg-white border-2 border-[#BF5B33] rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-start justify-between border-b border-[#EAE1D2] pb-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold text-xl">
-                  🚨
+                <div className="w-10 h-10 rounded-full bg-[#BF5B33]/10 text-[#BF5B33] flex items-center justify-center font-bold text-xl">
+                  {activeAlert.type === 'appointment_canceled' ? '🚨' :
+                   activeAlert.type === 'appointment_created' ? '📅' :
+                   activeAlert.type === 'intake_submitted' ? '📝' :
+                   activeAlert.type === 'document_signed' ? '📄' : '🔔'}
                 </div>
                 <div>
-                  <h3 className="font-serif font-bold text-lg text-red-900">
-                    Appointment Canceled by Client
+                  <h3 className="font-serif font-bold text-lg text-[#2C2A2A]">
+                    {activeAlert.title}
                   </h3>
-                  <p className="text-[11px] text-red-700 font-semibold uppercase tracking-wider">
-                    Staff Notification Notice
+                  <p className="text-[11px] text-[#BF5B33] font-semibold uppercase tracking-wider">
+                    Staff Real-Time Notice
                   </p>
                 </div>
               </div>
@@ -105,21 +138,16 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children, activeTab, o
 
             <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-2xl p-4 space-y-2 text-xs text-[#2C2A2A]">
               <p>
-                <strong className="font-bold text-[#4A5741]">Client Name:</strong>{' '}
+                <strong className="font-bold text-[#4A5741]">Client:</strong>{' '}
                 <span className="font-semibold text-sm text-[#2C2A2A]">{activeAlert.clientName}</span>
               </p>
-              <p>
-                <strong className="font-bold text-[#4A5741]">Session Type:</strong>{' '}
-                <span>{activeAlert.appointmentTypeName}</span>
+              <p className="leading-relaxed">
+                {activeAlert.message}
               </p>
-              <p>
-                <strong className="font-bold text-[#4A5741]">Scheduled Date/Time:</strong>{' '}
-                <span className="font-semibold">{new Date(activeAlert.startISO).toLocaleString()}</span>
-              </p>
-              {activeAlert.reason && (
-                <div className="mt-2 p-2.5 bg-white rounded-xl border border-red-200 text-[#2C2A2A]">
-                  <strong className="text-red-800 text-[11px] uppercase block mb-0.5 font-bold">Cancellation Reason:</strong>
-                  <span className="italic text-[#2C2A2A]/90">{activeAlert.reason}</span>
+              {activeAlert.details && (
+                <div className="mt-2 p-2.5 bg-white rounded-xl border border-[#EAE1D2] text-[#2C2A2A]">
+                  <strong className="text-[#BF5B33] text-[11px] uppercase block mb-0.5 font-bold">Details / Reason:</strong>
+                  <span className="italic text-[#2C2A2A]/90 whitespace-pre-line">{activeAlert.details}</span>
                 </div>
               )}
             </div>

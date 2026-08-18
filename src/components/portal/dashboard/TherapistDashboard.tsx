@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { getAppointments } from '../../../lib/firebase/scheduling';
 import { getClientsDirectory } from '../../../lib/firebase/clients';
+import {
+  getPracticeNotifications,
+  deletePracticeNotification,
+  clearAllPracticeNotifications,
+  type PracticeNotification
+} from '../../../lib/firebase/notifications';
 import type { AppointmentData } from '../../../types/scheduling';
 import type { ClientProfileData } from '../../../types/client';
 
@@ -13,26 +19,42 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
   const { user } = useAuth();
   const [todayAppointments, setTodayAppointments] = useState<AppointmentData[]>([]);
   const [pendingIntakes, setPendingIntakes] = useState<ClientProfileData[]>([]);
+  const [notifications, setNotifications] = useState<PracticeNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadDash() {
-      try {
-        const [appts, clients] = await Promise.all([
-          getAppointments({ therapistId: 'default_therapist' }),
-          getClientsDirectory({ intakeStatus: 'submitted' })
-        ]);
+  const loadDash = async () => {
+    try {
+      const [appts, clients, notifs] = await Promise.all([
+        getAppointments({ therapistId: 'default_therapist' }),
+        getClientsDirectory({ intakeStatus: 'submitted' }),
+        getPracticeNotifications()
+      ]);
 
-        setTodayAppointments(appts);
-        setPendingIntakes(clients);
-      } catch (err) {
-        console.error("Failed to load therapist dashboard", err);
-      } finally {
-        setLoading(false);
-      }
+      setTodayAppointments(appts);
+      setPendingIntakes(clients);
+      setNotifications(notifs);
+    } catch (err) {
+      console.error("Failed to load therapist dashboard", err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadDash();
   }, []);
+
+  const handleDeleteNotif = async (id?: string) => {
+    if (!id) return;
+    await deletePracticeNotification(id);
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const handleClearAll = async () => {
+    if (!window.confirm("Are you sure you want to delete all activity notifications?")) return;
+    await clearAllPracticeNotifications();
+    setNotifications([]);
+  };
 
   if (loading) {
     return <div className="p-8 text-center bg-white border border-[#EAE1D2] rounded-2xl">Loading therapist dashboard...</div>;
@@ -96,6 +118,91 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
           </div>
         );
       })()}
+
+      {/* Client Activity & Notification Center */}
+      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+        <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-3">
+          <div>
+            <h3 className="text-xl font-serif text-[#2C2A2A] font-medium flex items-center gap-2">
+              🔔 Client Activity & Notifications ({notifications.length})
+            </h3>
+            <p className="text-xs text-[#2C2A2A]/70 mt-0.5">
+              Real-time audit log of client profile updates, form submissions, signed agreements, bookings, and cancellations.
+            </p>
+          </div>
+
+          {notifications.length > 0 && (
+            <button
+              onClick={handleClearAll}
+              className="px-3 py-1.5 text-xs text-red-600 hover:text-red-800 font-semibold bg-red-50 border border-red-200 rounded-xl transition"
+            >
+              🗑️ Clear All Notifications
+            </button>
+          )}
+        </div>
+
+        {notifications.length > 0 ? (
+          <div className="space-y-3">
+            {notifications.map((notif) => {
+              const isCanceled = notif.type === 'appointment_canceled';
+              const isCreated = notif.type === 'appointment_created';
+              const isIntake = notif.type === 'intake_submitted';
+              const isDoc = notif.type === 'document_signed';
+
+              return (
+                <div
+                  key={notif.id}
+                  className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs ${
+                    isCanceled ? 'bg-red-50/70 border-red-200 text-red-950' :
+                    isCreated ? 'bg-green-50/70 border-green-200 text-green-950' :
+                    isIntake ? 'bg-amber-50/70 border-amber-200 text-amber-950' :
+                    isDoc ? 'bg-blue-50/70 border-blue-200 text-blue-950' :
+                    'bg-[#F7F2E9] border-[#EAE1D2] text-[#2C2A2A]'
+                  }`}
+                >
+                  <div className="space-y-1 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        isCanceled ? 'bg-red-100 text-red-800 border border-red-200' :
+                        isCreated ? 'bg-green-100 text-green-800 border border-green-200' :
+                        isIntake ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                        isDoc ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {notif.title}
+                      </span>
+                      <span className="text-[11px] text-gray-500 font-medium">
+                        {notif.createdAt?.seconds
+                          ? new Date(notif.createdAt.seconds * 1000).toLocaleString()
+                          : (notif.createdAt ? new Date(notif.createdAt).toLocaleString() : 'Just now')}
+                      </span>
+                    </div>
+
+                    <p className="font-semibold text-sm">{notif.message}</p>
+                    {notif.details && (
+                      <p className="text-[11px] opacity-85 italic bg-white/60 p-2 rounded-lg border border-gray-200/60 mt-1 whitespace-pre-line">
+                        Details: {notif.details}
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => handleDeleteNotif(notif.id)}
+                    className="text-[11px] font-semibold text-gray-600 hover:text-red-700 px-3 py-1 bg-white hover:bg-red-50 border border-gray-200 rounded-lg transition whitespace-nowrap"
+                    title="Delete notification"
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="p-6 text-center text-xs text-[#2C2A2A]/60 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2]">
+            No recent client activity notifications. Client updates, bookings, submissions, and cancellations will appear here.
+          </div>
+        )}
+      </div>
 
       {/* Pending Intakes Section */}
       {pendingIntakes.length > 0 && (

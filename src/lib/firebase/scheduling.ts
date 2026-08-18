@@ -15,6 +15,8 @@ import {
 import { db } from './config';
 import type { AvailabilityRules, AppointmentData, AppointmentStatus } from '../../types/scheduling';
 
+import { createPracticeNotification } from './notifications';
+
 export const DEFAULT_AVAILABILITY_RULES: AvailabilityRules = {
   therapistId: 'default',
   timezone: 'America/Chicago',
@@ -367,6 +369,16 @@ export async function bookAppointmentWithLock(
     });
   });
 
+  // Record practice notification for appointment creation
+  createPracticeNotification({
+    type: 'appointment_created',
+    title: '📅 New Appointment Booked',
+    message: `${appointmentData.clientName || 'Client'} booked ${appointmentData.appointmentTypeName || 'Therapy Session'} for ${new Date(appointmentData.startISO).toLocaleString()}.`,
+    clientId: appointmentData.clientId,
+    clientName: appointmentData.clientName || appointmentData.clientEmail || 'Client',
+    details: `Format: ${appointmentData.format}`
+  });
+
   return newApptRef.id;
 }
 
@@ -439,17 +451,29 @@ export async function updateAppointmentStatus(
     updatedAt: serverTimestamp()
   });
 
-  // If appointment was canceled by client, record alert for therapist/admin pop-up notice
+  // If appointment was canceled by client, record practice notification
   if (status === 'canceled_by_client' && apptSnap.exists()) {
     try {
       const appt = apptSnap.data() as AppointmentData;
+      const cancelReason = reason || 'Canceled by client via portal';
+      
+      await createPracticeNotification({
+        type: 'appointment_canceled',
+        title: '🛑 Appointment Canceled by Client',
+        message: `${appt.clientName || appt.clientEmail || 'Client'} canceled session (${appt.appointmentTypeName || 'Therapy Session'}) scheduled for ${new Date(appt.startISO).toLocaleString()}.`,
+        clientId: appt.clientId,
+        clientName: appt.clientName || appt.clientEmail || 'Client',
+        details: cancelReason
+      });
+
+      // Also create document in cancellationAlerts for fallback compatibility
       await addDoc(collection(db, 'cancellationAlerts'), {
         appointmentId,
         clientId: appt.clientId,
         clientName: appt.clientName || appt.clientEmail || 'Client',
         appointmentTypeName: appt.appointmentTypeName || 'Therapy Session',
         startISO: appt.startISO,
-        reason: reason || 'Canceled by client via portal',
+        reason: cancelReason,
         canceledAt: new Date().toISOString(),
         read: false
       });

@@ -26,6 +26,8 @@ export async function getClientProfile(clientId: string): Promise<ClientProfileD
   return null;
 }
 
+import { createPracticeNotification } from './notifications';
+
 /**
  * Update client profile with audit logging
  */
@@ -37,7 +39,7 @@ export async function updateClientProfile(
 ) {
   const clientRef = doc(db, 'clients', clientId);
   const currentSnap = await getDoc(clientRef);
-  const currentData = currentSnap.exists() ? currentSnap.data() : {};
+  const currentData = currentSnap.exists() ? currentSnap.data() as Partial<ClientProfileData> : {};
 
   // Record audit log entry
   const changedFields = Object.keys(updatedData);
@@ -64,6 +66,18 @@ export async function updateClientProfile(
     newValues: updatedData,
     timestamp: serverTimestamp()
   });
+
+  // Record practice notification if updated by client
+  if (actorRole === 'client' || !actorRole) {
+    const name = (updatedData.legalFirstName ? `${updatedData.legalFirstName} ${updatedData.legalLastName || ''}` : (currentData.legalFirstName ? `${currentData.legalFirstName} ${currentData.legalLastName || ''}` : 'Client')).trim();
+    await createPracticeNotification({
+      type: 'profile_updated',
+      title: '👤 Client Profile Updated',
+      message: `${name} updated profile fields (${changedFields.join(', ')}).`,
+      clientId,
+      clientName: name
+    });
+  }
 }
 
 /**
