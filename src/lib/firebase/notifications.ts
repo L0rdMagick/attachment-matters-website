@@ -26,11 +26,18 @@ export interface PracticeNotification {
  */
 export async function createPracticeNotification(notification: Omit<PracticeNotification, 'id' | 'createdAt' | 'read'>) {
   try {
-    await addDoc(collection(db, 'practiceNotifications'), {
-      ...notification,
+    const cleanPayload: Record<string, any> = {
+      type: notification.type || 'profile_updated',
+      title: notification.title || 'Client Activity Notice',
+      message: notification.message || '',
+      clientId: notification.clientId || 'unknown',
+      clientName: notification.clientName || 'Client',
+      details: notification.details || '',
       read: false,
       createdAt: serverTimestamp()
-    });
+    };
+
+    await addDoc(collection(db, 'practiceNotifications'), cleanPayload);
   } catch (err) {
     console.warn("Failed to create practice notification:", err);
   }

@@ -373,10 +373,10 @@ export async function bookAppointmentWithLock(
   createPracticeNotification({
     type: 'appointment_created',
     title: '📅 New Appointment Booked',
-    message: `${appointmentData.clientName || 'Client'} booked ${appointmentData.appointmentTypeName || 'Therapy Session'} for ${new Date(appointmentData.startISO).toLocaleString()}.`,
-    clientId: appointmentData.clientId,
-    clientName: appointmentData.clientName || appointmentData.clientEmail || 'Client',
-    details: `Format: ${appointmentData.format}`
+    message: `${appointment.clientName || 'Client'} booked ${appointment.appointmentTypeName || 'Therapy Session'} for ${new Date(appointment.startISO).toLocaleString()}.`,
+    clientId: appointment.clientId,
+    clientName: appointment.clientName || appointment.clientEmail || 'Client',
+    details: `Format: ${appointment.format}`
   });
 
   return newApptRef.id;

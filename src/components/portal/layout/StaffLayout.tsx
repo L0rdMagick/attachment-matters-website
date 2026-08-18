@@ -28,44 +28,43 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children, activeTab, o
   useEffect(() => {
     if (!user) return;
 
-    // Listen to practiceNotifications collection for unread notifications
-    const qNotifs = query(
-      collection(db, 'practiceNotifications'),
-      where('read', '==', false)
-    );
+    // Listen to practiceNotifications collection
+    const colNotifs = collection(db, 'practiceNotifications');
+    const unsubNotifs = onSnapshot(colNotifs, (snapshot) => {
+      const unreadNotifs = snapshot.docs
+        .map((d) => ({ id: d.id, ...d.data() } as any))
+        .filter((n) => n.read === false);
 
-    const unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
-      if (!snapshot.empty) {
-        const d = snapshot.docs[0];
-        const data = d.data();
+      if (unreadNotifs.length > 0) {
+        const first = unreadNotifs[0];
         setActiveAlert({
-          id: d.id,
-          type: data.type,
-          title: data.title || 'Client Portal Notice',
-          message: data.message || '',
-          clientName: data.clientName || 'Client',
-          details: data.details || data.reason || '',
-          createdAt: data.createdAt,
+          id: first.id,
+          type: first.type,
+          title: first.title || 'Client Portal Notice',
+          message: first.message || '',
+          clientName: first.clientName || 'Client',
+          details: first.details || first.reason || '',
+          createdAt: first.createdAt,
           sourceCollection: 'practiceNotifications'
         });
       } else {
         // Fallback check on cancellationAlerts
-        const qCancels = query(
-          collection(db, 'cancellationAlerts'),
-          where('read', '==', false)
-        );
-        const unsubCancels = onSnapshot(qCancels, (snap2) => {
-          if (!snap2.empty) {
-            const d2 = snap2.docs[0];
-            const data2 = d2.data();
+        const colCancels = collection(db, 'cancellationAlerts');
+        const unsubCancels = onSnapshot(colCancels, (snap2) => {
+          const unreadCancels = snap2.docs
+            .map((d) => ({ id: d.id, ...d.data() } as any))
+            .filter((c) => c.read === false);
+
+          if (unreadCancels.length > 0) {
+            const firstCancel = unreadCancels[0];
             setActiveAlert({
-              id: d2.id,
+              id: firstCancel.id,
               type: 'appointment_canceled',
               title: '🛑 Appointment Canceled by Client',
-              message: `${data2.clientName || 'Client'} canceled appointment (${data2.appointmentTypeName || 'Therapy Session'}).`,
-              clientName: data2.clientName || 'Client',
-              details: data2.reason || '',
-              createdAt: data2.canceledAt,
+              message: `${firstCancel.clientName || 'Client'} canceled appointment (${firstCancel.appointmentTypeName || 'Therapy Session'}).`,
+              clientName: firstCancel.clientName || 'Client',
+              details: firstCancel.reason || '',
+              createdAt: firstCancel.canceledAt,
               sourceCollection: 'cancellationAlerts'
             });
           } else {
