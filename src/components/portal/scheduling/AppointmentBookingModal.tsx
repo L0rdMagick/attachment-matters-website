@@ -284,107 +284,123 @@ export const AppointmentBookingModal: React.FC = () => {
             Schedule a New Session
           </h3>
 
-          <div>
-            <label htmlFor="bk-type" className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
-              Select Appointment Type
-            </label>
-            <select
-              id="bk-type"
-              value={selectedType?.id || ''}
-              onChange={(e) => {
-                const found = rules?.appointmentTypes?.find((t) => t.id === e.target.value);
-                if (found) {
-                  setSelectedType(found);
-                  if (found.format === 'telehealth') setFormat('telehealth');
-                  else if (found.format === 'in_person') setFormat('in_person');
-                }
-              }}
-              className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white font-medium text-[#2C2A2A]"
-            >
-              {rules?.appointmentTypes?.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.durationMinutes} mins — ${(t.priceInCents / 100).toFixed(2)})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="bk-date" className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Date</label>
-              <input
-                id="bk-date"
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs"
-              />
+          {rules?.allowClientSelfScheduling === false ? (
+            <div className="p-6 bg-[#F7F2E9] border border-[#EAE1D2] rounded-2xl text-center space-y-3">
+              <div className="w-10 h-10 bg-[#4A5741]/10 text-[#4A5741] rounded-full flex items-center justify-center mx-auto text-lg">
+                📅
+              </div>
+              <h4 className="text-base font-serif font-medium text-[#2C2A2A]">
+                Online Self-Scheduling Disabled
+              </h4>
+              <p className="text-xs text-[#2C2A2A]/70 leading-relaxed">
+                Direct online self-scheduling is currently turned off by practice administration. Please contact Family Trust Therapy directly to schedule or adjust your appointment.
+              </p>
             </div>
-            <div>
-              <label htmlFor="bk-fmt" className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Format</label>
-              <select
-                id="bk-fmt"
-                value={format}
-                onChange={(e) => setFormat(e.target.value as any)}
-                disabled={selectedType?.format === 'telehealth' || selectedType?.format === 'in_person'}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white disabled:opacity-75"
+          ) : (
+            <>
+              <div>
+                <label htmlFor="bk-type" className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
+                  Select Appointment Type
+                </label>
+                <select
+                  id="bk-type"
+                  value={selectedType?.id || ''}
+                  onChange={(e) => {
+                    const found = rules?.appointmentTypes?.find((t) => t.id === e.target.value);
+                    if (found) {
+                      setSelectedType(found);
+                      if (found.format === 'telehealth') setFormat('telehealth');
+                      else if (found.format === 'in_person') setFormat('in_person');
+                    }
+                  }}
+                  className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white font-medium text-[#2C2A2A]"
+                >
+                  {rules?.appointmentTypes?.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.durationMinutes} mins — ${(t.priceInCents / 100).toFixed(2)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="bk-date" className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Date</label>
+                  <input
+                    id="bk-date"
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="bk-fmt" className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Format</label>
+                  <select
+                    id="bk-fmt"
+                    value={format}
+                    onChange={(e) => setFormat(e.target.value as any)}
+                    disabled={selectedType?.format === 'telehealth' || selectedType?.format === 'in_person'}
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white disabled:opacity-75"
+                  >
+                    {selectedType?.format !== 'in_person' && <option value="telehealth">Telehealth (Video)</option>}
+                    {selectedType?.format !== 'telehealth' && <option value="in_person">In Person (Office)</option>}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-2">
+                  Available Time Slots ({rules?.timezone})
+                </label>
+                {availableSlots.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {availableSlots.map((slot) => {
+                      const isSelected = selectedTimeSlot === slot;
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => setSelectedTimeSlot(slot)}
+                          className={`py-2 rounded-xl text-xs font-semibold transition border ${
+                            isSelected ? 'bg-[#BF5B33] text-white border-[#BF5B33]' : 'bg-[#F7F2E9] text-[#2C2A2A] border-[#EAE1D2] hover:bg-[#EAE1D2]/60'
+                          }`}
+                        >
+                          {slot}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-xl text-amber-900 text-xs font-semibold text-center">
+                    {closedReason || 'No available appointment time slots on this date. Please select a different day.'}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="bk-note" className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
+                  Appointment Note / Reason (Optional)
+                </label>
+                <textarea
+                  id="bk-note"
+                  rows={2}
+                  value={bookingNote}
+                  onChange={(e) => setBookingNote(e.target.value)}
+                  placeholder="Add any notes or specific topics you would like to cover..."
+                  className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white text-[#2C2A2A]"
+                />
+              </div>
+
+              <button
+                onClick={handleBook}
+                disabled={!selectedTimeSlot || booking}
+                className="w-full py-3 px-6 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-semibold text-xs rounded-xl transition disabled:opacity-50"
               >
-                {selectedType?.format !== 'in_person' && <option value="telehealth">Telehealth (Video)</option>}
-                {selectedType?.format !== 'telehealth' && <option value="in_person">In Person (Office)</option>}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-2">
-              Available Time Slots ({rules?.timezone})
-            </label>
-            {availableSlots.length > 0 ? (
-              <div className="grid grid-cols-3 gap-2">
-                {availableSlots.map((slot) => {
-                  const isSelected = selectedTimeSlot === slot;
-                  return (
-                    <button
-                      key={slot}
-                      type="button"
-                      onClick={() => setSelectedTimeSlot(slot)}
-                      className={`py-2 rounded-xl text-xs font-semibold transition border ${
-                        isSelected ? 'bg-[#BF5B33] text-white border-[#BF5B33]' : 'bg-[#F7F2E9] text-[#2C2A2A] border-[#EAE1D2] hover:bg-[#EAE1D2]/60'
-                      }`}
-                    >
-                      {slot}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-xl text-amber-900 text-xs font-semibold text-center">
-                {closedReason || 'No available appointment time slots on this date. Please select a different day.'}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="bk-note" className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
-              Appointment Note / Reason (Optional)
-            </label>
-            <textarea
-              id="bk-note"
-              rows={2}
-              value={bookingNote}
-              onChange={(e) => setBookingNote(e.target.value)}
-              placeholder="Add any notes or specific topics you would like to cover..."
-              className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white text-[#2C2A2A]"
-            />
-          </div>
-
-          <button
-            onClick={handleBook}
-            disabled={!selectedTimeSlot || booking}
-            className="w-full py-3 px-6 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-semibold text-xs rounded-xl transition disabled:opacity-50"
-          >
-            {booking ? 'Reserving Lock...' : 'Confirm Appointment Reservation'}
-          </button>
+                {booking ? 'Reserving Lock...' : 'Confirm Appointment Reservation'}
+              </button>
+            </>
+          )}
         </div>
 
         {/* Existing Appointments List */}

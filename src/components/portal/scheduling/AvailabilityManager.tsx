@@ -379,6 +379,25 @@ export const AvailabilityManager: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Client Self-Scheduling Permission */}
+          <div className="pt-4 border-t border-[#EAE1D2] flex items-center justify-between gap-4">
+            <div>
+              <label htmlFor="av-self-sched" className="text-xs font-semibold uppercase text-[#2C2A2A] block cursor-pointer">
+                Allow Clients to Self-Schedule Appointments
+              </label>
+              <p className="text-[11px] text-[#2C2A2A]/70 normal-case mt-0.5">
+                When enabled, clients can view available time slots and book appointments independently in the portal.
+              </p>
+            </div>
+            <input
+              id="av-self-sched"
+              type="checkbox"
+              checked={rules.allowClientSelfScheduling ?? true}
+              onChange={(e) => setRules({ ...rules, allowClientSelfScheduling: e.target.checked })}
+              className="w-5 h-5 text-[#BF5B33] rounded cursor-pointer accent-[#BF5B33]"
+            />
+          </div>
         </div>
 
         <div className="flex justify-end">
