@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { getAppointments } from '../../../lib/firebase/scheduling';
+import { getAppointments, getAvailabilityRules } from '../../../lib/firebase/scheduling';
 import { getInvoicesForClient } from '../../../lib/firebase/billing';
 import { getSignedDocuments } from '../../../lib/firebase/consent';
 import { getClientProfile } from '../../../lib/firebase/clients';
-import type { AppointmentData } from '../../../types/scheduling';
+import type { AppointmentData, AvailabilityRules } from '../../../types/scheduling';
 import type { ClientProfileData } from '../../../types/client';
 
 interface ClientDashboardProps {
@@ -15,6 +15,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
   const { user } = useAuth();
   const [profile, setProfile] = useState<ClientProfileData | null>(null);
   const [appointments, setAppointments] = useState<AppointmentData[]>([]);
+  const [rules, setRules] = useState<AvailabilityRules | null>(null);
   const [outstandingBalance, setOutstandingBalance] = useState(0);
   const [signedDocsCount, setSignedDocsCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -23,16 +24,18 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
     if (!user) return;
     async function loadDashboard() {
       try {
-        const [prof, appts, invs, docs] = await Promise.all([
+        const [prof, appts, invs, docs, r] = await Promise.all([
           getClientProfile(user!.uid),
           getAppointments({ clientId: user!.uid }),
           getInvoicesForClient(user!.uid),
-          getSignedDocuments(user!.uid)
+          getSignedDocuments(user!.uid),
+          getAvailabilityRules('default')
         ]);
 
         setProfile(prof);
         setAppointments(appts);
         setSignedDocsCount(docs.length);
+        setRules(r);
 
         const totalBal = invs.reduce((sum, i) => sum + i.balanceCents, 0);
         setOutstandingBalance(totalBal);
@@ -50,6 +53,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
   }
 
   const nextAppointment = appointments.find((a) => a.status === 'confirmed' || a.status === 'requested' || a.status === 'rescheduled');
+  const selfSchedulingAllowed = rules?.allowClientSelfScheduling !== false;
 
   return (
     <div className="space-y-8 font-sans">
@@ -72,7 +76,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
             onClick={() => onNavigate('appointments')}
             className="px-4 py-2.5 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-semibold text-xs rounded-xl shadow-sm transition"
           >
-            📅 Schedule Appointment
+            {selfSchedulingAllowed ? '📅 Schedule Appointment' : '📅 My Appointments'}
           </button>
           <button
             onClick={() => onNavigate('documents')}
@@ -115,7 +119,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
               onClick={() => onNavigate('appointments')}
               className="px-4 py-2 bg-white text-[#4A5741] text-xs font-semibold rounded-xl hover:bg-gray-100 transition"
             >
-              Manage / Reschedule Session
+              {selfSchedulingAllowed ? 'Manage / Reschedule Session' : 'View / Manage Session'}
             </button>
           </div>
         </div>
@@ -126,7 +130,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
             onClick={() => onNavigate('appointments')}
             className="px-4 py-2 bg-[#BF5B33] text-white text-xs font-semibold rounded-xl hover:bg-[#a64e2b] transition"
           >
-            Schedule Next Session
+            {selfSchedulingAllowed ? 'Schedule Next Session' : 'View Appointments'}
           </button>
         </div>
       )}

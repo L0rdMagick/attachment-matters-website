@@ -202,6 +202,14 @@ export const AppointmentBookingModal: React.FC = () => {
   const [rescheduleModalError, setRescheduleModalError] = useState<string | null>(null);
 
   const openRescheduleModal = (appt: AppointmentData) => {
+    if (rules?.allowClientSelfScheduling === false) {
+      setNoticeModal({
+        title: "Rescheduling Restricted",
+        message: "Self-service rescheduling is currently disabled by practice administration. Please contact Family Trust Therapy directly to adjust your appointment.",
+        type: "error"
+      });
+      return;
+    }
     setRescheduleModalAppt(appt);
     setRescheduleModalError(null);
     const minNoticeHours = rules?.minNoticeHours ?? 24;
@@ -220,6 +228,7 @@ export const AppointmentBookingModal: React.FC = () => {
   };
 
   const handleConfirmReschedule = async () => {
+    if (rules?.allowClientSelfScheduling === false) return;
     if (!rescheduleModalAppt || !rescheduleSlot) return;
     setRescheduling(true);
     setRescheduleModalError(null);
@@ -262,9 +271,13 @@ export const AppointmentBookingModal: React.FC = () => {
     <div className="space-y-8 font-sans relative">
       {/* Top Banner */}
       <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm">
-        <h2 className="text-3xl font-serif text-[#2C2A2A] font-medium">Appointment Scheduling</h2>
+        <h2 className="text-3xl font-serif text-[#2C2A2A] font-medium">
+          {rules?.allowClientSelfScheduling === false ? 'My Scheduled Appointments' : 'Appointment Scheduling'}
+        </h2>
         <p className="text-xs text-[#2C2A2A]/70 mt-1">
-          Select an available date and time slot. Atomic server reservation locking prevents double bookings.
+          {rules?.allowClientSelfScheduling === false
+            ? 'View your upcoming and past therapy sessions, or manage appointment cancellations. Direct online booking and self-rescheduling are currently disabled.'
+            : 'Select an available date and time slot. Atomic server reservation locking prevents double bookings.'}
         </p>
       </div>
 
@@ -468,12 +481,14 @@ export const AppointmentBookingModal: React.FC = () => {
 
                   {appt.status === 'confirmed' || appt.status === 'requested' || appt.status === 'rescheduled' ? (
                     <div className="pt-2 flex justify-end gap-3 border-t border-[#EAE1D2]/60 mt-2">
-                      <button
-                        onClick={() => openRescheduleModal(appt)}
-                        className="text-[11px] font-semibold text-[#BF5B33] hover:underline"
-                      >
-                        Reschedule Session
-                      </button>
+                      {rules?.allowClientSelfScheduling !== false && (
+                        <button
+                          onClick={() => openRescheduleModal(appt)}
+                          className="text-[11px] font-semibold text-[#BF5B33] hover:underline"
+                        >
+                          Reschedule Session
+                        </button>
+                      )}
                       <button
                         onClick={() => openCancelModal(appt)}
                         className="text-[11px] font-semibold text-red-600 hover:underline"

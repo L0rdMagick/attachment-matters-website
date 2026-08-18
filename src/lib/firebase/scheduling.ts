@@ -438,6 +438,25 @@ export async function updateAppointmentStatus(
     ...(reason ? { cancellationReason: reason } : {}),
     updatedAt: serverTimestamp()
   });
+
+  // If appointment was canceled by client, record alert for therapist/admin pop-up notice
+  if (status === 'canceled_by_client' && apptSnap.exists()) {
+    try {
+      const appt = apptSnap.data() as AppointmentData;
+      await addDoc(collection(db, 'cancellationAlerts'), {
+        appointmentId,
+        clientId: appt.clientId,
+        clientName: appt.clientName || appt.clientEmail || 'Client',
+        appointmentTypeName: appt.appointmentTypeName || 'Therapy Session',
+        startISO: appt.startISO,
+        reason: reason || 'Canceled by client via portal',
+        canceledAt: new Date().toISOString(),
+        read: false
+      });
+    } catch (err) {
+      console.warn("Failed to create cancellation alert notice:", err);
+    }
+  }
 }
 
 /**
