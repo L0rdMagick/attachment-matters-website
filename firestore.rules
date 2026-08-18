@@ -145,5 +145,11 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false; // Only written via Cloud Functions / Firebase Admin SDK
     }
+
+    // Cancellation Alerts
+    match /cancellationAlerts/{alertId} {
+      allow read, update, delete: if isTherapist();
+      allow create: if isSignedIn();
+    }
   }
 }
