@@ -48,11 +48,11 @@ export async function updateClientProfile(
     previousValues[key] = (currentData as any)[key] ?? null;
   });
 
-  // Update client document
-  await updateDoc(clientRef, {
+  // Update client document safely
+  await setDoc(clientRef, {
     ...updatedData,
     updatedAt: serverTimestamp()
-  });
+  }, { merge: true });
 
   // Create audit event record
   await addDoc(collection(db, 'auditEvents'), {
@@ -67,17 +67,16 @@ export async function updateClientProfile(
     timestamp: serverTimestamp()
   });
 
-  // Record practice notification if updated by client
-  if (actorRole === 'client' || !actorRole) {
-    const name = (updatedData.legalFirstName ? `${updatedData.legalFirstName} ${updatedData.legalLastName || ''}` : (currentData.legalFirstName ? `${currentData.legalFirstName} ${currentData.legalLastName || ''}` : 'Client')).trim();
-    await createPracticeNotification({
-      type: 'profile_updated',
-      title: '👤 Client Profile Updated',
-      message: `${name} updated profile fields (${changedFields.join(', ')}).`,
-      clientId,
-      clientName: name
-    });
-  }
+  // Always record practice notification for client profile changes
+  const name = (updatedData.legalFirstName ? `${updatedData.legalFirstName} ${updatedData.legalLastName || ''}` : (currentData.legalFirstName ? `${currentData.legalFirstName} ${currentData.legalLastName || ''}` : 'Client')).trim();
+  await createPracticeNotification({
+    type: 'profile_updated',
+    title: '👤 Client Profile Saved / Updated',
+    message: `${name} updated profile information.`,
+    clientId,
+    clientName: name,
+    details: `Updated fields: ${changedFields.join(', ')}`
+  });
 }
 
 /**
@@ -106,6 +105,14 @@ export async function uploadInsuranceCard(
     },
     { merge: true }
   );
+
+  await createPracticeNotification({
+    type: 'profile_updated',
+    title: '📇 Insurance Card Uploaded',
+    message: `Client uploaded new insurance card image (${side} side).`,
+    clientId,
+    clientName: 'Client'
+  });
 
   return downloadUrl;
 }

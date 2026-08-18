@@ -11,6 +11,9 @@ import {
 import type { AppointmentData } from '../../../types/scheduling';
 import type { ClientProfileData } from '../../../types/client';
 
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../../lib/firebase/config';
+
 interface TherapistDashboardProps {
   onNavigate: (tab: string) => void;
 }
@@ -24,15 +27,13 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
 
   const loadDash = async () => {
     try {
-      const [appts, clients, notifs] = await Promise.all([
+      const [appts, clients] = await Promise.all([
         getAppointments({ therapistId: 'default_therapist' }),
-        getClientsDirectory({ intakeStatus: 'submitted' }),
-        getPracticeNotifications()
+        getClientsDirectory({ intakeStatus: 'submitted' })
       ]);
 
       setTodayAppointments(appts);
       setPendingIntakes(clients);
-      setNotifications(notifs);
     } catch (err) {
       console.error("Failed to load therapist dashboard", err);
     } finally {
@@ -42,6 +43,26 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
 
   useEffect(() => {
     loadDash();
+
+    // Real-time listener for practice notifications feed
+    const colRef = collection(db, 'practiceNotifications');
+    const unsubscribe = onSnapshot(
+      colRef,
+      (snapshot) => {
+        const notifs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as PracticeNotification));
+        notifs.sort((a, b) => {
+          const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : new Date(a.createdAt || 0).getTime();
+          const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt || 0).getTime();
+          return timeB - timeA;
+        });
+        setNotifications(notifs);
+      },
+      (err) => {
+        console.warn("Failed to subscribe to practice notifications:", err);
+      }
+    );
+
+    return () => unsubscribe();
   }, []);
 
   const handleDeleteNotif = async (id?: string) => {
