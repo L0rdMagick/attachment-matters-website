@@ -31,7 +31,7 @@ import { LedgerManager } from './billing/LedgerManager';
 type AuthScreen = 'login' | 'register' | 'forgot';
 
 const MainPortalContent: React.FC = () => {
-  const { user, role: initialRole, loading, isSuspended } = useAuth();
+  const { user, profile, role: initialRole, loading, isSuspended, logout } = useAuth();
   const [authScreen, setAuthScreen] = useState<AuthScreen>('login');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -42,6 +42,13 @@ const MainPortalContent: React.FC = () => {
   // Auto-promote owner/dev email to admin
   const isOwner = user?.email?.toLowerCase() === 'dev@austintarotreader.com';
   const effectiveRole = activeRoleOverride || (isOwner ? 'admin' : initialRole);
+
+  // Automatically clear stored browser session for deleted or suspended accounts
+  useEffect(() => {
+    if (user && isSuspended) {
+      logout();
+    }
+  }, [user, isSuspended, logout]);
 
   if (loading) {
     return (
