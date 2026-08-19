@@ -61,20 +61,24 @@ const MainPortalContent: React.FC = () => {
     );
   }
 
-  // Suspended or Deleted Account Handling
+  // Suspended, Archived, or Deleted Account Handling
   if (user && isSuspended) {
     const isDeletedAccount = profile?.status === 'deleted';
+    const isArchivedAccount = profile?.status === 'archived';
+
     return (
       <div className="min-h-screen bg-[#F7F2E9] flex items-center justify-center font-sans px-4">
-        <div className="bg-[#ffffff] border border-red-200 rounded-2xl p-8 max-w-md text-center shadow-sm space-y-4">
-          <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-xl">
-            🛑
+        <div className="bg-[#ffffff] border border-amber-200 rounded-2xl p-8 max-w-md text-center shadow-sm space-y-4">
+          <div className="w-12 h-12 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mx-auto text-xl">
+            {isArchivedAccount ? '📁' : '🛑'}
           </div>
           <h2 className="text-2xl font-serif text-[#2C2A2A] font-medium">
-            {isDeletedAccount ? 'Account Closed' : 'Account Suspended'}
+            {isArchivedAccount ? 'Account Archived' : isDeletedAccount ? 'Account Closed' : 'Account Suspended'}
           </h2>
           <p className="text-[#2C2A2A]/70 text-sm leading-relaxed">
-            {isDeletedAccount
+            {isArchivedAccount
+              ? 'Your client portal access has been archived by practice administration. Please contact Family Trust Therapy if you need assistance or wish to resume therapy sessions.'
+              : isDeletedAccount
               ? 'This account has been deleted by practice administration and is no longer accessible.'
               : 'Your portal access has been temporarily suspended by the practice administrator. Please contact our main office for assistance.'}
           </p>

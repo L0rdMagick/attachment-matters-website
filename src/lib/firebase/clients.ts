@@ -229,8 +229,11 @@ export async function getClientsDirectory(filters?: {
     );
   }
 
-  if (filters?.accountStatus) {
+  if (filters?.accountStatus && filters.accountStatus !== 'all') {
     clients = clients.filter((c) => (c.accountStatus || 'active') === filters.accountStatus);
+  } else if (!filters?.accountStatus) {
+    // Default to returning active clients only (excludes archived & deleted for dropdowns)
+    clients = clients.filter((c) => (c.accountStatus || 'active') === 'active');
   }
 
   if (filters?.intakeStatus) {
@@ -238,6 +241,33 @@ export async function getClientsDirectory(filters?: {
   }
 
   return clients;
+}
+
+/**
+ * Archive client chart (HIPAA Compliant Soft Delete)
+ * Revokes portal login access and hides from active dropdowns, while retaining clinical history.
+ */
+export async function archiveClientProfile(clientId: string, actorUid: string, actorRole: string) {
+  const clientRef = doc(db, 'clients', clientId);
+  const userRef = doc(db, 'users', clientId);
+
+  await Promise.allSettled([
+    setDoc(clientRef, { accountStatus: 'archived', updatedAt: serverTimestamp() }, { merge: true }),
+    setDoc(userRef, { status: 'archived', updatedAt: serverTimestamp() }, { merge: true })
+  ]);
+}
+
+/**
+ * Reactivate archived client chart
+ */
+export async function unarchiveClientProfile(clientId: string, actorUid: string, actorRole: string) {
+  const clientRef = doc(db, 'clients', clientId);
+  const userRef = doc(db, 'users', clientId);
+
+  await Promise.allSettled([
+    setDoc(clientRef, { accountStatus: 'active', updatedAt: serverTimestamp() }, { merge: true }),
+    setDoc(userRef, { status: 'active', updatedAt: serverTimestamp() }, { merge: true })
+  ]);
 }
 
 /**

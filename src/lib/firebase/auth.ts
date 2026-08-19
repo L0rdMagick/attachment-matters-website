@@ -102,12 +102,25 @@ export async function getUserRoleAndProfile(user: User): Promise<{ role: UserRol
     }
   }
 
-  // Check if either document explicitly marks status as deleted
+  // Check if either document explicitly marks status as deleted or archived
   const userStatus = userSnap.exists() ? userSnap.data().status : null;
   const clientStatus = clientSnap.exists() ? clientSnap.data().accountStatus : null;
 
   const blockedEmails = new Set(['jon@austintarotreader.com', 'joe@austintarotreader.com']);
   const cleanEmail = (user.email || '').toLowerCase().trim();
+
+  if (userStatus === 'archived' || clientStatus === 'archived') {
+    return {
+      role: 'client',
+      profile: {
+        uid: user.uid,
+        email: user.email || '',
+        role: 'client',
+        status: 'archived',
+        emailVerified: user.emailVerified
+      }
+    };
+  }
 
   if (userStatus === 'deleted' || clientStatus === 'deleted' || blockedEmails.has(cleanEmail)) {
     return {
