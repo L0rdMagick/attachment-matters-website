@@ -106,9 +106,6 @@ export async function getUserRoleAndProfile(user: User): Promise<{ role: UserRol
   const userStatus = userSnap.exists() ? userSnap.data().status : null;
   const clientStatus = clientSnap.exists() ? clientSnap.data().accountStatus : null;
 
-  const blockedEmails = new Set(['jon@austintarotreader.com', 'joe@austintarotreader.com']);
-  const cleanEmail = (user.email || '').toLowerCase().trim();
-
   if (userStatus === 'archived' || clientStatus === 'archived') {
     return {
       role: 'client',
@@ -122,7 +119,7 @@ export async function getUserRoleAndProfile(user: User): Promise<{ role: UserRol
     };
   }
 
-  if (userStatus === 'deleted' || clientStatus === 'deleted' || blockedEmails.has(cleanEmail)) {
+  if (userStatus === 'deleted' || clientStatus === 'deleted') {
     return {
       role: 'client',
       profile: {

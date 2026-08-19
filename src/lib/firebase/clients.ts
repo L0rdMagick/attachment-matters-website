@@ -153,16 +153,12 @@ export async function getClientsDirectory(filters?: {
 }): Promise<ClientProfileData[]> {
   const clientMap = new Map<string, ClientProfileData>();
 
-  // List of emails explicitly purged or blocked from appearing
-  const blockedEmails = new Set(['jon@austintarotreader.com', 'joe@austintarotreader.com']);
-
   // 1. Query clients collection safely
   try {
     const clientsSnap = await getDocs(collection(db, 'clients'));
     clientsSnap.docs.forEach((d) => {
       const data = d.data() as ClientProfileData;
-      const cleanEmail = (data.email || '').toLowerCase().trim();
-      if (data.accountStatus !== 'deleted' && !(data as any).isDeleted && !blockedEmails.has(cleanEmail)) {
+      if (data.accountStatus !== 'deleted' && !(data as any).isDeleted) {
         clientMap.set(d.id, { uid: d.id, ...data });
       }
     });
@@ -177,7 +173,7 @@ export async function getClientsDirectory(filters?: {
       const uData = uDoc.data();
       const uEmail = (uData.email || '').toLowerCase().trim();
 
-      if ((uData.role === 'client' || !uData.role) && uData.status !== 'deleted' && !uData.isDeleted && !blockedEmails.has(uEmail)) {
+      if ((uData.role === 'client' || !uData.role) && uData.status !== 'deleted' && !uData.isDeleted) {
         if (!clientMap.has(uDoc.id)) {
           // Check if email belongs to an already deleted or existing profile in clientMap
           const existingByEmail = Array.from(clientMap.values()).find(
@@ -205,12 +201,11 @@ export async function getClientsDirectory(filters?: {
 
   let clients = Array.from(clientMap.values());
 
-  // Filter out any explicitly deleted records or blocked emails
+  // Filter out any explicitly deleted records
   clients = clients.filter(
     (c) =>
       c.accountStatus !== 'deleted' &&
-      !(c as any).isDeleted &&
-      !blockedEmails.has((c.email || '').toLowerCase().trim())
+      !(c as any).isDeleted
   );
 
   if (filters?.assignedTherapistId) {
