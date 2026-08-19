@@ -157,7 +157,10 @@ export async function getClientsDirectory(filters?: {
   try {
     const clientsSnap = await getDocs(collection(db, 'clients'));
     clientsSnap.docs.forEach((d) => {
-      clientMap.set(d.id, { uid: d.id, ...d.data() } as ClientProfileData);
+      const data = d.data() as ClientProfileData;
+      if (data.accountStatus !== 'deleted' && !(data as any).isDeleted) {
+        clientMap.set(d.id, { uid: d.id, ...data });
+      }
     });
   } catch (err) {
     console.warn("Could not query clients collection directly:", err);
@@ -168,18 +171,26 @@ export async function getClientsDirectory(filters?: {
     const usersSnap = await getDocs(collection(db, 'users'));
     for (const uDoc of usersSnap.docs) {
       const uData = uDoc.data();
-      if (uData.role === 'client' || !uData.role) {
+      if ((uData.role === 'client' || !uData.role) && uData.status !== 'deleted' && !uData.isDeleted) {
         if (!clientMap.has(uDoc.id)) {
-          const newClient: ClientProfileData = {
-            uid: uDoc.id,
-            legalFirstName: uData.legalFirstName || 'New',
-            legalLastName: uData.legalLastName || 'Client',
-            email: uData.email || '',
-            accountStatus: (uData.status as any) || 'active',
-            intakeStatus: 'not_started',
-            consentStatus: 'pending'
-          };
-          clientMap.set(uDoc.id, newClient);
+          const uEmail = (uData.email || '').toLowerCase().trim();
+          // Check if email belongs to an already deleted or existing profile in clientMap
+          const existingByEmail = Array.from(clientMap.values()).find(
+            (c) => c.email && c.email.toLowerCase().trim() === uEmail
+          );
+
+          if (!existingByEmail && uEmail) {
+            const newClient: ClientProfileData = {
+              uid: uDoc.id,
+              legalFirstName: uData.legalFirstName || 'New',
+              legalLastName: uData.legalLastName || 'Client',
+              email: uData.email || '',
+              accountStatus: (uData.status as any) || 'active',
+              intakeStatus: 'not_started',
+              consentStatus: 'pending'
+            };
+            clientMap.set(uDoc.id, newClient);
+          }
         }
       }
     }
@@ -188,6 +199,9 @@ export async function getClientsDirectory(filters?: {
   }
 
   let clients = Array.from(clientMap.values());
+
+  // Filter out any explicitly deleted records
+  clients = clients.filter((c) => c.accountStatus !== 'deleted' && !(c as any).isDeleted);
 
   if (filters?.assignedTherapistId) {
     clients = clients.filter((c) => c.assignedTherapistId === filters.assignedTherapistId);
@@ -217,15 +231,32 @@ export async function getClientsDirectory(filters?: {
 }
 
 /**
- * Permanently delete client profile and all associated portal documents
+ * Permanently delete client profile and all associated portal documents across collections
  */
-export async function deleteClientProfile(clientId: string) {
-  // Delete core client, user, and intake documents
-  await Promise.allSettled([
-    deleteDoc(doc(db, 'clients', clientId)),
-    deleteDoc(doc(db, 'users', clientId)),
-    deleteDoc(doc(db, 'intakeSubmissions', clientId))
-  ]);
+export async function deleteClientProfile(clientId: string, clientEmail?: string) {
+  const refsToDelete: any[] = [
+    doc(db, 'clients', clientId),
+    doc(db, 'users', clientId),
+    doc(db, 'intakeSubmissions', clientId)
+  ];
+
+  // Also query users and clients by email to delete any duplicate/orphaned user documents
+  if (clientEmail && clientEmail.trim()) {
+    const trimmedEmail = clientEmail.trim();
+    try {
+      const [uSnap, cSnap] = await Promise.all([
+        getDocs(query(collection(db, 'users'), where('email', '==', trimmedEmail))),
+        getDocs(query(collection(db, 'clients'), where('email', '==', trimmedEmail)))
+      ]);
+      uSnap.docs.forEach((d) => refsToDelete.push(d.ref));
+      cSnap.docs.forEach((d) => refsToDelete.push(d.ref));
+    } catch (err) {
+      console.warn("Could not query documents by email for deletion:", err);
+    }
+  }
+
+  // Execute document deletions
+  await Promise.allSettled(refsToDelete.map((dRef) => deleteDoc(dRef)));
 
   // Clean up collections linked by clientId
   const collectionsToClean = [

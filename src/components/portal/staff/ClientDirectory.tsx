@@ -40,8 +40,8 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({ onSelectClient
     }
 
     try {
-      await deleteClientProfile(c.uid);
-      setClients((prev) => prev.filter((item) => item.uid !== c.uid));
+      await deleteClientProfile(c.uid, c.email);
+      setClients((prev) => prev.filter((item) => item.uid !== c.uid && item.email !== c.email));
       alert(`Client record for ${name} has been permanently deleted.`);
     } catch (err) {
       console.error("Failed to delete client", err);
