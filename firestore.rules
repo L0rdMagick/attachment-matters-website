@@ -52,6 +52,7 @@ service cloud.firestore {
       allow create: if (isSignedIn() && request.auth.uid == userId) || (request.resource.data.uid == userId);
       // Client cannot alter their own role or status
       allow update: if (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status']) || request.auth.token.email == 'dev@austintarotreader.com')) || isAdmin();
+      allow delete: if isTherapist();
     }
 
     // Client Profiles
@@ -60,6 +61,7 @@ service cloud.firestore {
       allow create, write: if (isSignedIn() && request.auth.uid == clientId) || isTherapist();
       // Client can update non-locked profile fields
       allow update: if (isOwner(clientId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['assignedTherapistId', 'accountStatus']) || request.auth.token.email == 'dev@austintarotreader.com')) || isTherapist();
+      allow delete: if isTherapist();
     }
 
     // Staff Profiles
@@ -109,6 +111,7 @@ service cloud.firestore {
     match /intakeSubmissions/{submissionId} {
       allow read: if isSignedIn() && (request.auth.uid == submissionId || isTherapist() || (resource != null && resource.data.clientId == request.auth.uid));
       allow create, update, write: if isSignedIn() && (request.auth.uid == submissionId || request.resource.data.clientId == request.auth.uid || isTherapist());
+      allow delete: if isTherapist();
     }
 
     // Consent Templates & Signed Documents

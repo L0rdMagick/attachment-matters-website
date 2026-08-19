@@ -3,6 +3,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   collection,
   query,
   where,
@@ -213,4 +214,36 @@ export async function getClientsDirectory(filters?: {
   }
 
   return clients;
+}
+
+/**
+ * Permanently delete client profile and all associated portal documents
+ */
+export async function deleteClientProfile(clientId: string) {
+  // Delete core client, user, and intake documents
+  await Promise.allSettled([
+    deleteDoc(doc(db, 'clients', clientId)),
+    deleteDoc(doc(db, 'users', clientId)),
+    deleteDoc(doc(db, 'intakeSubmissions', clientId))
+  ]);
+
+  // Clean up collections linked by clientId
+  const collectionsToClean = [
+    'appointments',
+    'signedDocuments',
+    'invoices',
+    'ledgerEntries',
+    'practiceNotifications',
+    'cancellationAlerts'
+  ];
+
+  for (const colName of collectionsToClean) {
+    try {
+      const q = query(collection(db, colName), where('clientId', '==', clientId));
+      const snap = await getDocs(q);
+      await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+    } catch (err) {
+      console.warn(`Error deleting from ${colName}:`, err);
+    }
+  }
 }

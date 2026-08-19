@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getClientsDirectory } from '../../../lib/firebase/clients';
+import { getClientsDirectory, deleteClientProfile } from '../../../lib/firebase/clients';
 import type { ClientProfileData } from '../../../types/client';
 
 interface ClientDirectoryProps {
@@ -13,24 +13,41 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({ onSelectClient
   const [statusFilter, setStatusFilter] = useState('');
   const [intakeFilter, setIntakeFilter] = useState('');
 
-  useEffect(() => {
-    async function loadDirectory() {
-      setLoading(true);
-      try {
-        const data = await getClientsDirectory({
-          searchQuery,
-          accountStatus: statusFilter || undefined,
-          intakeStatus: intakeFilter || undefined
-        });
-        setClients(data);
-      } catch (err) {
-        console.error("Failed to load client directory", err);
-      } finally {
-        setLoading(false);
-      }
+  const loadDirectory = async () => {
+    setLoading(true);
+    try {
+      const data = await getClientsDirectory({
+        searchQuery,
+        accountStatus: statusFilter || undefined,
+        intakeStatus: intakeFilter || undefined
+      });
+      setClients(data);
+    } catch (err) {
+      console.error("Failed to load client directory", err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadDirectory();
   }, [searchQuery, statusFilter, intakeFilter]);
+
+  const handleDeleteClient = async (c: ClientProfileData) => {
+    const name = c.legalFirstName ? `${c.legalFirstName} ${c.legalLastName || ''}` : c.email;
+    if (!window.confirm(`⚠️ Are you sure you want to permanently delete the client chart for ${name} (${c.email})?\n\nThis will purge their profile, intake submissions, agreements, and appointments.`)) {
+      return;
+    }
+
+    try {
+      await deleteClientProfile(c.uid);
+      setClients((prev) => prev.filter((item) => item.uid !== c.uid));
+      alert(`Client record for ${name} has been permanently deleted.`);
+    } catch (err) {
+      console.error("Failed to delete client", err);
+      alert("Failed to delete client record. Please try again.");
+    }
+  };
 
   return (
     <div className="space-y-6 font-sans">
@@ -125,12 +142,19 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({ onSelectClient
                         {c.consentStatus || 'Pending'}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-right">
+                    <td className="py-4 px-6 text-right whitespace-nowrap space-x-2">
                       <button
                         onClick={() => onSelectClient(c.uid)}
                         className="px-3.5 py-1.5 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-medium text-xs rounded-lg transition"
                       >
                         Open Chart →
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClient(c)}
+                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 font-medium text-xs border border-red-200 rounded-lg transition"
+                        title="Permanently delete client chart"
+                      >
+                        🗑️ Delete
                       </button>
                     </td>
                   </tr>
