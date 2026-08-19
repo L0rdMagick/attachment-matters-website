@@ -187,12 +187,24 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
       schedType?.bufferAfterMinutes || 0
     );
 
-    if (!availCheck.isAvailable) {
-      const proceed = confirm(
-        `⚠️ OVERRIDE PRACTICE AVAILABILITY WARNING:\n\n${availCheck.reason}\n\nDo you want to override your practice settings and schedule this session anyway?`
+    if (availCheck.hasDoubleBooking) {
+      const proceedDouble = confirm(
+        `⚠️ DOUBLE BOOKING WARNING:\n\n${availCheck.doubleBookingReason}\n\nDo you want to override and proceed with this double booking?`
       );
-      if (!proceed) {
+      if (!proceedDouble) {
         setSchedBooking(false);
+        setShowScheduleModal(false);
+        return;
+      }
+    }
+
+    if (availCheck.isOutsideHours) {
+      const proceedOutside = confirm(
+        `⚠️ OUTSIDE SCHEDULED HOURS WARNING:\n\n${availCheck.outsideHoursReason}\n\nDo you want to override your practice settings and schedule this session outside of scheduled hours?`
+      );
+      if (!proceedOutside) {
+        setSchedBooking(false);
+        setShowScheduleModal(false);
         return;
       }
     }

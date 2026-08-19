@@ -237,32 +237,38 @@ export function checkTherapistSlotAvailability(
   existingAppointments: AppointmentData[],
   bufferBeforeMinutes: number = 0,
   bufferAfterMinutes: number = 0
-): { isAvailable: boolean; reason?: string } {
+): {
+  isAvailable: boolean;
+  reason?: string;
+  hasDoubleBooking: boolean;
+  doubleBookingReason?: string;
+  isOutsideHours: boolean;
+  outsideHoursReason?: string;
+} {
   const dayKey = getDayOfWeekKey(dateStr);
   const dayConfig = rules.workingDays[dayKey];
   const formattedDay = dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
 
+  let isOutsideHours = false;
+  let outsideHoursReason = '';
+
   if (!dayConfig || !dayConfig.enabled) {
-    return {
-      isAvailable: false,
-      reason: `Your practice settings show that ${formattedDay}s are currently closed / disabled for appointments.`
-    };
-  }
+    isOutsideHours = true;
+    outsideHoursReason = `Your practice settings show that ${formattedDay}s are currently closed / disabled for appointments.`;
+  } else {
+    const [tHour, tMin] = timeStr.split(':').map(Number);
+    const slotStartMin = tHour * 60 + tMin;
+    const slotEndMin = slotStartMin + durationMinutes;
 
-  const [tHour, tMin] = timeStr.split(':').map(Number);
-  const slotStartMin = tHour * 60 + tMin;
-  const slotEndMin = slotStartMin + durationMinutes;
+    const [sHour, sMin] = dayConfig.startTime.split(':').map(Number);
+    const [eHour, eMin] = dayConfig.endTime.split(':').map(Number);
+    const dayStartMin = sHour * 60 + sMin;
+    const dayEndMin = eHour * 60 + eMin;
 
-  const [sHour, sMin] = dayConfig.startTime.split(':').map(Number);
-  const [eHour, eMin] = dayConfig.endTime.split(':').map(Number);
-  const dayStartMin = sHour * 60 + sMin;
-  const dayEndMin = eHour * 60 + eMin;
-
-  if (slotStartMin < dayStartMin || slotEndMin > dayEndMin) {
-    return {
-      isAvailable: false,
-      reason: `The requested time (${timeStr}) is outside your configured practice working hours for ${formattedDay}s (${dayConfig.startTime} - ${dayConfig.endTime}).`
-    };
+    if (slotStartMin < dayStartMin || slotEndMin > dayEndMin) {
+      isOutsideHours = true;
+      outsideHoursReason = `The requested time (${timeStr}) is outside your configured practice working hours for ${formattedDay}s (${dayConfig.startTime} - ${dayConfig.endTime}).`;
+    }
   }
 
   // Check overlap with existing appointments (accounting for pre/post buffers)
@@ -278,14 +284,24 @@ export function checkTherapistSlotAvailability(
     return blockedStartMs < apptEndMs && blockedEndMs > apptStartMs;
   });
 
+  let hasDoubleBooking = false;
+  let doubleBookingReason = '';
   if (conflict) {
-    return {
-      isAvailable: false,
-      reason: `This time slot conflicts with an existing appointment for ${conflict.clientName || 'another client'} (${new Date(conflict.startISO).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}).`
-    };
+    hasDoubleBooking = true;
+    doubleBookingReason = `This time slot conflicts with an existing appointment for ${conflict.clientName || 'another client'} (${new Date(conflict.startISO).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}).`;
   }
 
-  return { isAvailable: true };
+  const isAvailable = !isOutsideHours && !hasDoubleBooking;
+  const reason = doubleBookingReason || outsideHoursReason || undefined;
+
+  return {
+    isAvailable,
+    reason,
+    hasDoubleBooking,
+    doubleBookingReason,
+    isOutsideHours,
+    outsideHoursReason
+  };
 }
 
 /**
