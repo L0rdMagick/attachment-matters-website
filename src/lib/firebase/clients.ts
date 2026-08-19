@@ -153,12 +153,16 @@ export async function getClientsDirectory(filters?: {
 }): Promise<ClientProfileData[]> {
   const clientMap = new Map<string, ClientProfileData>();
 
+  // List of emails explicitly purged or blocked from appearing
+  const blockedEmails = new Set(['jon@austintarotreader.com', 'joe@austintarotreader.com']);
+
   // 1. Query clients collection safely
   try {
     const clientsSnap = await getDocs(collection(db, 'clients'));
     clientsSnap.docs.forEach((d) => {
       const data = d.data() as ClientProfileData;
-      if (data.accountStatus !== 'deleted' && !(data as any).isDeleted) {
+      const cleanEmail = (data.email || '').toLowerCase().trim();
+      if (data.accountStatus !== 'deleted' && !(data as any).isDeleted && !blockedEmails.has(cleanEmail)) {
         clientMap.set(d.id, { uid: d.id, ...data });
       }
     });
@@ -171,9 +175,10 @@ export async function getClientsDirectory(filters?: {
     const usersSnap = await getDocs(collection(db, 'users'));
     for (const uDoc of usersSnap.docs) {
       const uData = uDoc.data();
-      if ((uData.role === 'client' || !uData.role) && uData.status !== 'deleted' && !uData.isDeleted) {
+      const uEmail = (uData.email || '').toLowerCase().trim();
+
+      if ((uData.role === 'client' || !uData.role) && uData.status !== 'deleted' && !uData.isDeleted && !blockedEmails.has(uEmail)) {
         if (!clientMap.has(uDoc.id)) {
-          const uEmail = (uData.email || '').toLowerCase().trim();
           // Check if email belongs to an already deleted or existing profile in clientMap
           const existingByEmail = Array.from(clientMap.values()).find(
             (c) => c.email && c.email.toLowerCase().trim() === uEmail
@@ -200,8 +205,13 @@ export async function getClientsDirectory(filters?: {
 
   let clients = Array.from(clientMap.values());
 
-  // Filter out any explicitly deleted records
-  clients = clients.filter((c) => c.accountStatus !== 'deleted' && !(c as any).isDeleted);
+  // Filter out any explicitly deleted records or blocked emails
+  clients = clients.filter(
+    (c) =>
+      c.accountStatus !== 'deleted' &&
+      !(c as any).isDeleted &&
+      !blockedEmails.has((c.email || '').toLowerCase().trim())
+  );
 
   if (filters?.assignedTherapistId) {
     clients = clients.filter((c) => c.assignedTherapistId === filters.assignedTherapistId);
@@ -240,18 +250,30 @@ export async function deleteClientProfile(clientId: string, clientEmail?: string
     doc(db, 'intakeSubmissions', clientId)
   ];
 
-  // Also query users and clients by email to delete any duplicate/orphaned user documents
+  // Scan both users and clients collections for any documents matching email (case-insensitive)
   if (clientEmail && clientEmail.trim()) {
-    const trimmedEmail = clientEmail.trim();
+    const targetEmail = clientEmail.trim().toLowerCase();
     try {
       const [uSnap, cSnap] = await Promise.all([
-        getDocs(query(collection(db, 'users'), where('email', '==', trimmedEmail))),
-        getDocs(query(collection(db, 'clients'), where('email', '==', trimmedEmail)))
+        getDocs(collection(db, 'users')),
+        getDocs(collection(db, 'clients'))
       ]);
-      uSnap.docs.forEach((d) => refsToDelete.push(d.ref));
-      cSnap.docs.forEach((d) => refsToDelete.push(d.ref));
+
+      uSnap.docs.forEach((d) => {
+        const email = (d.data().email || '').toLowerCase().trim();
+        if (email === targetEmail) {
+          refsToDelete.push(d.ref);
+        }
+      });
+
+      cSnap.docs.forEach((d) => {
+        const email = (d.data().email || '').toLowerCase().trim();
+        if (email === targetEmail) {
+          refsToDelete.push(d.ref);
+        }
+      });
     } catch (err) {
-      console.warn("Could not query documents by email for deletion:", err);
+      console.warn("Error scanning documents by email for deletion:", err);
     }
   }
 
