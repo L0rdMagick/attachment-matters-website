@@ -208,13 +208,6 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({ onSelectClient
                             📁 Archive
                           </button>
                         )}
-                        <button
-                          onClick={() => handleDeleteClient(c)}
-                          className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 font-medium text-xs border border-red-200 rounded-lg transition"
-                          title="Permanently purge test account from Firebase"
-                        >
-                          🗑️ Purge
-                        </button>
                       </td>
                     </tr>
                   );

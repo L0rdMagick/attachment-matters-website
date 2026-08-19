@@ -77,7 +77,7 @@ const MainPortalContent: React.FC = () => {
           </h2>
           <p className="text-[#2C2A2A]/70 text-sm leading-relaxed">
             {isArchivedAccount
-              ? 'Your client portal access has been archived by practice administration. Please contact Family Trust Therapy if you need assistance or wish to resume therapy sessions.'
+              ? 'Your account has been archived. Please email the practice administrator to restore account visibility and reactivate your portal access.'
               : isDeletedAccount
               ? 'This account has been deleted by practice administration and is no longer accessible.'
               : 'Your portal access has been temporarily suspended by the practice administrator. Please contact our main office for assistance.'}
