@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const isEmailVerified = user ? user.emailVerified : false;
-  const isSuspended = profile ? profile.status === 'suspended' || profile.status === 'deactivated' : false;
+  const isSuspended = profile ? profile.status === 'suspended' || profile.status === 'deactivated' || profile.status === 'deleted' : false;
 
   return (
     <AuthContext.Provider

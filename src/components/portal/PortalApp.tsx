@@ -54,24 +54,29 @@ const MainPortalContent: React.FC = () => {
     );
   }
 
-  // Suspended Account Handling
+  // Suspended or Deleted Account Handling
   if (user && isSuspended) {
+    const isDeletedAccount = profile?.status === 'deleted';
     return (
       <div className="min-h-screen bg-[#F7F2E9] flex items-center justify-center font-sans px-4">
-        <div className="bg-[#ffffff] border border-red-200 rounded-2xl p-8 max-w-md text-center shadow-sm">
-          <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
+        <div className="bg-[#ffffff] border border-red-200 rounded-2xl p-8 max-w-md text-center shadow-sm space-y-4">
+          <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-xl">
             🛑
           </div>
-          <h2 className="text-2xl font-serif text-[#2C2A2A] mb-2 font-medium">Account Suspended</h2>
-          <p className="text-[#2C2A2A]/70 text-sm leading-relaxed mb-6">
-            Your portal access has been temporarily suspended by the practice administrator. Please contact our main office for assistance.
+          <h2 className="text-2xl font-serif text-[#2C2A2A] font-medium">
+            {isDeletedAccount ? 'Account Closed' : 'Account Suspended'}
+          </h2>
+          <p className="text-[#2C2A2A]/70 text-sm leading-relaxed">
+            {isDeletedAccount
+              ? 'This account has been deleted by practice administration and is no longer accessible.'
+              : 'Your portal access has been temporarily suspended by the practice administrator. Please contact our main office for assistance.'}
           </p>
-          <a
-            href="/"
-            className="inline-block py-2.5 px-6 bg-[#4A5741] text-white font-medium text-sm rounded-xl hover:bg-[#384232] transition"
+          <button
+            onClick={() => logout()}
+            className="w-full py-2.5 px-6 bg-[#BF5B33] text-white font-medium text-xs rounded-xl hover:bg-[#a64e2b] transition shadow-sm"
           >
-            Return to Practice Website
-          </a>
+            Sign Out & Exit
+          </button>
         </div>
       </div>
     );

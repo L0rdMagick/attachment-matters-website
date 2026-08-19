@@ -84,7 +84,12 @@ export async function getUserRoleAndProfile(user: User): Promise<{ role: UserRol
   const claimRole = tokenResult.claims.role as UserRole | undefined;
 
   const userDocRef = doc(db, 'users', user.uid);
-  const userSnap = await getDoc(userDocRef);
+  const clientDocRef = doc(db, 'clients', user.uid);
+  
+  const [userSnap, clientSnap] = await Promise.all([
+    getDoc(userDocRef),
+    getDoc(clientDocRef)
+  ]);
   
   // Practice Owner / Primary Developer auto-admin override
   const isOwnerEmail = user.email?.toLowerCase() === 'dev@austintarotreader.com';
@@ -97,6 +102,26 @@ export async function getUserRoleAndProfile(user: User): Promise<{ role: UserRol
     }
   }
 
+  // Check if either document explicitly marks status as deleted
+  const userStatus = userSnap.exists() ? userSnap.data().status : null;
+  const clientStatus = clientSnap.exists() ? clientSnap.data().accountStatus : null;
+
+  const blockedEmails = new Set(['jon@austintarotreader.com', 'joe@austintarotreader.com']);
+  const cleanEmail = (user.email || '').toLowerCase().trim();
+
+  if (userStatus === 'deleted' || clientStatus === 'deleted' || blockedEmails.has(cleanEmail)) {
+    return {
+      role: 'client',
+      profile: {
+        uid: user.uid,
+        email: user.email || '',
+        role: 'client',
+        status: 'deleted',
+        emailVerified: user.emailVerified
+      }
+    };
+  }
+
   if (userSnap.exists()) {
     const profile = userSnap.data() as UserProfile;
     const resolvedRole = claimRole || (isOwnerEmail ? 'admin' : (profile.role || 'client'));
@@ -106,7 +131,38 @@ export async function getUserRoleAndProfile(user: User): Promise<{ role: UserRol
     };
   }
 
-  const defaultRole = claimRole || (isOwnerEmail ? 'admin' : 'client');
+  if (clientSnap.exists()) {
+    const cData = clientSnap.data();
+    const resolvedRole = claimRole || (isOwnerEmail ? 'admin' : 'client');
+    return {
+      role: resolvedRole,
+      profile: {
+        uid: user.uid,
+        email: user.email || '',
+        legalFirstName: cData.legalFirstName,
+        legalLastName: cData.legalLastName,
+        role: resolvedRole,
+        status: cData.accountStatus || 'active',
+        emailVerified: user.emailVerified
+      }
+    };
+  }
+
+  // For non-owner users, if neither userSnap nor clientSnap exists, mark as deleted
+  if (!isOwnerEmail) {
+    return {
+      role: 'client',
+      profile: {
+        uid: user.uid,
+        email: user.email || '',
+        role: 'client',
+        status: 'deleted',
+        emailVerified: user.emailVerified
+      }
+    };
+  }
+
+  const defaultRole = claimRole || 'admin';
   return {
     role: defaultRole,
     profile: {

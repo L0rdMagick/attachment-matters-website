@@ -244,6 +244,16 @@ export async function getClientsDirectory(filters?: {
  * Permanently delete client profile and all associated portal documents across collections
  */
 export async function deleteClientProfile(clientId: string, clientEmail?: string) {
+  // 1. Mark account status as deleted on user and client documents (tombstone)
+  try {
+    await Promise.all([
+      setDoc(doc(db, 'users', clientId), { status: 'deleted', role: 'client', email: clientEmail || '' }, { merge: true }),
+      setDoc(doc(db, 'clients', clientId), { accountStatus: 'deleted', isDeleted: true, email: clientEmail || '' }, { merge: true })
+    ]);
+  } catch (err) {
+    console.warn("Tombstone write skipped:", err);
+  }
+
   const refsToDelete: any[] = [
     doc(db, 'clients', clientId),
     doc(db, 'users', clientId),
