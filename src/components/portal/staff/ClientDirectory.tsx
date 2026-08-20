@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getClientsDirectory, deleteClientProfile, archiveClientProfile, unarchiveClientProfile } from '../../../lib/firebase/clients';
+import { getClientsDirectory, deleteClientProfile, archiveClientProfile, unarchiveClientProfile, updateClientProfile } from '../../../lib/firebase/clients';
 import { useAuth } from '../../../context/AuthContext';
 import type { ClientProfileData } from '../../../types/client';
 
@@ -34,6 +34,16 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({ onSelectClient
   useEffect(() => {
     loadDirectory();
   }, [searchQuery, statusFilter, intakeFilter]);
+
+  const handleSelfSchedulingOverrideChange = async (c: ClientProfileData, overrideVal: 'global' | 'allowed' | 'restricted') => {
+    try {
+      await updateClientProfile(c.uid, { allowSelfSchedulingOverride: overrideVal }, user?.uid || '', role || '');
+      setClients((prev) => prev.map((item) => item.uid === c.uid ? { ...item, allowSelfSchedulingOverride: overrideVal } : item));
+    } catch (err) {
+      console.error("Failed to update client self-scheduling permission", err);
+      alert("Failed to update client self-scheduling permission.");
+    }
+  };
 
   const handleArchiveClient = async (c: ClientProfileData) => {
     const name = c.legalFirstName ? `${c.legalFirstName} ${c.legalLastName || ''}` : c.email;
@@ -146,6 +156,7 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({ onSelectClient
                   <th className="py-3.5 px-6">Status</th>
                   <th className="py-3.5 px-6">Intake</th>
                   <th className="py-3.5 px-6">Consent</th>
+                  <th className="py-3.5 px-6">Self-Scheduling</th>
                   <th className="py-3.5 px-6 text-right">Actions</th>
                 </tr>
               </thead>
@@ -183,6 +194,23 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({ onSelectClient
                         }`}>
                           {c.consentStatus || 'Pending'}
                         </span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <select
+                          value={c.allowSelfSchedulingOverride || 'global'}
+                          onChange={(e) => handleSelfSchedulingOverrideChange(c, e.target.value as any)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border outline-none cursor-pointer transition ${
+                            c.allowSelfSchedulingOverride === 'allowed'
+                              ? 'bg-green-50 text-green-800 border-green-300'
+                              : c.allowSelfSchedulingOverride === 'restricted'
+                              ? 'bg-red-50 text-red-800 border-red-300'
+                              : 'bg-gray-50 text-gray-700 border-gray-200'
+                          }`}
+                        >
+                          <option value="global">🌐 Practice Global</option>
+                          <option value="allowed">✅ Allowed (Override)</option>
+                          <option value="restricted">🚫 Restricted (Override)</option>
+                        </select>
                       </td>
                       <td className="py-4 px-6 text-right whitespace-nowrap space-x-2">
                         <button

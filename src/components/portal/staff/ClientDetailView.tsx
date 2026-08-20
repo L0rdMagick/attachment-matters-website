@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getClientProfile } from '../../../lib/firebase/clients';
+import { getClientProfile, updateClientProfile } from '../../../lib/firebase/clients';
 import { getSignedDocuments } from '../../../lib/firebase/consent';
 import { getIntakeSubmission, reviewIntakeSubmission } from '../../../lib/firebase/intake';
 import { getAppointments, updateAppointmentStatus, bookAppointmentWithLock, getAvailabilityRules, checkTherapistSlotAvailability, DEFAULT_AVAILABILITY_RULES } from '../../../lib/firebase/scheduling';
@@ -10,6 +10,7 @@ import type { AppointmentData, AppointmentStatus, AvailabilityRules } from '../.
 import { PrivateClinicalNotesView } from '../notes/PrivateClinicalNotesView';
 import { PrintableIntakeDocument } from '../intake/PrintableIntakeDocument';
 import { PrintableSignedConsentDocument } from '../consent/PrintableSignedConsentDocument';
+import { useAuth } from '../../../context/AuthContext';
 
 interface ClientDetailViewProps {
   clientId: string;
@@ -29,6 +30,7 @@ type ChartTab =
   | 'audit';
 
 export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, onBack }) => {
+  const { user, role } = useAuth();
   const [client, setClient] = useState<ClientProfileData | null>(null);
   const [signedDocs, setSignedDocs] = useState<SignedDocumentData[]>([]);
   const [intakeData, setIntakeData] = useState<IntakeSubmissionData | null>(null);
@@ -79,6 +81,17 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
     }
     loadClient();
   }, [clientId]);
+
+  const handleSelfSchedulingOverrideChange = async (val: 'global' | 'allowed' | 'restricted') => {
+    if (!client) return;
+    try {
+      await updateClientProfile(client.uid, { allowSelfSchedulingOverride: val }, user?.uid || '', role || '');
+      setClient({ ...client, allowSelfSchedulingOverride: val });
+    } catch (err) {
+      console.error("Failed to update client self-scheduling permission", err);
+      alert("Failed to update client self-scheduling permission.");
+    }
+  };
 
   const refreshSignedDocs = async () => {
     setLoadingDocs(true);
@@ -354,6 +367,46 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                 <p><strong>Group Number:</strong> {client.insuranceInfo?.groupNumber || 'N/A'}</p>
                 <p><strong>Subscriber Name:</strong> {client.insuranceInfo?.subscriberName || 'Self'}</p>
                 <p><strong>Subscriber Relationship:</strong> {client.insuranceInfo?.subscriberRelationship || 'Self'}</p>
+              </div>
+            </div>
+
+            {/* Administrative Portal Permissions */}
+            <div className="bg-[#F7F2E9] p-5 rounded-xl border border-[#EAE1D2] space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-xs uppercase tracking-wider text-[#4A5741]">
+                  ⚙️ Administrative Portal Permissions
+                </h4>
+                <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium ${
+                  client.allowSelfSchedulingOverride === 'allowed'
+                    ? 'bg-green-100 text-green-800 border border-green-200'
+                    : client.allowSelfSchedulingOverride === 'restricted'
+                    ? 'bg-red-100 text-red-800 border border-red-200'
+                    : 'bg-gray-100 text-gray-700 border border-gray-200'
+                }`}>
+                  Effective Status: {client.allowSelfSchedulingOverride === 'allowed' ? '✅ Allowed (Override)' : client.allowSelfSchedulingOverride === 'restricted' ? '🚫 Restricted (Override)' : `🌐 Inheriting Global Practice Policy (${rules.allowClientSelfScheduling !== false ? 'Allowed' : 'Disabled'})`}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center bg-white p-4 rounded-xl border border-[#EAE1D2]">
+                <div>
+                  <label className="block text-xs font-semibold text-[#2C2A2A] mb-0.5">
+                    Client Self-Scheduling Permission
+                  </label>
+                  <p className="text-[11px] text-[#2C2A2A]/70">
+                    Optionally override the global "Allow Clients to Self-Schedule Appointments" setting for this client alone.
+                  </p>
+                </div>
+                <div>
+                  <select
+                    value={client.allowSelfSchedulingOverride || 'global'}
+                    onChange={(e) => handleSelfSchedulingOverrideChange(e.target.value as any)}
+                    className="w-full px-3 py-2 rounded-xl border border-[#EAE1D2] text-xs bg-white text-[#2C2A2A] font-semibold focus:ring-2 focus:ring-[#BF5B33] outline-none cursor-pointer"
+                  >
+                    <option value="global">🌐 Use Global Practice Setting (Default)</option>
+                    <option value="allowed">✅ Always Allowed for this Client (Override)</option>
+                    <option value="restricted">🚫 Always Restricted for this Client (Override)</option>
+                  </select>
+                </div>
               </div>
             </div>
 

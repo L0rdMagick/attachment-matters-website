@@ -50,6 +50,7 @@ export interface ClientProfileData {
   insuranceCardBackPath?: string;
   assignedTherapistId?: string;
   assignedTherapistName?: string;
+  allowSelfSchedulingOverride?: 'global' | 'allowed' | 'restricted';
   accountStatus: 'active' | 'inactive' | 'suspended';
   intakeStatus: 'not_started' | 'in_progress' | 'submitted' | 'approved' | 'revision_requested';
   consentStatus: 'pending' | 'completed';

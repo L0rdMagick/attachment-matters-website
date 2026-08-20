@@ -9,11 +9,14 @@ import {
   getAvailableTimeSlots,
   DEFAULT_AVAILABILITY_RULES
 } from '../../../lib/firebase/scheduling';
+import { getClientProfile } from '../../../lib/firebase/clients';
 import type { AvailabilityRules, AppointmentType, AppointmentData } from '../../../types/scheduling';
+import type { ClientProfileData } from '../../../types/client';
 
 export const AppointmentBookingModal: React.FC = () => {
   const { user } = useAuth();
   const [rules, setRules] = useState<AvailabilityRules>(DEFAULT_AVAILABILITY_RULES);
+  const [clientProfile, setClientProfile] = useState<ClientProfileData | null>(null);
   const [myAppointments, setMyAppointments] = useState<AppointmentData[]>([]);
   const [selectedType, setSelectedType] = useState<AppointmentType | null>(DEFAULT_AVAILABILITY_RULES.appointmentTypes[0] || null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -41,9 +44,10 @@ export const AppointmentBookingModal: React.FC = () => {
   useEffect(() => {
     async function loadData() {
       try {
-        const [r, appts] = await Promise.all([
+        const [r, appts, prof] = await Promise.all([
           getAvailabilityRules('default'),
-          user ? getAppointments({ clientId: user.uid }) : Promise.resolve([])
+          user ? getAppointments({ clientId: user.uid }) : Promise.resolve([]),
+          user ? getClientProfile(user.uid) : Promise.resolve(null)
         ]);
         if (r && r.appointmentTypes && r.appointmentTypes.length > 0) {
           setRules(r);
@@ -51,6 +55,9 @@ export const AppointmentBookingModal: React.FC = () => {
         }
         if (appts) {
           setMyAppointments(appts);
+        }
+        if (prof) {
+          setClientProfile(prof);
         }
       } catch (err) {
         console.error("Failed to load booking system", err);
@@ -60,6 +67,13 @@ export const AppointmentBookingModal: React.FC = () => {
     }
     loadData();
   }, [user]);
+
+  const clientOverride = clientProfile?.allowSelfSchedulingOverride;
+  const isSelfSchedulingAllowed = clientOverride === 'allowed'
+    ? true
+    : clientOverride === 'restricted'
+    ? false
+    : rules?.allowClientSelfScheduling !== false;
 
   const upcomingClientAppts = myAppointments.filter(a => a.status === 'confirmed' || a.status === 'requested' || a.status === 'rescheduled');
   const historyClientAppts = myAppointments.filter(a => a.status === 'completed' || a.status.startsWith('canceled'));
@@ -87,10 +101,10 @@ export const AppointmentBookingModal: React.FC = () => {
   );
 
   const handleBook = async () => {
-    if (rules?.allowClientSelfScheduling === false) {
+    if (!isSelfSchedulingAllowed) {
       setMessage({
         type: 'error',
-        text: 'Online self-scheduling is currently disabled by practice administrators. Please contact your therapist directly.'
+        text: 'Online self-scheduling is currently restricted for your account. Please contact your therapist directly.'
       });
       return;
     }
@@ -112,6 +126,7 @@ export const AppointmentBookingModal: React.FC = () => {
     const startISO = `${selectedDate}T${selectedTimeSlot}:00`;
     const endISO = new Date(new Date(startISO).getTime() + selectedType.durationMinutes * 60000).toISOString();
 
+    const isReq = !!rules?.requireAppointmentApproval;
     const appointmentPayload: Omit<AppointmentData, 'id'> = {
       clientId: user.uid,
       clientName: user.displayName || user.email || 'Client',
@@ -124,7 +139,7 @@ export const AppointmentBookingModal: React.FC = () => {
       timezone: rules?.timezone || 'America/Chicago',
       format,
       locationOrLink: format === 'telehealth' ? 'https://familytrusttherapy.com/telehealth-room' : '123 Practice Way, Suite 100',
-      status: rules?.requireAppointmentApproval ? 'requested' : 'confirmed',
+      status: isReq ? 'requested' : 'confirmed',
       notes: bookingNote.trim() || undefined,
       priceInCents: selectedType.priceInCents,
       syncStatus: 'pending'
@@ -132,22 +147,19 @@ export const AppointmentBookingModal: React.FC = () => {
 
     try {
       const apptId = await bookAppointmentWithLock(appointmentPayload);
-      const isReq = rules?.requireAppointmentApproval;
-      
-      // Trigger Notice Popup
-      setNoticeModal({
-        title: isReq ? "Appointment Requested" : "Appointment Booked Successfully!",
-        message: `Your session (${selectedType.name}) has been ${isReq ? 'requested' : 'confirmed'} for ${new Date(startISO).toLocaleString()} (${rules?.timezone || 'America/Chicago'}). Reservation ID: ${apptId}.`,
-        type: "success"
-      });
-
-      // Refresh user appointments
       const updated = await getAppointments({ clientId: user.uid });
       setMyAppointments(updated);
       setSelectedTimeSlot(null);
       setBookingNote('');
+
+      // Trigger Confirmation Notice Popup
+      setNoticeModal({
+        title: isReq ? "Appointment Request Submitted" : "Appointment Confirmed",
+        message: `Your session (${selectedType.name}) has been ${isReq ? 'requested' : 'confirmed'} for ${new Date(startISO).toLocaleString()} (${rules?.timezone || 'America/Chicago'}). Reservation ID: ${apptId}.`,
+        type: "success"
+      });
     } catch (err: any) {
-      console.error(err);
+      console.error("Booking error:", err);
       setMessage({
         type: 'error',
         text: err.message || "Failed to book appointment due to double-booking lock protection."
@@ -202,10 +214,10 @@ export const AppointmentBookingModal: React.FC = () => {
   const [rescheduleModalError, setRescheduleModalError] = useState<string | null>(null);
 
   const openRescheduleModal = (appt: AppointmentData) => {
-    if (rules?.allowClientSelfScheduling === false) {
+    if (!isSelfSchedulingAllowed) {
       setNoticeModal({
         title: "Rescheduling Restricted",
-        message: "Self-service rescheduling is currently disabled by practice administration. Please contact Family Trust Therapy directly to adjust your appointment.",
+        message: "Self-service rescheduling is currently restricted for your account. Please contact Family Trust Therapy directly to adjust your appointment.",
         type: "error"
       });
       return;
@@ -228,7 +240,7 @@ export const AppointmentBookingModal: React.FC = () => {
   };
 
   const handleConfirmReschedule = async () => {
-    if (rules?.allowClientSelfScheduling === false) return;
+    if (!isSelfSchedulingAllowed) return;
     if (!rescheduleModalAppt || !rescheduleSlot) return;
     setRescheduling(true);
     setRescheduleModalError(null);
@@ -272,11 +284,11 @@ export const AppointmentBookingModal: React.FC = () => {
       {/* Top Banner */}
       <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm">
         <h2 className="text-3xl font-serif text-[#2C2A2A] font-medium">
-          {rules?.allowClientSelfScheduling === false ? 'My Scheduled Appointments' : 'Appointment Scheduling'}
+          {!isSelfSchedulingAllowed ? 'My Scheduled Appointments' : 'Appointment Scheduling'}
         </h2>
         <p className="text-xs text-[#2C2A2A]/70 mt-1">
-          {rules?.allowClientSelfScheduling === false
-            ? 'View your upcoming and past therapy sessions, or manage appointment cancellations. Direct online booking and self-rescheduling are currently disabled.'
+          {!isSelfSchedulingAllowed
+            ? 'View your upcoming and past therapy sessions, or manage appointment cancellations. Direct online booking and self-rescheduling are currently disabled or restricted for your account.'
             : 'Select an available date and time slot. Atomic server reservation locking prevents double bookings.'}
         </p>
       </div>
@@ -297,16 +309,16 @@ export const AppointmentBookingModal: React.FC = () => {
             Schedule a New Session
           </h3>
 
-          {rules?.allowClientSelfScheduling === false ? (
+          {!isSelfSchedulingAllowed ? (
             <div className="p-6 bg-[#F7F2E9] border border-[#EAE1D2] rounded-2xl text-center space-y-3">
               <div className="w-10 h-10 bg-[#4A5741]/10 text-[#4A5741] rounded-full flex items-center justify-center mx-auto text-lg">
                 📅
               </div>
               <h4 className="text-base font-serif font-medium text-[#2C2A2A]">
-                Online Self-Scheduling Disabled
+                Online Self-Scheduling Disabled / Restricted
               </h4>
               <p className="text-xs text-[#2C2A2A]/70 leading-relaxed">
-                Direct online self-scheduling is currently turned off by practice administration. Please contact Family Trust Therapy directly to schedule or adjust your appointment.
+                Direct online self-scheduling is currently turned off or restricted for your account. Please contact Family Trust Therapy directly to schedule or adjust your appointment.
               </p>
             </div>
           ) : (

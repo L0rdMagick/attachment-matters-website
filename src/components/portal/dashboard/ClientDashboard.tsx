@@ -53,7 +53,12 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
   }
 
   const nextAppointment = appointments.find((a) => a.status === 'confirmed' || a.status === 'requested' || a.status === 'rescheduled');
-  const selfSchedulingAllowed = rules?.allowClientSelfScheduling !== false;
+  const override = profile?.allowSelfSchedulingOverride;
+  const selfSchedulingAllowed = override === 'allowed'
+    ? true
+    : override === 'restricted'
+    ? false
+    : rules?.allowClientSelfScheduling !== false;
 
   return (
     <div className="space-y-8 font-sans">
