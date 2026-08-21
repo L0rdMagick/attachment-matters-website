@@ -15,9 +15,78 @@ import type { ConsentTemplateData, SignedDocumentData } from '../../types/consen
 import { deleteDoc } from 'firebase/firestore';
 
 const STORAGE_KEY = 'practice_form_templates_v1';
+const DELETED_KEY = 'deleted_practice_form_templates_v1';
 
 // Pre-configured practice consent templates with structured sections
 export const DEFAULT_CONSENT_TEMPLATES: ConsentTemplateData[] = [
+  {
+    id: 'intake-v1',
+    title: 'Initial Client Clinical Intake Questionnaire',
+    category: 'Intake',
+    version: 'v1.4 (2026)',
+    isActive: true,
+    requiredForIntake: true,
+    description: 'Comprehensive initial questionnaire capturing reason for therapy, medical history, social history, and safety screening.',
+    lastUpdated: '2026-08-01',
+    sections: [
+      {
+        id: 'sec-1',
+        title: 'SECTION 1: REASON FOR SEEKING CLINICAL TREATMENT & GOALS',
+        content: `1.1 Primary Reason for Therapy Presentation & Symptoms
+Comprehensive presentation details, primary concerns, and emotional/relational status.
+
+1.2 Reported Symptoms & Presenting Concerns
+Trauma / PTSD Symptoms • Sleep Disturbance • Grief / Loss • Anxiety • Mood Regulation
+
+1.3 Primary Treatment Goals & Desired Outcomes
+Client-centered goals and clinical milestones for therapeutic outcomes.`
+      },
+      {
+        id: 'sec-2',
+        title: 'SECTION 2: TREATMENT & MEDICAL HISTORY',
+        content: `2.1 Prior Psychotherapy / Counseling History
+Previous counseling experience, inpatient/outpatient treatment, and prior clinical outcomes.
+
+2.2 Current Prescription & OTC Medications
+List of current medications, dosages, and prescribing clinicians.
+
+2.3 Relevant Medical Conditions & History
+Chronic medical conditions, injuries, physical health factors impacting clinical care.
+
+2.4 Current Healthcare & Medical Providers
+Primary care physician and psychiatric/specialist provider disclosures.`
+      },
+      {
+        id: 'sec-3',
+        title: 'SECTION 3: SOCIAL HISTORY, SAFETY ASSESSMENT & ADDITIONAL NOTES',
+        content: `3.1 Social History & Relationship Background
+Relationship status, employment/educational history, living situation, and support systems.
+
+3.2 Safety Screening Assessment Record
+Standard Columbia-SSRS Safety Assessment screening for self-harm and suicidal ideation.
+
+3.3 Additional Client Disclosures & Notes
+Additional context, preferences, or confidential notes provided by client.`
+      }
+    ],
+    textContent: `FAMILY TRUST THERAPY - INITIAL CLIENT CLINICAL INTAKE QUESTIONNAIRE
+
+SECTION 1: REASON FOR SEEKING CLINICAL TREATMENT & GOALS
+1.1 Primary Reason for Therapy Presentation & Symptoms
+1.2 Reported Symptoms & Presenting Concerns
+1.3 Primary Treatment Goals & Desired Outcomes
+
+SECTION 2: TREATMENT & MEDICAL HISTORY
+2.1 Prior Psychotherapy / Counseling History
+2.2 Current Prescription & OTC Medications
+2.3 Relevant Medical Conditions & History
+2.4 Current Healthcare & Medical Providers
+
+SECTION 3: SOCIAL HISTORY, SAFETY ASSESSMENT & ADDITIONAL NOTES
+3.1 Social History & Relationship Background
+3.2 Safety Screening Assessment Record
+3.3 Additional Client Disclosures & Notes`
+  },
   {
     id: 'informed_consent',
     title: 'Informed Consent for Psychotherapy',
@@ -140,8 +209,28 @@ Sessions canceled with less than 24 hours notice will be charged a standard canc
 ];
 
 /**
- * Helper to sync templates with localStorage
+ * Helpers for local storage & deletion tracking
  */
+function getDeletedTemplateIds(): string[] {
+  try {
+    const raw = localStorage.getItem(DELETED_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function addDeletedTemplateId(id: string): void {
+  try {
+    const current = getDeletedTemplateIds();
+    if (!current.includes(id)) {
+      localStorage.setItem(DELETED_KEY, JSON.stringify([...current, id]));
+    }
+  } catch (err) {
+    console.warn("Could not save deleted template ID:", err);
+  }
+}
+
 function getLocalTemplates(): ConsentTemplateData[] | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -163,31 +252,49 @@ function saveLocalTemplates(templates: ConsentTemplateData[]): void {
 }
 
 /**
- * Fetch all active consent templates (Firestore + LocalStorage Sync)
+ * Fetch all active consent templates (Firestore + LocalStorage + Default Merging)
  */
 export async function getConsentTemplates(): Promise<ConsentTemplateData[]> {
+  const deletedIds = getDeletedTemplateIds();
+  let saved: ConsentTemplateData[] = [];
+
   try {
     const colRef = collection(db, 'consentTemplates');
     const snap = await getDocs(colRef);
-
     if (!snap.empty) {
-      const fsTemplates = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ConsentTemplateData));
-      const activeOnly = fsTemplates.filter(t => t.isActive !== false);
-      saveLocalTemplates(activeOnly);
-      return activeOnly;
+      saved = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ConsentTemplateData));
     }
   } catch (err) {
-    console.warn("Could not fetch templates from Firestore, using local/default fallback:", err);
+    console.warn("Could not fetch templates from Firestore:", err);
   }
 
-  // Fallback to localStorage or default
-  const local = getLocalTemplates();
-  if (local && local.length > 0) {
-    return local;
+  if (saved.length === 0) {
+    const local = getLocalTemplates();
+    if (local && local.length > 0) {
+      saved = local;
+    }
   }
 
-  saveLocalTemplates(DEFAULT_CONSENT_TEMPLATES);
-  return DEFAULT_CONSENT_TEMPLATES;
+  // Merge default templates with saved Firestore/LocalStorage templates
+  const templateMap = new Map<string, ConsentTemplateData>();
+
+  // 1. Seed defaults (if not deleted)
+  DEFAULT_CONSENT_TEMPLATES.forEach((t) => {
+    if (!deletedIds.includes(t.id)) {
+      templateMap.set(t.id, t);
+    }
+  });
+
+  // 2. Override/add saved templates
+  saved.forEach((t) => {
+    if (!deletedIds.includes(t.id) && t.isActive !== false) {
+      templateMap.set(t.id, t);
+    }
+  });
+
+  const merged = Array.from(templateMap.values());
+  saveLocalTemplates(merged);
+  return merged;
 }
 
 /**
@@ -222,6 +329,8 @@ export async function saveConsentTemplate(template: ConsentTemplateData): Promis
  * Delete a consent template (Firestore + LocalStorage Sync)
  */
 export async function deleteConsentTemplate(templateId: string): Promise<void> {
+  addDeletedTemplateId(templateId);
+
   // Update Firestore
   try {
     const docRef = doc(db, 'consentTemplates', templateId);
