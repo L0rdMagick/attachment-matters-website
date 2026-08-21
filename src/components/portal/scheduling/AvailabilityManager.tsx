@@ -160,12 +160,6 @@ export const AvailabilityManager: React.FC = () => {
         </p>
       </div>
 
-      {message && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 text-xs font-semibold">
-          {message}
-        </div>
-      )}
-
       <div className="space-y-8">
         {/* Working Hours by Day */}
         <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
