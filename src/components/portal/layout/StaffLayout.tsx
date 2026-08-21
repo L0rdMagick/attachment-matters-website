@@ -29,59 +29,72 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children, activeTab, o
   useEffect(() => {
     if (!user) return;
 
-    const colNotifs = collection(db, 'practiceNotifications');
-    const colCancels = collection(db, 'cancellationAlerts');
+    let notifList: PopupNoticeAlert[] = [];
+    let cancelList: PopupNoticeAlert[] = [];
 
-    const unsubNotifs = onSnapshot(colNotifs, (snapshot) => {
-      const unreadNotifs = snapshot.docs
-        .map((d) => ({ id: d.id, sourceCollection: 'practiceNotifications', ...d.data() } as any))
-        .filter((n) => n.read !== true);
-
-      const unsubCancels = onSnapshot(colCancels, (snapCancels) => {
-        const unreadCancels = snapCancels.docs
-          .map((d) => ({
-            id: d.id,
-            sourceCollection: 'cancellationAlerts',
-            type: 'appointment_canceled',
-            title: '🛑 Appointment Canceled by Client',
-            message: `${d.data().clientName || 'Client'} canceled session (${d.data().appointmentTypeName || 'Therapy Session'}).`,
-            clientName: d.data().clientName || 'Client',
-            details: d.data().reason || '',
-            createdAt: d.data().canceledAt,
-            read: d.data().read
-          }))
-          .filter((c) => c.read !== true);
-
-        const allUnread = [...unreadNotifs, ...unreadCancels];
-        allUnread.sort((a, b) => {
-          const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt ? new Date(a.createdAt).getTime() : Date.now());
-          const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt ? new Date(b.createdAt).getTime() : Date.now());
-          return timeB - timeA;
-        });
-
-        setUnreadCount(allUnread.length);
-        setUnreadAlertsList(allUnread);
-
-        if (allUnread.length > 0) {
-          const latest = allUnread[0];
-          setActiveAlert({
-            id: latest.id,
-            type: latest.type,
-            title: latest.title || 'Client Portal Notice',
-            message: latest.message || '',
-            clientName: latest.clientName || 'Client',
-            details: latest.details || '',
-            createdAt: latest.createdAt,
-            sourceCollection: latest.sourceCollection
-          });
-        } else {
-          setActiveAlert(null);
-        }
+    const updateCombinedAlerts = () => {
+      const combined = [...notifList, ...cancelList];
+      combined.sort((a, b) => {
+        const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt ? new Date(a.createdAt).getTime() : Date.now());
+        const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt ? new Date(b.createdAt).getTime() : Date.now());
+        return timeB - timeA;
       });
-      return () => unsubCancels();
-    });
 
-    return () => unsubNotifs();
+      setUnreadCount(combined.length);
+      setUnreadAlertsList(combined);
+      setActiveAlert(combined.length > 0 ? combined[0] : null);
+    };
+
+    // 1. Independent listener for practiceNotifications
+    const unsubNotifs = onSnapshot(
+      collection(db, 'practiceNotifications'),
+      (snapshot) => {
+        try {
+          notifList = snapshot.docs
+            .map((d) => ({ id: d.id, sourceCollection: 'practiceNotifications', ...d.data() } as any))
+            .filter((n) => n.read !== true);
+          updateCombinedAlerts();
+        } catch (err) {
+          console.warn("Error processing practiceNotifications snapshot:", err);
+        }
+      },
+      (err) => {
+        console.warn("Failed to subscribe to practiceNotifications:", err);
+      }
+    );
+
+    // 2. Independent listener for cancellationAlerts
+    const unsubCancels = onSnapshot(
+      collection(db, 'cancellationAlerts'),
+      (snapCancels) => {
+        try {
+          cancelList = snapCancels.docs
+            .map((d) => ({
+              id: d.id,
+              sourceCollection: 'cancellationAlerts',
+              type: 'appointment_canceled',
+              title: '🛑 Appointment Canceled by Client',
+              message: `${d.data().clientName || 'Client'} canceled session (${d.data().appointmentTypeName || 'Therapy Session'}).`,
+              clientName: d.data().clientName || 'Client',
+              details: d.data().reason || '',
+              createdAt: d.data().canceledAt,
+              read: d.data().read
+            }))
+            .filter((c) => c.read !== true);
+          updateCombinedAlerts();
+        } catch (err) {
+          console.warn("Error processing cancellationAlerts snapshot:", err);
+        }
+      },
+      (err) => {
+        console.warn("Failed to subscribe to cancellationAlerts:", err);
+      }
+    );
+
+    return () => {
+      unsubNotifs();
+      unsubCancels();
+    };
   }, [user]);
 
   const handleDismissAlert = async () => {
