@@ -121,69 +121,58 @@ export const ConsentSigner: React.FC = () => {
     e.preventDefault();
     if (!user || !selectedTemplate) return;
     if (!typedSignature.trim()) {
-      alert("Please type your full legal name as your signature.");
+      showAlert('⚠️ Signature Required', 'Please type your full legal name as your signature.', 'danger', '⚠️');
       return;
     }
     if (!acknowledged) {
-      alert("Please check the acknowledgment box before signing.");
+      showAlert('⚠️ Acknowledgment Required', 'Please check the acknowledgment box before signing.', 'danger', '⚠️');
       return;
     }
 
-    showConfirm({
-      title: '✒️ Execute Electronic Signature',
-      message: `Are you sure you want to sign and submit "${selectedTemplate.title}"?`,
-      details: `By clicking confirm, your typed legal signature ("${typedSignature.trim()}") will be immutably recorded with an audit timestamp and cryptographic hash.`,
-      icon: '✒️',
-      confirmText: 'Sign & Submit Agreement',
-      cancelText: 'Cancel & Review',
-      variant: 'warning',
-      onConfirm: async () => {
-        setSigning(true);
-        setMessage(null);
+    setSigning(true);
+    setMessage(null);
 
-        try {
-          let signatureDataUrl: string | undefined = undefined;
-          if (canvasRef.current) {
-            const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              const pixelData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-              const hasPixels = pixelData.some((channel) => channel !== 0);
-              if (hasPixels) {
-                signatureDataUrl = canvas.toDataURL();
-              }
-            }
+    try {
+      let signatureDataUrl: string | undefined = undefined;
+      if (canvasRef.current) {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const pixelData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+          const hasPixels = pixelData.some((channel) => channel !== 0);
+          if (hasPixels) {
+            signatureDataUrl = canvas.toDataURL();
           }
-
-          const docHash = await signConsentDocument(
-            user.uid,
-            selectedTemplate,
-            typedSignature.trim(),
-            signatureDataUrl
-          );
-
-          setMessage(`Document successfully signed and archived! Unique Audit Hash: ${docHash}`);
-          setTypedSignature('');
-          setAcknowledged(false);
-          setIsEditingSigned(false);
-          clearCanvas();
-
-          try {
-            const updatedSigned = await getSignedDocuments(user.uid);
-            setSignedDocs(updatedSigned);
-          } catch (refreshErr) {
-            console.warn("Could not refresh signed documents list immediately:", refreshErr);
-          }
-
-          showAlert('✓ Document Signed', `Successfully signed "${selectedTemplate.title}". Your legal agreement has been archived.`, 'success', '📄');
-        } catch (err: any) {
-          console.error("Failed to sign document", err);
-          showAlert('⚠️ Signature Error', err.message || 'Failed to submit electronic signature.', 'danger', '⚠️');
-        } finally {
-          setSigning(false);
         }
       }
-    });
+
+      const docHash = await signConsentDocument(
+        user.uid,
+        selectedTemplate,
+        typedSignature.trim(),
+        signatureDataUrl
+      );
+
+      setMessage(`Document successfully signed and archived! Unique Audit Hash: ${docHash}`);
+      setTypedSignature('');
+      setAcknowledged(false);
+      setIsEditingSigned(false);
+      clearCanvas();
+
+      try {
+        const updatedSigned = await getSignedDocuments(user.uid);
+        setSignedDocs(updatedSigned);
+      } catch (refreshErr) {
+        console.warn("Could not refresh signed documents list immediately:", refreshErr);
+      }
+
+      showAlert('✓ Document Signed', `Successfully signed "${selectedTemplate.title}". Your legal agreement has been archived.`, 'success', '📄');
+    } catch (err: any) {
+      console.error("Failed to sign document", err);
+      showAlert('⚠️ Signature Error', err.message || 'Failed to submit electronic signature.', 'danger', '⚠️');
+    } finally {
+      setSigning(false);
+    }
   };
 
   if (loading) {
