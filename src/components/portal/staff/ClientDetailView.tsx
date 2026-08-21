@@ -258,12 +258,12 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
   return (
     <div className="space-y-6 font-sans">
       {/* Top Banner & Client Summary */}
-      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 no-print print:hidden">
+      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 no-print print:hidden">
         <div>
-          <button onClick={onBack} className="text-xs text-[#BF5B33] hover:underline font-semibold mb-2 block">
+          <button onClick={onBack} className="text-xs text-[#BF5B33] hover:underline font-semibold mb-2 block min-h-[32px] flex items-center">
             ← Back to Directory
           </button>
-          <h2 className="text-3xl font-serif text-[#2C2A2A] font-medium">
+          <h2 className="text-2xl sm:text-3xl font-serif text-[#2C2A2A] font-medium">
             {client.legalLastName}, {client.legalFirstName}{' '}
             {client.legalMiddleName ? `${client.legalMiddleName} ` : ''}
             {client.preferredName ? <span className="text-[#4A5741] font-normal">("{client.preferredName}")</span> : ''}
@@ -275,13 +275,13 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
           <span className="text-xs px-3 py-1.5 rounded-full font-semibold bg-[#4A5741]/10 text-[#4A5741] border border-[#4A5741]/20">
             Account Status: {client.accountStatus || 'Active'}
           </span>
           <button
             onClick={() => setShowScheduleModal(true)}
-            className="px-4 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl shadow-sm transition"
+            className="w-full sm:w-auto px-4 py-2.5 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl shadow-sm transition min-h-[42px] flex items-center justify-center"
           >
             + Schedule Appointment
           </button>
@@ -289,7 +289,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
       </div>
 
       {/* Chart Navigation Tabs */}
-      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-2 shadow-sm overflow-x-auto flex space-x-1 no-print print:hidden">
+      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-1.5 sm:p-2 shadow-sm overflow-x-auto no-scrollbar flex space-x-1 no-print print:hidden touch-scroll">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const isPrivate = tab.id === 'private-clinical-notes';
@@ -297,11 +297,11 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3.5 py-2 text-xs font-semibold rounded-xl whitespace-nowrap transition flex items-center gap-1.5 ${
+              className={`px-3 py-2 text-xs font-semibold rounded-xl whitespace-nowrap transition flex items-center gap-1.5 min-h-[40px] ${
                 isActive
                   ? isPrivate
-                    ? 'bg-red-700 text-white shadow-sm'
-                    : 'bg-[#4A5741] text-white shadow-sm'
+                    ? 'bg-red-700 text-white shadow-xs'
+                    : 'bg-[#4A5741] text-white shadow-xs'
                   : isPrivate
                   ? 'text-red-700 hover:bg-red-50'
                   : 'text-[#2C2A2A]/80 hover:bg-[#EAE1D2]/50'

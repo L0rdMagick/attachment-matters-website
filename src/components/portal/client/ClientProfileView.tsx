@@ -216,12 +216,12 @@ export const ClientProfileView: React.FC = () => {
   return (
     <div className="space-y-8 font-sans">
       {/* Header card */}
-      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <span className="text-xs bg-[#4A5741]/10 text-[#4A5741] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider">
             Client Profile & Preferences
           </span>
-          <h2 className="text-3xl font-serif font-medium text-[#2C2A2A] mt-2">
+          <h2 className="text-2xl sm:text-3xl font-serif font-medium text-[#2C2A2A] mt-2">
             {profile?.preferredName ? `${profile.preferredName} (${profile.legalFirstName} ${profile.legalLastName})` : `${legalFirstName} ${legalLastName}`}
           </h2>
           <p className="text-xs text-[#2C2A2A]/70 mt-1">
@@ -230,11 +230,11 @@ export const ClientProfileView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex gap-2">
-          <span className={`text-xs px-3 py-1.5 rounded-lg font-semibold border ${profile?.intakeStatus === 'approved' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+        <div className="flex flex-wrap gap-2">
+          <span className={`text-xs px-3 py-1.5 rounded-xl font-semibold border ${profile?.intakeStatus === 'approved' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
             Intake: {profile?.intakeStatus ? profile.intakeStatus.replace('_', ' ') : 'Pending'}
           </span>
-          <span className={`text-xs px-3 py-1.5 rounded-lg font-semibold border ${profile?.consentStatus === 'completed' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+          <span className={`text-xs px-3 py-1.5 rounded-xl font-semibold border ${profile?.consentStatus === 'completed' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
             Consent: {profile?.consentStatus || 'Pending'}
           </span>
         </div>
@@ -754,7 +754,7 @@ export const ClientProfileView: React.FC = () => {
           <button
             type="submit"
             disabled={saving}
-            className="py-3.5 px-8 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-medium text-sm rounded-xl shadow-sm transition disabled:opacity-50"
+            className="w-full sm:w-auto py-3.5 px-8 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-medium text-xs sm:text-sm rounded-xl shadow-sm transition disabled:opacity-50 min-h-[44px] flex items-center justify-center"
           >
             {saving ? 'Saving & Logging Audit Event...' : 'Save Profile Changes'}
           </button>

@@ -246,14 +246,14 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
   }
 
   return (
-    <div className="space-y-8 font-sans">
+    <div className="space-y-6 sm:space-y-8 font-sans">
       {/* Top Banner */}
-      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <span className="text-xs bg-[#BF5B33]/10 text-[#BF5B33] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider">
             Clinical Practice Dashboard
           </span>
-          <h2 className="text-3xl font-serif text-[#2C2A2A] font-medium mt-2">
+          <h2 className="text-2xl sm:text-3xl font-serif text-[#2C2A2A] font-medium mt-2">
             Welcome back, Clinician
           </h2>
           <p className="text-xs text-[#2C2A2A]/70 mt-1">
@@ -261,16 +261,16 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row w-full md:w-auto gap-2.5">
           <button
             onClick={() => onNavigate('calendar')}
-            className="px-4 py-2.5 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl shadow-sm transition"
+            className="w-full sm:w-auto px-4 py-3 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl shadow-sm transition min-h-[44px] flex items-center justify-center"
           >
             🗓️ Open Calendar
           </button>
           <button
             onClick={() => onNavigate('clients')}
-            className="px-4 py-2.5 bg-[#4A5741] hover:bg-[#384232] text-white text-xs font-semibold rounded-xl shadow-sm transition"
+            className="w-full sm:w-auto px-4 py-3 bg-[#4A5741] hover:bg-[#384232] text-white text-xs font-semibold rounded-xl shadow-sm transition min-h-[44px] flex items-center justify-center"
           >
             👥 Client Directory
           </button>
@@ -282,21 +282,21 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
         const activeScheduledCount = todayAppointments.filter(a => a.status === 'confirmed' || a.status === 'requested' || a.status === 'rescheduled').length;
         const completedCount = todayAppointments.filter(a => a.status === 'completed').length;
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-1">
-              <p className="text-xs font-semibold uppercase text-[#4A5741]">Sessions Scheduled</p>
-              <p className="text-3xl font-serif font-bold text-[#2C2A2A]">{activeScheduledCount}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-6 shadow-xs space-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#4A5741]">Sessions Scheduled</p>
+              <p className="text-2xl sm:text-3xl font-serif font-bold text-[#2C2A2A]">{activeScheduledCount}</p>
               <p className="text-[11px] text-gray-500">{completedCount} completed sessions</p>
             </div>
 
-            <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-1">
-              <p className="text-xs font-semibold uppercase text-[#4A5741]">Forms & Intakes Pending Review</p>
-              <p className="text-3xl font-serif font-bold text-[#BF5B33]">{pendingFormSubmissions.length}</p>
+            <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-6 shadow-xs space-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#4A5741]">Forms & Intakes Pending Review</p>
+              <p className="text-2xl sm:text-3xl font-serif font-bold text-[#BF5B33]">{pendingFormSubmissions.length}</p>
             </div>
 
-            <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-1">
-              <p className="text-xs font-semibold uppercase text-[#4A5741]">Google Calendar Sync</p>
-              <p className="text-sm font-semibold text-green-700 flex items-center gap-1.5 mt-2">
+            <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-6 shadow-xs space-y-1 sm:col-span-2 lg:col-span-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#4A5741]">Google Calendar Sync</p>
+              <p className="text-xs sm:text-sm font-semibold text-green-700 flex items-center gap-1.5 mt-2">
                 <span className="w-2 h-2 rounded-full bg-green-600 animate-pulse"></span> 2-Way Sync Active
               </p>
             </div>
@@ -305,10 +305,10 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
       })()}
 
       {/* Client Activity & Notification Center */}
-      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-3">
+      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-8 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-[#EAE1D2] pb-3 gap-3">
           <div>
-            <h3 className="text-xl font-serif text-[#2C2A2A] font-medium flex items-center gap-2">
+            <h3 className="text-lg sm:text-xl font-serif text-[#2C2A2A] font-medium flex items-center gap-2">
               🔔 Client Activity & Notifications ({notifications.length})
             </h3>
             <p className="text-xs text-[#2C2A2A]/70 mt-0.5">
@@ -319,7 +319,7 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
           {notifications.length > 0 && (
             <button
               onClick={handleClearAll}
-              className="px-3 py-1.5 text-xs text-red-600 hover:text-red-800 font-semibold bg-red-50 border border-red-200 rounded-xl transition"
+              className="w-full sm:w-auto px-3 py-2 text-xs text-red-600 hover:text-red-800 font-semibold bg-red-50 border border-red-200 rounded-xl transition min-h-[38px]"
             >
               🗑️ Clear All Notifications
             </button>
@@ -337,7 +337,7 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
               return (
                 <div
                   key={notif.id}
-                  className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs ${
+                  className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs ${
                     isCanceled ? 'bg-red-50/70 border-red-200 text-red-950' :
                     isCreated ? 'bg-green-50/70 border-green-200 text-green-950' :
                     isIntake ? 'bg-amber-50/70 border-amber-200 text-amber-950' :
@@ -346,7 +346,7 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
                   }`}
                 >
                   <div className="space-y-1 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                         isCanceled ? 'bg-red-100 text-red-800 border border-red-200' :
                         isCreated ? 'bg-green-100 text-green-800 border border-green-200' :
@@ -363,7 +363,7 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
                       </span>
                     </div>
 
-                    <p className="font-semibold text-sm">{notif.message}</p>
+                    <p className="font-semibold text-xs sm:text-sm">{notif.message}</p>
                     {notif.details && (
                       <div className="text-[11px] bg-white/90 p-3 rounded-xl border border-gray-200/80 mt-2 space-y-1 font-mono text-[#2C2A2A]">
                         <strong className="block text-[10px] font-sans font-bold uppercase tracking-wider text-[#BF5B33]">
@@ -378,7 +378,7 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
 
                   <button
                     onClick={() => handleDeleteNotif(notif.id)}
-                    className="text-[11px] font-semibold text-gray-600 hover:text-red-700 px-3 py-1 bg-white hover:bg-red-50 border border-gray-200 rounded-lg transition whitespace-nowrap"
+                    className="w-full sm:w-auto text-[11px] font-semibold text-gray-600 hover:text-red-700 px-3 py-2 bg-white hover:bg-red-50 border border-gray-200 rounded-xl transition whitespace-nowrap min-h-[38px] flex items-center justify-center"
                     title="Delete notification"
                   >
                     🗑️ Delete
@@ -396,7 +396,7 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
 
       {/* Pending Client Forms & Intake Questionnaires Section */}
       {pendingFormSubmissions.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 shadow-sm space-y-3 font-sans">
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-3 font-sans">
           <div className="border-b border-amber-200/80 pb-2">
             <h3 className="text-base font-serif font-medium text-amber-900 flex items-center gap-2">
               ⚠️ Client Forms & Intake Questionnaires Awaiting Review ({pendingFormSubmissions.length})
@@ -435,7 +435,7 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
                   </div>
                   <button
                     onClick={() => onNavigate('clients')}
-                    className="px-4 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-semibold text-xs rounded-xl shadow-xs transition whitespace-nowrap self-end sm:self-center"
+                    className="w-full sm:w-auto px-4 py-2.5 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-semibold text-xs rounded-xl shadow-xs transition whitespace-nowrap min-h-[40px] flex items-center justify-center"
                   >
                     {isConsent ? 'Review Form →' : 'Review Packet →'}
                   </button>

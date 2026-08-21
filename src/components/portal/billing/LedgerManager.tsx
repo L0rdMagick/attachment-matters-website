@@ -270,7 +270,7 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
         <div className="flex justify-end">
           <button
             onClick={() => setShowNewInv(true)}
-            className="px-4 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl transition shadow-sm"
+            className="w-full sm:w-auto px-4 py-3 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl transition shadow-sm min-h-[44px] flex items-center justify-center"
           >
             + Create New Invoice
           </button>

@@ -96,27 +96,27 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({ onSelectClient
   return (
     <div className="space-y-6 font-sans">
       {/* Header & Filter Controls */}
-      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-serif text-[#2C2A2A] font-medium">Practice Client Directory</h2>
+          <h2 className="text-xl sm:text-2xl font-serif text-[#2C2A2A] font-medium">Practice Client Directory</h2>
           <p className="text-xs text-[#2C2A2A]/70 mt-1">
             Search, filter, and manage client medical records and administrative charts.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 w-full md:w-auto">
           <input
             type="text"
             placeholder="Search by name or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-3.5 py-2 rounded-xl border border-[#EAE1D2] text-xs focus:ring-2 focus:ring-[#BF5B33] outline-none min-w-[200px]"
+            className="px-3.5 py-2.5 rounded-xl border border-[#EAE1D2] text-xs focus:ring-2 focus:ring-[#BF5B33] outline-none w-full sm:w-[200px] min-h-[42px]"
           />
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-[#EAE1D2] text-xs bg-white text-[#2C2A2A] font-medium"
+            className="px-3 py-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white text-[#2C2A2A] font-medium w-full sm:w-auto min-h-[42px]"
           >
             <option value="">Active Clients Only (Default)</option>
             <option value="archived">📁 Archived Charts (Read-Only)</option>
@@ -127,7 +127,7 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({ onSelectClient
           <select
             value={intakeFilter}
             onChange={(e) => setIntakeFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-[#EAE1D2] text-xs bg-white text-[#2C2A2A]"
+            className="px-3 py-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white text-[#2C2A2A] w-full sm:w-auto min-h-[42px]"
           >
             <option value="">All Intake Statuses</option>
             <option value="not_started">Intake Not Started</option>
@@ -138,7 +138,7 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({ onSelectClient
         </div>
       </div>
 
-      {/* Directory List Table */}
+      {/* Directory List Table / Mobile Cards */}
       <div className="bg-white border border-[#EAE1D2] rounded-2xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="p-8 text-center text-xs text-[#2C2A2A]/70">Loading client directory...</div>
@@ -147,101 +147,168 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({ onSelectClient
             No clients match the specified search or filter criteria.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-sans">
-              <thead className="bg-[#F7F2E9] text-[#2C2A2A] uppercase tracking-wider font-semibold border-b border-[#EAE1D2]">
-                <tr>
-                  <th className="py-3.5 px-6">Client Name</th>
-                  <th className="py-3.5 px-6">Contact Email</th>
-                  <th className="py-3.5 px-6">Status</th>
-                  <th className="py-3.5 px-6">Intake</th>
-                  <th className="py-3.5 px-6">Consent</th>
-                  <th className="py-3.5 px-6">Self-Scheduling</th>
-                  <th className="py-3.5 px-6 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#EAE1D2]">
-                {clients.map((c) => {
-                  const isArchived = c.accountStatus === 'archived';
-                  return (
-                    <tr key={c.uid} className={`hover:bg-[#F7F2E9]/40 transition ${isArchived ? 'bg-gray-50/70' : ''}`}>
-                      <td className="py-4 px-6 font-semibold text-[#2C2A2A]">
-                        {c.legalLastName ? `${c.legalLastName}, ${c.legalFirstName}` : c.email}{' '}
-                        {c.preferredName ? <span className="text-[#4A5741] font-normal">("{c.preferredName}")</span> : ''}
-                      </td>
-                      <td className="py-4 px-6 text-[#2C2A2A]/80">{c.email}</td>
-                      <td className="py-4 px-6">
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium capitalize ${
-                          isArchived ? 'bg-amber-100 text-amber-900 border border-amber-200' : 'bg-green-100 text-green-800'
-                        }`}>
-                          {isArchived ? '📁 Archived' : (c.accountStatus || 'Active')}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium capitalize ${
-                          c.intakeStatus === 'approved'
-                            ? 'bg-green-100 text-green-800'
-                            : c.intakeStatus === 'submitted'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
+          <div>
+            {/* Mobile Client Cards View (<640px) */}
+            <div className="sm:hidden divide-y divide-[#EAE1D2]">
+              {clients.map((c) => {
+                const isArchived = c.accountStatus === 'archived';
+                return (
+                  <div key={c.uid} className={`p-4 space-y-3 ${isArchived ? 'bg-gray-50/80' : 'bg-white'}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-semibold text-sm text-[#2C2A2A]">
+                          {c.legalLastName ? `${c.legalLastName}, ${c.legalFirstName}` : c.email}{' '}
+                          {c.preferredName ? <span className="text-[#4A5741] font-normal">("{c.preferredName}")</span> : ''}
+                        </h4>
+                        <p className="text-xs text-[#2C2A2A]/70 truncate max-w-[220px]">{c.email}</p>
+                      </div>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-medium uppercase whitespace-nowrap ${
+                        isArchived ? 'bg-amber-100 text-amber-900 border border-amber-200' : 'bg-green-100 text-green-800'
+                      }`}>
+                        {isArchived ? '📁 Archived' : (c.accountStatus || 'Active')}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-[#F7F2E9] p-2 rounded-xl">
+                        <span className="text-[10px] text-gray-500 font-bold uppercase block">Intake</span>
+                        <span className="font-medium text-[#2C2A2A] capitalize">
                           {c.intakeStatus ? c.intakeStatus.replace('_', ' ') : 'Not Started'}
                         </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium capitalize ${
-                          c.consentStatus === 'completed' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                        }`}>
+                      </div>
+                      <div className="bg-[#F7F2E9] p-2 rounded-xl">
+                        <span className="text-[10px] text-gray-500 font-bold uppercase block">Consent</span>
+                        <span className="font-medium text-[#2C2A2A] capitalize">
                           {c.consentStatus || 'Pending'}
                         </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <select
-                          value={c.allowSelfSchedulingOverride || 'global'}
-                          onChange={(e) => handleSelfSchedulingOverrideChange(c, e.target.value as any)}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border outline-none cursor-pointer transition ${
-                            c.allowSelfSchedulingOverride === 'allowed'
-                              ? 'bg-green-50 text-green-800 border-green-300'
-                              : c.allowSelfSchedulingOverride === 'restricted'
-                              ? 'bg-red-50 text-red-800 border-red-300'
-                              : 'bg-gray-50 text-gray-700 border-gray-200'
-                          }`}
-                        >
-                          <option value="global">🌐 Practice Global</option>
-                          <option value="allowed">✅ Allowed (Override)</option>
-                          <option value="restricted">🚫 Restricted (Override)</option>
-                        </select>
-                      </td>
-                      <td className="py-4 px-6 text-right whitespace-nowrap space-x-2">
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-stretch gap-2 pt-1">
+                      <button
+                        onClick={() => onSelectClient(c.uid)}
+                        className="w-full py-2.5 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-semibold text-xs rounded-xl shadow-xs transition min-h-[42px] flex items-center justify-center"
+                      >
+                        Open Chart →
+                      </button>
+                      {isArchived ? (
                         <button
-                          onClick={() => onSelectClient(c.uid)}
-                          className="px-3.5 py-1.5 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-medium text-xs rounded-lg transition"
+                          onClick={() => handleRestoreClient(c)}
+                          className="w-full py-2.5 bg-green-50 hover:bg-green-100 text-green-700 font-semibold text-xs border border-green-200 rounded-xl transition min-h-[42px] flex items-center justify-center"
                         >
-                          Open Chart →
+                          ↩️ Restore Chart
                         </button>
-                        {isArchived ? (
-                          <button
-                            onClick={() => handleRestoreClient(c)}
-                            className="px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 font-medium text-xs border border-green-200 rounded-lg transition"
-                            title="Reactivate client chart & portal login"
+                      ) : (
+                        <button
+                          onClick={() => handleArchiveClient(c)}
+                          className="w-full py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-semibold text-xs border border-amber-200 rounded-xl transition min-h-[42px] flex items-center justify-center"
+                        >
+                          📁 Archive Chart
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop & Tablet Table View (>=640px) */}
+            <div className="hidden sm:block overflow-x-auto touch-scroll">
+              <table className="w-full text-left text-xs font-sans">
+                <thead className="bg-[#F7F2E9] text-[#2C2A2A] uppercase tracking-wider font-semibold border-b border-[#EAE1D2]">
+                  <tr>
+                    <th className="py-3.5 px-6">Client Name</th>
+                    <th className="py-3.5 px-6">Contact Email</th>
+                    <th className="py-3.5 px-6">Status</th>
+                    <th className="py-3.5 px-6">Intake</th>
+                    <th className="py-3.5 px-6">Consent</th>
+                    <th className="py-3.5 px-6">Self-Scheduling</th>
+                    <th className="py-3.5 px-6 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EAE1D2]">
+                  {clients.map((c) => {
+                    const isArchived = c.accountStatus === 'archived';
+                    return (
+                      <tr key={c.uid} className={`hover:bg-[#F7F2E9]/40 transition ${isArchived ? 'bg-gray-50/70' : ''}`}>
+                        <td className="py-4 px-6 font-semibold text-[#2C2A2A]">
+                          {c.legalLastName ? `${c.legalLastName}, ${c.legalFirstName}` : c.email}{' '}
+                          {c.preferredName ? <span className="text-[#4A5741] font-normal">("{c.preferredName}")</span> : ''}
+                        </td>
+                        <td className="py-4 px-6 text-[#2C2A2A]/80">{c.email}</td>
+                        <td className="py-4 px-6">
+                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium capitalize ${
+                            isArchived ? 'bg-amber-100 text-amber-900 border border-amber-200' : 'bg-green-100 text-green-800'
+                          }`}>
+                            {isArchived ? '📁 Archived' : (c.accountStatus || 'Active')}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium capitalize ${
+                            c.intakeStatus === 'approved'
+                              ? 'bg-green-100 text-green-800'
+                              : c.intakeStatus === 'submitted'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {c.intakeStatus ? c.intakeStatus.replace('_', ' ') : 'Not Started'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium capitalize ${
+                            c.consentStatus === 'completed' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            {c.consentStatus || 'Pending'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <select
+                            value={c.allowSelfSchedulingOverride || 'global'}
+                            onChange={(e) => handleSelfSchedulingOverrideChange(c, e.target.value as any)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border outline-none cursor-pointer transition ${
+                              c.allowSelfSchedulingOverride === 'allowed'
+                                ? 'bg-green-50 text-green-800 border-green-300'
+                                : c.allowSelfSchedulingOverride === 'restricted'
+                                ? 'bg-red-50 text-red-800 border-red-300'
+                                : 'bg-gray-50 text-gray-700 border-gray-200'
+                            }`}
                           >
-                            ↩️ Restore
-                          </button>
-                        ) : (
+                            <option value="global">🌐 Practice Global</option>
+                            <option value="allowed">✅ Allowed (Override)</option>
+                            <option value="restricted">🚫 Restricted (Override)</option>
+                          </select>
+                        </td>
+                        <td className="py-4 px-6 text-right whitespace-nowrap space-x-2">
                           <button
-                            onClick={() => handleArchiveClient(c)}
-                            className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-medium text-xs border border-amber-200 rounded-lg transition"
-                            title="Archive client chart & revoke portal sign-in (HIPAA Soft Delete)"
+                            onClick={() => onSelectClient(c.uid)}
+                            className="px-3.5 py-1.5 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-medium text-xs rounded-lg transition min-h-[36px]"
                           >
-                            📁 Archive
+                            Open Chart →
                           </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          {isArchived ? (
+                            <button
+                              onClick={() => handleRestoreClient(c)}
+                              className="px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 font-medium text-xs border border-green-200 rounded-lg transition min-h-[36px]"
+                              title="Reactivate client chart & portal login"
+                            >
+                              ↩️ Restore
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleArchiveClient(c)}
+                              className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-medium text-xs border border-amber-200 rounded-lg transition min-h-[36px]"
+                              title="Archive client chart & revoke portal sign-in (HIPAA Soft Delete)"
+                            >
+                              📁 Archive
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

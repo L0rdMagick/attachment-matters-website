@@ -325,7 +325,7 @@ export const ConsentSigner: React.FC = () => {
                   <button
                     type="submit"
                     disabled={signing}
-                    className="w-full py-3.5 px-6 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-semibold text-sm rounded-xl shadow-sm transition disabled:opacity-50"
+                    className="w-full py-3.5 px-6 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-semibold text-xs sm:text-sm rounded-xl shadow-sm transition disabled:opacity-50 min-h-[44px] flex items-center justify-center"
                   >
                     {signing ? 'Signing Document...' : 'Sign & Submit Consent Agreement'}
                   </button>

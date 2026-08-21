@@ -228,19 +228,19 @@ export const IntakeFormRunner: React.FC = () => {
       {/* Interactive Form - Hidden when printing */}
       <div className="space-y-6 no-print print:hidden">
         {/* Header & Progress Indicator */}
-        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm">
+        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-2xl font-serif text-[#2C2A2A] font-medium">Initial Client Intake Questionnaire</h2>
+              <h2 className="text-xl sm:text-2xl font-serif text-[#2C2A2A] font-medium">Initial Client Intake Questionnaire</h2>
               <p className="text-xs text-[#2C2A2A]/70 mt-1">
                 Please complete all sections to help your therapist prepare for your first session.
               </p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-4 py-2 border border-[#4A5741] text-[#4A5741] hover:bg-[#4A5741]/5 font-semibold text-xs rounded-xl transition"
+                className="w-full sm:w-auto px-4 py-2.5 border border-[#4A5741] text-[#4A5741] hover:bg-[#4A5741]/5 font-semibold text-xs rounded-xl transition min-h-[40px] flex items-center justify-center"
               >
                 🖨️ Print Form Preview
               </button>
@@ -248,7 +248,7 @@ export const IntakeFormRunner: React.FC = () => {
                 type="button"
                 onClick={handleSaveDraft}
                 disabled={saving}
-                className="px-4 py-2 bg-[#F7F2E9] hover:bg-[#EAE1D2] text-[#2C2A2A] font-semibold text-xs rounded-xl border border-[#EAE1D2] transition"
+                className="w-full sm:w-auto px-4 py-2.5 bg-[#F7F2E9] hover:bg-[#EAE1D2] text-[#2C2A2A] font-semibold text-xs rounded-xl border border-[#EAE1D2] transition min-h-[40px] flex items-center justify-center"
               >
                 {saving ? 'Saving...' : '💾 Save & Continue Later'}
               </button>
@@ -262,24 +262,24 @@ export const IntakeFormRunner: React.FC = () => {
           )}
 
           {/* Progress steps */}
-          <div className="grid grid-cols-3 gap-2 text-center text-xs font-semibold border-t border-[#EAE1D2] pt-4">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center text-[11px] sm:text-xs font-semibold border-t border-[#EAE1D2] pt-4">
             <button
               onClick={() => setStep(1)}
-              className={`py-2 rounded-xl transition ${step === 1 ? 'bg-[#BF5B33] text-white' : 'bg-[#F7F2E9] text-[#2C2A2A]/70'}`}
+              className={`py-2.5 px-1 rounded-xl transition min-h-[42px] flex items-center justify-center ${step === 1 ? 'bg-[#BF5B33] text-white shadow-xs' : 'bg-[#F7F2E9] text-[#2C2A2A]/70 hover:bg-[#EAE1D2]/60'}`}
             >
-              Step 1: Reasons & Goals
+              <span>Step 1<span className="hidden sm:inline">: Reasons & Goals</span></span>
             </button>
             <button
               onClick={() => setStep(2)}
-              className={`py-2 rounded-xl transition ${step === 2 ? 'bg-[#BF5B33] text-white' : 'bg-[#F7F2E9] text-[#2C2A2A]/70'}`}
+              className={`py-2.5 px-1 rounded-xl transition min-h-[42px] flex items-center justify-center ${step === 2 ? 'bg-[#BF5B33] text-white shadow-xs' : 'bg-[#F7F2E9] text-[#2C2A2A]/70 hover:bg-[#EAE1D2]/60'}`}
             >
-              Step 2: Medical & History
+              <span>Step 2<span className="hidden sm:inline">: Medical & History</span></span>
             </button>
             <button
               onClick={() => setStep(3)}
-              className={`py-2 rounded-xl transition ${step === 3 ? 'bg-[#BF5B33] text-white' : 'bg-[#F7F2E9] text-[#2C2A2A]/70'}`}
+              className={`py-2.5 px-1 rounded-xl transition min-h-[42px] flex items-center justify-center ${step === 3 ? 'bg-[#BF5B33] text-white shadow-xs' : 'bg-[#F7F2E9] text-[#2C2A2A]/70 hover:bg-[#EAE1D2]/60'}`}
             >
-              Step 3: History & Review
+              <span>Step 3<span className="hidden sm:inline">: History & Review</span></span>
             </button>
           </div>
         </div>
@@ -486,18 +486,18 @@ export const IntakeFormRunner: React.FC = () => {
                 <strong>Submission Acknowledgment:</strong> By clicking "Submit Final Intake Packet", you confirm that the information provided is accurate to the best of your knowledge.
               </div>
 
-              <div className="flex justify-between pt-4">
+              <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setStep(2)}
-                  className="py-3 px-6 bg-gray-100 text-gray-700 text-xs font-semibold rounded-xl hover:bg-gray-200 transition"
+                  className="w-full sm:w-auto py-3 px-6 bg-gray-100 text-gray-700 text-xs font-semibold rounded-xl hover:bg-gray-200 transition min-h-[44px] flex items-center justify-center order-2 sm:order-1"
                 >
                   ← Back
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="py-3.5 px-8 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-sm font-semibold rounded-xl shadow-sm transition disabled:opacity-50"
+                  className="w-full sm:w-auto py-3.5 px-8 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs sm:text-sm font-semibold rounded-xl shadow-sm transition disabled:opacity-50 min-h-[44px] flex items-center justify-center order-1 sm:order-2"
                 >
                   {saving ? 'Submitting...' : 'Submit Final Intake Packet'}
                 </button>

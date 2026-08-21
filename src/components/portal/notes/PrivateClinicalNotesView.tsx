@@ -185,9 +185,9 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
   return (
     <div className="space-y-6 font-sans">
       {/* Header */}
-      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-serif text-[#2C2A2A] font-medium">Private Clinical Notes (DAP / SOAP)</h2>
+          <h2 className="text-xl sm:text-2xl font-serif text-[#2C2A2A] font-medium">Private Clinical Notes (DAP / SOAP)</h2>
           <p className="text-xs text-[#2C2A2A]/70 mt-1">
             HIPAA-compliant, confidential progress notes. Prohibited from client access at security rule level.
           </p>
@@ -195,7 +195,7 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
 
         <button
           onClick={handleOpenNew}
-          className="px-4 py-2 bg-[#BF5B33] text-white font-semibold text-xs rounded-xl shadow-sm hover:bg-[#a64e2b] transition"
+          className="w-full sm:w-auto px-4 py-3 bg-[#BF5B33] text-white font-semibold text-xs rounded-xl shadow-sm hover:bg-[#a64e2b] transition min-h-[44px] flex items-center justify-center"
         >
           + Write New Clinical Note
         </button>
@@ -203,7 +203,7 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
 
       {/* Client Selector Dropdown */}
       {!targetClientId && (
-        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <label htmlFor="clinical-client-select" className="text-xs font-semibold uppercase text-[#2C2A2A]">
             Select Client Chart:
           </label>
@@ -211,7 +211,7 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
             id="clinical-client-select"
             value={selectedClientId}
             onChange={(e) => setSelectedClientId(e.target.value)}
-            className="p-2.5 rounded-xl border border-[#EAE1D2] text-xs font-medium bg-white text-[#2C2A2A] max-w-sm w-full outline-none focus:ring-2 focus:ring-[#BF5B33]/20"
+            className="p-2.5 rounded-xl border border-[#EAE1D2] text-xs font-medium bg-white text-[#2C2A2A] max-w-sm w-full outline-none focus:ring-2 focus:ring-[#BF5B33]/20 min-h-[42px]"
           >
             {clientList.length === 0 ? (
               <option value="">No clients found</option>

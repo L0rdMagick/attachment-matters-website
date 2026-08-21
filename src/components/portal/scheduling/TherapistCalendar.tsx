@@ -263,28 +263,28 @@ export const TherapistCalendar: React.FC = () => {
 
   return (
     <div className="space-y-6 font-sans relative">
-      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 no-print print:hidden">
         <div>
-          <h2 className="text-2xl font-serif text-[#2C2A2A] font-medium">Therapist Clinical Calendar</h2>
+          <h2 className="text-xl sm:text-2xl font-serif text-[#2C2A2A] font-medium">Practice Calendar & Scheduling</h2>
           <p className="text-xs text-[#2C2A2A]/70 mt-1">
             Manage daily schedule, client sessions, and two-way Google Calendar synchronization.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 w-full md:w-auto">
           <button
             onClick={() => setShowScheduleModal(true)}
-            className="px-4 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl shadow-sm transition"
+            className="w-full sm:w-auto px-4 py-2.5 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl shadow-sm transition min-h-[42px] flex items-center justify-center"
           >
             + Schedule Client Session
           </button>
-          <div className="flex bg-[#F7F2E9] p-1 rounded-xl border border-[#EAE1D2] text-xs font-semibold">
+          <div className="flex bg-[#F7F2E9] p-1 rounded-xl border border-[#EAE1D2] text-xs font-semibold w-full sm:w-auto justify-between">
             {(['agenda', 'day', 'week', 'month'] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`px-3 py-1 rounded-lg capitalize transition ${
-                  viewMode === mode ? 'bg-[#BF5B33] text-white shadow-sm' : 'text-[#2C2A2A]/70 hover:text-[#2C2A2A]'
+                className={`flex-1 sm:flex-none px-3 py-2 rounded-lg capitalize transition min-h-[38px] ${
+                  viewMode === mode ? 'bg-[#BF5B33] text-white shadow-xs' : 'text-[#2C2A2A]/70 hover:text-[#2C2A2A]'
                 }`}
               >
                 {mode}
@@ -294,27 +294,27 @@ export const TherapistCalendar: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-3">
-          <h3 className="text-lg font-serif text-[#2C2A2A] font-medium">
+      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-[#EAE1D2] pb-3 gap-3">
+          <h3 className="text-base sm:text-lg font-serif text-[#2C2A2A] font-medium">
             Session Agenda ({displayedAppts.length})
           </h3>
-          <div className="flex bg-[#F7F2E9] p-1 rounded-xl border border-[#EAE1D2] text-xs font-semibold">
+          <div className="flex bg-[#F7F2E9] p-1 rounded-xl border border-[#EAE1D2] text-xs font-semibold w-full sm:w-auto">
             <button
               onClick={() => setStatusTab('upcoming')}
-              className={`px-3 py-1.5 rounded-lg transition ${
-                statusTab === 'upcoming' ? 'bg-[#BF5B33] text-white shadow-sm' : 'text-[#2C2A2A]/70 hover:text-[#2C2A2A]'
+              className={`flex-1 sm:flex-none px-3 py-2 rounded-lg transition min-h-[38px] ${
+                statusTab === 'upcoming' ? 'bg-[#BF5B33] text-white shadow-xs' : 'text-[#2C2A2A]/70 hover:text-[#2C2A2A]'
               }`}
             >
-              Scheduled Sessions ({upcomingAppts.length})
+              Scheduled ({upcomingAppts.length})
             </button>
             <button
               onClick={() => setStatusTab('history')}
-              className={`px-3 py-1.5 rounded-lg transition ${
-                statusTab === 'history' ? 'bg-[#BF5B33] text-white shadow-sm' : 'text-[#2C2A2A]/70 hover:text-[#2C2A2A]'
+              className={`flex-1 sm:flex-none px-3 py-2 rounded-lg transition min-h-[38px] ${
+                statusTab === 'history' ? 'bg-[#BF5B33] text-white shadow-xs' : 'text-[#2C2A2A]/70 hover:text-[#2C2A2A]'
               }`}
             >
-              Completed & History ({historyAppts.length})
+              History ({historyAppts.length})
             </button>
           </div>
         </div>
