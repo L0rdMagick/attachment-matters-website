@@ -207,32 +207,39 @@ export const ConsentSigner: React.FC = () => {
 
         {/* Selected Document Text & Signing Form / Printable View */}
         <div className="md:col-span-2 space-y-6">
-          {selectedTemplate && (
-            isAlreadySigned(selectedTemplate.id) && !isEditingSigned && getSignedDocForTemplate(selectedTemplate.id) ? (
-              <div className="space-y-4">
-                <div className="flex justify-end no-print print:hidden">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const existingDoc = getSignedDocForTemplate(selectedTemplate.id);
-                      if (existingDoc?.clientTypedName) {
-                        setTypedSignature(existingDoc.clientTypedName);
-                      }
-                      setIsEditingSigned(true);
-                    }}
-                    className="px-4 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5"
-                  >
-                    ✏️ Update / Re-Sign Agreement
-                  </button>
-                </div>
-                <PrintableSignedConsentDocument
-                  clientName={profile?.legalFirstName ? `${profile.legalFirstName} ${profile.legalLastName}` : (user?.email || '')}
-                  clientEmail={user?.email || ''}
-                  signedDoc={getSignedDocForTemplate(selectedTemplate.id)!}
-                />
-              </div>
-            ) : (
-              <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+          {selectedTemplate ? (
+            (() => {
+              const currentSignedDoc = getSignedDocForTemplate(selectedTemplate.id);
+              const showSignedView = isAlreadySigned(selectedTemplate.id) && !isEditingSigned && currentSignedDoc;
+
+              if (showSignedView && currentSignedDoc) {
+                return (
+                  <div className="space-y-4">
+                    <div className="flex justify-end no-print print:hidden">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (currentSignedDoc?.clientTypedName) {
+                            setTypedSignature(currentSignedDoc.clientTypedName);
+                          }
+                          setIsEditingSigned(true);
+                        }}
+                        className="px-4 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5"
+                      >
+                        ✏️ Update / Re-Sign Agreement
+                      </button>
+                    </div>
+                    <PrintableSignedConsentDocument
+                      clientName={profile?.legalFirstName ? `${profile.legalFirstName} ${profile.legalLastName || ''}`.trim() : (user?.email || '')}
+                      clientEmail={user?.email || ''}
+                      signedDoc={currentSignedDoc}
+                    />
+                  </div>
+                );
+              }
+
+              return (
+                <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
                 <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-4">
                   <div>
                     <h3 className="text-2xl font-serif text-[#2C2A2A] font-medium">{selectedTemplate.title}</h3>
@@ -399,9 +406,10 @@ export const ConsentSigner: React.FC = () => {
                     {signing ? 'Signing Document...' : 'Sign & Submit Consent Agreement'}
                   </button>
                 </form>
-              </div>
-            )
-          )}
+                </div>
+              );
+            })()
+          ) : null}
         </div>
       </div>
     </div>

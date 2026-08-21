@@ -12,13 +12,41 @@ export const PrintableSignedConsentDocument: React.FC<PrintableSignedConsentDocu
   clientEmail,
   signedDoc
 }) => {
-  const formattedDate = new Date(signedDoc.signedAtISO).toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  if (!signedDoc) {
+    return (
+      <div className="p-6 bg-white border border-[#EAE1D2] rounded-2xl text-xs text-red-700">
+        ⚠️ Unable to load signed document record. Please re-select the document.
+      </div>
+    );
+  }
+
+  const safeFormatDateTime = (iso?: string) => {
+    if (!iso) return new Date().toLocaleString('en-US');
+    try {
+      const d = new Date(iso);
+      return isNaN(d.getTime()) ? new Date().toLocaleString('en-US') : d.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return new Date().toLocaleString('en-US');
+    }
+  };
+
+  const safeFormatDate = (iso?: string) => {
+    if (!iso) return new Date().toLocaleDateString('en-US');
+    try {
+      const d = new Date(iso);
+      return isNaN(d.getTime()) ? new Date().toLocaleDateString('en-US') : d.toLocaleDateString('en-US');
+    } catch {
+      return new Date().toLocaleDateString('en-US');
+    }
+  };
+
+  const formattedDate = safeFormatDateTime(signedDoc.signedAtISO);
 
   return (
     <div className="official-print-document bg-white border-2 border-gray-900 rounded-none p-6 sm:p-10 shadow-none space-y-6 font-sans text-gray-900 print:border-none print:shadow-none print:p-0 print:m-0 print-card">
@@ -126,7 +154,7 @@ export const PrintableSignedConsentDocument: React.FC<PrintableSignedConsentDocu
               </div>
               <div>
                 <span className="block text-[10px] uppercase text-gray-600">Date Signed</span>
-                <span className="font-semibold text-gray-900">{new Date(signedDoc.signedAtISO).toLocaleDateString('en-US')}</span>
+                <span className="font-semibold text-gray-900">{safeFormatDate(signedDoc.signedAtISO)}</span>
               </div>
             </div>
             <div>
