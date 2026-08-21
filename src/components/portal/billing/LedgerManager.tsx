@@ -6,6 +6,7 @@ import { getAppointments } from '../../../lib/firebase/scheduling';
 import type { InvoiceData, LedgerEntryData, LedgerEntryType } from '../../../types/billing';
 import type { ClientProfileData } from '../../../types/client';
 import type { AppointmentData } from '../../../types/scheduling';
+import { PortalClientSelector } from '../common/PortalClientSelector';
 
 export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetClientId }) => {
   const { user, role } = useAuth();
@@ -244,25 +245,14 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
 
       {isStaff && !targetClientId && (
         <div className="bg-white border border-[#EAE1D2] rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <label htmlFor="staff-client-select" className="text-xs font-semibold uppercase text-[#2C2A2A]">
-            Select Client to View/Issue Invoices:
-          </label>
-          <select
-            id="staff-client-select"
-            value={selectedClientId}
-            onChange={(e) => setSelectedClientId(e.target.value)}
-            className="p-2.5 rounded-xl border border-[#EAE1D2] text-xs font-medium bg-white text-[#2C2A2A] max-w-sm w-full outline-none focus:ring-2 focus:ring-[#BF5B33]/20"
-          >
-            {clientList.length === 0 ? (
-              <option value="">No clients found</option>
-            ) : (
-              clientList.map((c) => (
-                <option key={c.uid} value={c.uid}>
-                  {c.legalFirstName} {c.legalLastName} ({c.email || 'No Email'})
-                </option>
-              ))
-            )}
-          </select>
+          <span className="text-xs font-semibold uppercase text-[#2C2A2A]">
+            Active Client Financial Ledger:
+          </span>
+          <PortalClientSelector
+            clients={clientList}
+            selectedClientId={selectedClientId}
+            onSelectClient={(id) => setSelectedClientId(id)}
+          />
         </div>
       )}
 

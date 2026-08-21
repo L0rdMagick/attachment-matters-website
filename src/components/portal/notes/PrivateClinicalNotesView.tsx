@@ -10,6 +10,7 @@ import {
 import type { PrivateClinicalNoteData, NoteFormat, NoteAmendment } from '../../../types/notes';
 import type { ClientProfileData } from '../../../types/client';
 import { PortalConfirmModal } from '../common/PortalConfirmModal';
+import { PortalClientSelector } from '../common/PortalClientSelector';
 
 export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = ({ targetClientId }) => {
   const { user, role } = useAuth();
@@ -239,25 +240,14 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
       {/* Client Selector Dropdown */}
       {!targetClientId && (
         <div className="bg-white border border-[#EAE1D2] rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <label htmlFor="clinical-client-select" className="text-xs font-semibold uppercase text-[#2C2A2A]">
-            Select Client Chart:
-          </label>
-          <select
-            id="clinical-client-select"
-            value={selectedClientId}
-            onChange={(e) => setSelectedClientId(e.target.value)}
-            className="p-2.5 rounded-xl border border-[#EAE1D2] text-xs font-medium bg-white text-[#2C2A2A] max-w-sm w-full outline-none focus:ring-2 focus:ring-[#BF5B33]/20 min-h-[42px]"
-          >
-            {clientList.length === 0 ? (
-              <option value="">No clients found</option>
-            ) : (
-              clientList.map((c) => (
-                <option key={c.uid} value={c.uid}>
-                  {c.legalFirstName} {c.legalLastName} ({c.email || 'No Email'})
-                </option>
-              ))
-            )}
-          </select>
+          <span className="text-xs font-semibold uppercase text-[#2C2A2A]">
+            Active Client Chart:
+          </span>
+          <PortalClientSelector
+            clients={clientList}
+            selectedClientId={selectedClientId}
+            onSelectClient={(id) => setSelectedClientId(id)}
+          />
         </div>
       )}
 

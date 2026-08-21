@@ -14,6 +14,7 @@ import { getClientsDirectory } from '../../../lib/firebase/clients';
 import type { AppointmentData, AppointmentStatus, AvailabilityRules } from '../../../types/scheduling';
 import type { ClientProfileData } from '../../../types/client';
 import { usePortalModal } from '../common/PortalModalContext';
+import { PortalClientSelector } from '../common/PortalClientSelector';
 
 export const TherapistCalendar: React.FC = () => {
   const { user } = useAuth();
@@ -429,12 +430,13 @@ export const TherapistCalendar: React.FC = () => {
             </div>
             {schedMessage && <div className="p-3 bg-red-50 text-red-800 border border-red-200 rounded-xl text-xs font-medium">{schedMessage}</div>}
             <form onSubmit={handleScheduleAppointment} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Assign To Client</label>
-                <select value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} className="w-full p-2.5 rounded-xl border border-[#EAE1D2] bg-white text-xs text-[#2C2A2A] font-medium">
-                  {clientList.length === 0 ? <option value="">No clients found</option> : clientList.map((c) => <option key={c.uid} value={c.uid}>{c.legalFirstName} {c.legalLastName} ({c.email || 'No Email'})</option>)}
-                </select>
-              </div>
+              <PortalClientSelector
+                clients={clientList}
+                selectedClientId={selectedClientId}
+                onSelectClient={(id) => setSelectedClientId(id)}
+                label="Assign To Client *"
+                className="w-full"
+              />
               <div>
                 <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Select Appointment Type</label>
                 <select value={schedType.id} onChange={(e) => { const found = rules.appointmentTypes.find(t => t.id === e.target.value); if (found) { setSchedType(found); if (found.format === 'telehealth') setSchedFormat('telehealth'); else if (found.format === 'in_person') setSchedFormat('in_person'); } }} className="w-full p-2.5 rounded-xl border border-[#EAE1D2] bg-white text-xs text-[#2C2A2A] font-medium">
