@@ -36,20 +36,29 @@ export const PortalModalProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const showAlert = (
-    title: string,
-    message: string,
+    titleOrOptions: string | ShowModalOptions,
+    message?: string,
     variant: 'danger' | 'warning' | 'info' | 'success' = 'info',
     icon?: string
   ) => {
-    setModalState({
-      title,
-      message,
-      variant,
-      icon,
-      isAlertOnly: true,
-      confirmText: 'OK',
-      isOpen: true
-    });
+    if (typeof titleOrOptions === 'object') {
+      setModalState({
+        ...titleOrOptions,
+        isAlertOnly: true,
+        confirmText: titleOrOptions.confirmText || 'OK',
+        isOpen: true
+      });
+    } else {
+      setModalState({
+        title: titleOrOptions,
+        message: message || '',
+        variant,
+        icon,
+        isAlertOnly: true,
+        confirmText: 'OK',
+        isOpen: true
+      });
+    }
   };
 
   const handleConfirm = async () => {

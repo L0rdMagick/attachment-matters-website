@@ -147,12 +147,7 @@ export const TemplateManagerView: React.FC = () => {
       onConfirm: () => {
         setTemplates((prev) => prev.filter((t) => t.id !== tmpl.id));
         setActiveModal({ isOpen: false, template: null, isEditing: false });
-        showAlert({
-          title: '✓ Template Deleted',
-          message: `Practice form template "${tmpl.name}" was removed successfully.`,
-          icon: '✓',
-          variant: 'success'
-        });
+        showAlert('✓ Template Deleted', `Practice form template "${tmpl.name}" was removed successfully.`, 'success', '✓');
       }
     });
   };
@@ -160,12 +155,7 @@ export const TemplateManagerView: React.FC = () => {
   const handleSaveTemplate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.contentPreview) {
-      showAlert({
-        title: '⚠️ Missing Information',
-        message: 'Please fill in both the template title and content body.',
-        icon: '⚠️',
-        variant: 'danger'
-      });
+      showAlert('⚠️ Missing Information', 'Please fill in both the template title and content body.', 'danger', '⚠️');
       return;
     }
 
@@ -190,12 +180,7 @@ export const TemplateManagerView: React.FC = () => {
     });
 
     setActiveModal({ isOpen: false, template: null, isEditing: false });
-    showAlert({
-      title: '✓ Template Saved',
-      message: `Practice form template "${savedTemplate.name}" updated successfully.`,
-      icon: '✓',
-      variant: 'success'
-    });
+    showAlert('✓ Template Saved', `Practice form template "${savedTemplate.name}" updated successfully.`, 'success', '✓');
   };
 
   return (
