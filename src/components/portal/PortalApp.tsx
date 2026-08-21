@@ -122,58 +122,28 @@ const MainPortalContent: React.FC = () => {
     );
   }
 
-  // Quick Role Switcher Banner for Owner / Dev
-  const RoleSwitcherBanner = () => (
-    <div className="bg-[#2C2A2A] text-white px-4 py-2 text-xs font-sans border-b border-[#EAE1D2]/20 no-print print:hidden">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <span className="font-semibold text-[#EAE1D2]">
-          ⚙️ Practice Owner / Admin Access ({user.email})
-        </span>
-        <div className="flex items-center gap-2">
-          <span className="opacity-70 text-[11px]">View Experience As:</span>
-          <button
-            onClick={() => { setActiveRoleOverride('admin'); setActiveTab('dashboard'); }}
-            className={`px-2.5 py-0.5 rounded text-[11px] font-semibold transition ${
-              effectiveRole === 'admin' ? 'bg-[#BF5B33] text-white' : 'bg-gray-700 hover:bg-gray-600'
-            }`}
-          >
-            Practice Admin
-          </button>
-          <button
-            onClick={() => { setActiveRoleOverride('therapist'); setActiveTab('dashboard'); }}
-            className={`px-2.5 py-0.5 rounded text-[11px] font-semibold transition ${
-              effectiveRole === 'therapist' ? 'bg-[#4A5741] text-white' : 'bg-gray-700 hover:bg-gray-600'
-            }`}
-          >
-            Therapist
-          </button>
-          <button
-            onClick={() => { setActiveRoleOverride('client'); setActiveTab('dashboard'); }}
-            className={`px-2.5 py-0.5 rounded text-[11px] font-semibold transition ${
-              effectiveRole === 'client' ? 'bg-blue-600 text-white' : 'bg-gray-700 hover:bg-gray-600'
-            }`}
-          >
-            Client Portal View
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  const handleRoleOverrideChange = (newRole: 'admin' | 'therapist' | 'client') => {
+    setActiveRoleOverride(newRole);
+    setActiveTab('dashboard');
+  };
 
   // Client Portal Experience
   if (effectiveRole === 'client') {
     return (
-      <>
-        {isOwner && <RoleSwitcherBanner />}
-        <ClientLayout activeTab={activeTab} onTabChange={setActiveTab}>
-          {activeTab === 'dashboard' && <ClientDashboard onNavigate={setActiveTab} />}
-          {activeTab === 'profile' && <ClientProfileView />}
-          {activeTab === 'appointments' && <AppointmentBookingModal />}
-          {activeTab === 'documents' && <ClientDocumentsView />}
-          {activeTab === 'notes' && <SharedNotesView />}
-          {activeTab === 'billing' && <LedgerManager />}
-        </ClientLayout>
-      </>
+      <ClientLayout
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        canSwitchRole={isOwner}
+        effectiveRole={effectiveRole}
+        onRoleOverrideChange={handleRoleOverrideChange}
+      >
+        {activeTab === 'dashboard' && <ClientDashboard onNavigate={setActiveTab} />}
+        {activeTab === 'profile' && <ClientProfileView />}
+        {activeTab === 'appointments' && <AppointmentBookingModal />}
+        {activeTab === 'documents' && <ClientDocumentsView />}
+        {activeTab === 'notes' && <SharedNotesView />}
+        {activeTab === 'billing' && <LedgerManager />}
+      </ClientLayout>
     );
   }
 
@@ -218,13 +188,15 @@ class PortalErrorBoundary extends React.Component<{ children: React.ReactNode },
   // Therapist / Admin Staff Experience
   return (
     <PortalErrorBoundary>
-      {isOwner && <RoleSwitcherBanner />}
       <StaffLayout
         activeTab={activeTab}
         onTabChange={(tab) => {
           setActiveTab(tab);
           setSelectedClientId(null);
         }}
+        canSwitchRole={isOwner}
+        effectiveRole={effectiveRole}
+        onRoleOverrideChange={handleRoleOverrideChange}
       >
         {activeTab === 'dashboard' && <TherapistDashboard onNavigate={setActiveTab} />}
         {activeTab === 'calendar' && <TherapistCalendar />}

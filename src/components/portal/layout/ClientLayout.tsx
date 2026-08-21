@@ -7,9 +7,19 @@ interface ClientLayoutProps {
   children: React.ReactNode;
   activeTab: string;
   onTabChange: (tab: string) => void;
+  canSwitchRole?: boolean;
+  effectiveRole?: string;
+  onRoleOverrideChange?: (role: 'admin' | 'therapist' | 'client') => void;
 }
 
-export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, activeTab, onTabChange }) => {
+export const ClientLayout: React.FC<ClientLayoutProps> = ({
+  children,
+  activeTab,
+  onTabChange,
+  canSwitchRole,
+  effectiveRole,
+  onRoleOverrideChange
+}) => {
   const { user, profile, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -71,29 +81,50 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, activeTab,
           </div>
 
           {/* Desktop Navigation Bar */}
-          <nav className="hidden lg:flex space-x-1 overflow-x-auto no-scrollbar border-t border-[#EAE1D2]/60 pt-1 pb-1 font-sans touch-scroll">
-            <a
-              href="/"
-              className="px-4 py-2.5 text-xs font-semibold rounded-lg text-[#4A5741] hover:bg-[#4A5741]/10 transition whitespace-nowrap flex items-center gap-1"
-            >
-              🌐 Home Website
-            </a>
-            {navItems.map((item) => {
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => onTabChange(item.id)}
-                  className={`px-4 py-2.5 text-xs font-semibold rounded-lg transition whitespace-nowrap ${
-                    isActive
-                      ? 'bg-[#4A5741] text-white shadow-xs'
-                      : 'text-[#2C2A2A]/80 hover:text-[#2C2A2A] hover:bg-[#EAE1D2]/50'
-                  }`}
+          <nav className="hidden lg:flex items-center justify-between space-x-1 overflow-x-auto no-scrollbar border-t border-[#EAE1D2]/60 pt-1 pb-1 font-sans touch-scroll">
+            <div className="flex items-center space-x-1">
+              <a
+                href="/"
+                className="px-4 py-2.5 text-xs font-semibold rounded-lg text-[#4A5741] hover:bg-[#4A5741]/10 transition whitespace-nowrap flex items-center gap-1"
+              >
+                🌐 Home Website
+              </a>
+              {navItems.map((item) => {
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onTabChange(item.id)}
+                    className={`px-4 py-2.5 text-xs font-semibold rounded-lg transition whitespace-nowrap ${
+                      isActive
+                        ? 'bg-[#4A5741] text-white shadow-xs'
+                        : 'text-[#2C2A2A]/80 hover:text-[#2C2A2A] hover:bg-[#EAE1D2]/50'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* View As Dropdown for Owner / Admin in Client View */}
+            {canSwitchRole && onRoleOverrideChange && (
+              <div className="flex items-center gap-1.5 ml-3 pl-3 border-l border-[#EAE1D2] shrink-0">
+                <label htmlFor="client-view-as-select" className="text-xs font-bold text-[#4A5741] whitespace-nowrap">
+                  View As:
+                </label>
+                <select
+                  id="client-view-as-select"
+                  value={effectiveRole || 'client'}
+                  onChange={(e) => onRoleOverrideChange(e.target.value as any)}
+                  className="px-2.5 py-1.5 rounded-lg border border-[#4A5741]/40 bg-white text-xs font-semibold text-[#2C2A2A] outline-none focus:ring-2 focus:ring-[#4A5741]/20 cursor-pointer shadow-xs"
                 >
-                  {item.label}
-                </button>
-              );
-            })}
+                  <option value="admin">Practice Admin</option>
+                  <option value="therapist">Therapist</option>
+                  <option value="client">Client Portal View</option>
+                </select>
+              </div>
+            )}
           </nav>
 
           {/* Mobile Navigation Drawer Menu */}
@@ -116,6 +147,28 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, activeTab,
                   Sign Out
                 </button>
               </div>
+
+              {/* View As Dropdown Selector in Mobile Drawer */}
+              {canSwitchRole && onRoleOverrideChange && (
+                <div className="px-3 py-2.5 bg-white rounded-xl border border-[#EAE1D2] space-y-1">
+                  <label htmlFor="client-mobile-view-as-select" className="text-[11px] font-bold uppercase tracking-wider text-[#4A5741] block">
+                    View As Experience:
+                  </label>
+                  <select
+                    id="client-mobile-view-as-select"
+                    value={effectiveRole || 'client'}
+                    onChange={(e) => {
+                      onRoleOverrideChange(e.target.value as any);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full p-2.5 rounded-xl border border-[#4A5741]/40 bg-[#F7F2E9] text-xs font-semibold text-[#2C2A2A] outline-none cursor-pointer"
+                  >
+                    <option value="admin">Practice Admin</option>
+                    <option value="therapist">Therapist</option>
+                    <option value="client">Client Portal View</option>
+                  </select>
+                </div>
+              )}
 
               <p className="text-[10px] font-bold uppercase tracking-wider text-[#4A5741] px-3 pt-1">Portal Views</p>
               <div className="grid grid-cols-1 gap-1">
