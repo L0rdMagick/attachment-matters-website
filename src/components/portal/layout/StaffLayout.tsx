@@ -33,13 +33,22 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children, activeTab, o
     let notifList: PopupNoticeAlert[] = [];
     let cancelList: PopupNoticeAlert[] = [];
 
+    const getNoticeTime = (n: any): number => {
+      if (n.createdAtISO) {
+        const t = new Date(n.createdAtISO).getTime();
+        if (!isNaN(t) && t > 0) return t;
+      }
+      if (n.createdAt?.seconds) return n.createdAt.seconds * 1000;
+      if (n.createdAt) {
+        const t = new Date(n.createdAt).getTime();
+        if (!isNaN(t) && t > 0) return t;
+      }
+      return Date.now();
+    };
+
     const updateCombinedAlerts = () => {
       const combined = [...notifList, ...cancelList];
-      combined.sort((a, b) => {
-        const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt ? new Date(a.createdAt).getTime() : Date.now());
-        const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt ? new Date(b.createdAt).getTime() : Date.now());
-        return timeB - timeA;
-      });
+      combined.sort((a, b) => getNoticeTime(b) - getNoticeTime(a));
 
       setUnreadCount(combined.length);
       setUnreadAlertsList(combined);

@@ -134,6 +134,19 @@ export async function signConsentDocument(
   );
 
   try {
+    let clientDisplayName = clientTypedName;
+    try {
+      const cSnap = await getDoc(clientRef);
+      if (cSnap.exists()) {
+        const cData = cSnap.data();
+        if (cData.legalFirstName) {
+          clientDisplayName = `${cData.legalFirstName} ${cData.legalLastName || ''}`.trim();
+        }
+      }
+    } catch (nameErr) {
+      console.warn("Could not fetch client profile name:", nameErr);
+    }
+
     const formattedTimestamp = new Date().toLocaleString('en-US', {
       dateStyle: 'medium',
       timeStyle: 'short'
@@ -143,6 +156,7 @@ export async function signConsentDocument(
       `Document: ${template.title}`,
       `Category: ${template.category} (${template.version})`,
       `Signer Legal Name: ${clientTypedName}`,
+      `Account Client: ${clientDisplayName}`,
       `Action: ${isUpdate ? 'Re-signed & Updated Agreement' : 'New Signature Executed'}`,
       `Audit Hash: ${documentHash}`,
       `Signed At: ${formattedTimestamp}`
@@ -151,9 +165,9 @@ export async function signConsentDocument(
     await createPracticeNotification({
       type: 'document_signed',
       title: isUpdate ? '📄 Consent Agreement Updated' : '📄 Consent Agreement Signed',
-      message: `${clientTypedName} ${isUpdate ? 'updated and re-signed' : 'electronically signed'} ${template.title}.`,
+      message: `${clientDisplayName} ${isUpdate ? 'updated and re-signed' : 'electronically signed'} ${template.title}.`,
       clientId,
-      clientName: clientTypedName,
+      clientName: clientDisplayName,
       details: detailsStr
     });
   } catch (notifErr) {

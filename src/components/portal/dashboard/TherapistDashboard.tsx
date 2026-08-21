@@ -88,11 +88,20 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
         }
       });
 
-      combinedNotifs.sort((a, b) => {
-        const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt ? new Date(a.createdAt).getTime() : Date.now());
-        const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt ? new Date(b.createdAt).getTime() : Date.now());
-        return timeB - timeA;
-      });
+      const getNoticeTime = (n: any): number => {
+        if (n.createdAtISO) {
+          const t = new Date(n.createdAtISO).getTime();
+          if (!isNaN(t) && t > 0) return t;
+        }
+        if (n.createdAt?.seconds) return n.createdAt.seconds * 1000;
+        if (n.createdAt) {
+          const t = new Date(n.createdAt).getTime();
+          if (!isNaN(t) && t > 0) return t;
+        }
+        return Date.now();
+      };
+
+      combinedNotifs.sort((a, b) => getNoticeTime(b) - getNoticeTime(a));
 
       setNotifications(combinedNotifs);
     } catch (err) {
@@ -112,11 +121,20 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
       (snapshot) => {
         const notifs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as PracticeNotification));
 
-        notifs.sort((a, b) => {
-          const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt ? new Date(a.createdAt).getTime() : Date.now());
-          const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt ? new Date(b.createdAt).getTime() : Date.now());
-          return timeB - timeA;
-        });
+        const getNoticeTime = (n: any): number => {
+          if (n.createdAtISO) {
+            const t = new Date(n.createdAtISO).getTime();
+            if (!isNaN(t) && t > 0) return t;
+          }
+          if (n.createdAt?.seconds) return n.createdAt.seconds * 1000;
+          if (n.createdAt) {
+            const t = new Date(n.createdAt).getTime();
+            if (!isNaN(t) && t > 0) return t;
+          }
+          return Date.now();
+        };
+
+        notifs.sort((a, b) => getNoticeTime(b) - getNoticeTime(a));
 
         setNotifications(notifs);
       },

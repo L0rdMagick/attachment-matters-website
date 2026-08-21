@@ -17,6 +17,7 @@ export interface PracticeNotification {
   clientId: string;
   clientName: string;
   details?: string;
+  createdAtISO?: string;
   createdAt?: any;
   read?: boolean;
 }
@@ -33,6 +34,7 @@ export async function createPracticeNotification(notification: Omit<PracticeNoti
     clientName: notification.clientName || 'Client',
     details: notification.details || '',
     read: false,
+    createdAtISO: new Date().toISOString(),
     createdAt: serverTimestamp()
   };
 
