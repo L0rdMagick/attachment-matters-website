@@ -27,13 +27,50 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
 
   const loadDash = async () => {
     try {
-      const [appts, clients] = await Promise.all([
+      const [appts, intakeClients, allClients, notifDocs] = await Promise.all([
         getAppointments({ therapistId: 'default_therapist' }),
-        getClientsDirectory({ intakeStatus: 'submitted' })
+        getClientsDirectory({ intakeStatus: 'submitted' }),
+        getClientsDirectory(),
+        getPracticeNotifications()
       ]);
 
       setTodayAppointments(appts);
-      setPendingIntakes(clients);
+      setPendingIntakes(intakeClients);
+
+      // Build unified activity notifications from practiceNotifications + client profile records
+      const combinedNotifs: PracticeNotification[] = [...notifDocs];
+
+      allClients.forEach((c: any) => {
+        if (c.updatedAt || c.lastActivityAt) {
+          const clientName = (c.legalFirstName ? `${c.legalFirstName} ${c.legalLastName || ''}` : c.email || 'Client').trim();
+          const noticeMsg = c.lastActivityNotice || `${clientName} updated profile information.`;
+
+          const alreadyExists = combinedNotifs.some(
+            (n) => n.clientId === c.uid && (n.message === noticeMsg || n.title.includes('Profile'))
+          );
+
+          if (!alreadyExists) {
+            combinedNotifs.push({
+              id: `client_act_${c.uid}`,
+              type: 'profile_updated',
+              title: '👤 Client Profile Saved / Updated',
+              message: noticeMsg,
+              clientId: c.uid,
+              clientName,
+              details: `Email: ${c.email || 'N/A'}`,
+              createdAt: c.lastActivityAt || c.updatedAt
+            });
+          }
+        }
+      });
+
+      combinedNotifs.sort((a, b) => {
+        const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt ? new Date(a.createdAt).getTime() : Date.now());
+        const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt ? new Date(b.createdAt).getTime() : Date.now());
+        return timeB - timeA;
+      });
+
+      setNotifications(combinedNotifs);
     } catch (err) {
       console.error("Failed to load therapist dashboard", err);
     } finally {
