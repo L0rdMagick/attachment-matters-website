@@ -22,8 +22,64 @@ export const ConsentSigner: React.FC = () => {
   const [isDrawing, setIsDrawing] = useState(false);
 
   const [isEditingSigned, setIsEditingSigned] = useState(false);
-
   const [answers, setAnswers] = useState<Record<string, string>>({});
+
+  // Helper to accurately map screen CSS coordinates to canvas buffer pixels
+  const getCoordinates = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const clientX = 'touches' in e && e.touches.length > 0 ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e && e.touches.length > 0 ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+
+    const scaleX = canvas.width / (rect.width || 1);
+    const scaleY = canvas.height / (rect.height || 1);
+
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  };
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const coords = getCoordinates(e);
+    ctx.beginPath();
+    ctx.moveTo(coords.x, coords.y);
+    setIsDrawing(true);
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const coords = getCoordinates(e);
+    ctx.lineTo(coords.x, coords.y);
+    ctx.strokeStyle = '#2C2A2A';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
 
   useEffect(() => {
     if (!user) return;
