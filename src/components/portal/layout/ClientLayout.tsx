@@ -44,27 +44,26 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, activeTab,
                 {mobileMenuOpen ? '✕' : '☰'}
               </button>
 
-              <a href="/" className="flex items-center gap-2 group">
-                <span className="font-serif text-lg sm:text-2xl font-semibold text-[#2C2A2A] tracking-tight group-hover:text-[#BF5B33] transition truncate max-w-[180px] sm:max-w-none">
-                  Family Trust Therapy
-                </span>
-                <span className="hidden xs:inline-block text-[10px] sm:text-xs bg-[#4A5741]/10 text-[#4A5741] font-sans font-semibold px-2 sm:px-2.5 py-0.5 rounded-full whitespace-nowrap">
-                  Client Portal
-                </span>
+              <a href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+                <img src="/images/family-trust-therapy-logo.png" alt="Family Trust Therapy Logo" className="h-10 sm:h-12 w-10 sm:w-12 object-contain" />
+                <div>
+                  <span className="block font-serif font-bold text-lg sm:text-xl leading-tight text-[#2C2A2A]">Family Trust</span>
+                  <span className="block font-serif text-sm sm:text-base leading-tight text-[#2C2A2A]">Therapy</span>
+                </div>
               </a>
             </div>
 
             {/* User Info & Logout */}
             <div className="flex items-center gap-2 sm:gap-4">
               <div className="hidden sm:block text-right">
-                <p className="text-xs font-semibold text-[#2C2A2A]">
-                  {profile?.legalFirstName || user?.email}
+                <p className="text-xs sm:text-sm font-bold text-[#2C2A2A]">
+                  {profile?.legalFirstName ? `${profile.legalFirstName} ${profile.legalLastName || ''}` : user?.email}
                 </p>
-                <p className="text-[11px] text-[#4A5741]">Client Account</p>
+                <p className="text-[11px] text-[#4A5741] font-medium">Client Care Account</p>
               </div>
               <button
                 onClick={logout}
-                className="text-[11px] sm:text-xs font-medium text-[#BF5B33] hover:text-[#a64e2b] border border-[#BF5B33]/30 px-2.5 sm:px-3 py-1.5 rounded-xl hover:bg-[#BF5B33]/5 transition min-h-[38px] flex items-center"
+                className="text-[11px] sm:text-xs font-medium text-[#BF5B33] hover:text-[#a64e2b] border border-[#BF5B33]/40 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full hover:bg-[#BF5B33]/5 transition min-h-[38px] flex items-center"
               >
                 Sign Out
               </button>
@@ -73,6 +72,12 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, activeTab,
 
           {/* Desktop Navigation Bar */}
           <nav className="hidden lg:flex space-x-1 overflow-x-auto no-scrollbar border-t border-[#EAE1D2]/60 pt-1 pb-1 font-sans touch-scroll">
+            <a
+              href="/"
+              className="px-4 py-2.5 text-xs font-semibold rounded-lg text-[#4A5741] hover:bg-[#4A5741]/10 transition whitespace-nowrap flex items-center gap-1"
+            >
+              🌐 Home Website
+            </a>
             {navItems.map((item) => {
               const isActive = activeTab === item.id;
               return (
@@ -93,15 +98,34 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children, activeTab,
 
           {/* Mobile Navigation Drawer Menu */}
           {mobileMenuOpen && (
-            <div className="lg:hidden border-t border-[#EAE1D2] py-3 bg-[#F7F2E9]/95 backdrop-blur-md rounded-b-2xl animate-fade-in shadow-lg px-2 space-y-1 mb-2">
-              <div className="px-3 py-2 bg-white rounded-xl border border-[#EAE1D2] mb-2">
-                <p className="text-xs font-bold text-[#2C2A2A]">
-                  {profile?.legalFirstName || user?.email}
-                </p>
-                <p className="text-[11px] text-[#4A5741]">Client Portal Account</p>
+            <div className="lg:hidden border-t border-[#EAE1D2] py-3 bg-[#F7F2E9]/95 backdrop-blur-md rounded-b-2xl animate-fade-in shadow-lg px-2 space-y-2 mb-2">
+              <div className="px-3 py-2.5 bg-white rounded-xl border border-[#EAE1D2] flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm font-bold text-[#2C2A2A]">
+                    {profile?.legalFirstName ? `${profile.legalFirstName} ${profile.legalLastName || ''}` : user?.email}
+                  </p>
+                  <p className="text-[11px] text-[#4A5741] font-medium">Client Care Account</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="text-xs text-[#BF5B33] font-semibold border border-[#BF5B33]/30 px-3 py-1.5 rounded-full hover:bg-[#BF5B33]/10"
+                >
+                  Sign Out
+                </button>
               </div>
+
               <p className="text-[10px] font-bold uppercase tracking-wider text-[#4A5741] px-3 pt-1">Portal Views</p>
               <div className="grid grid-cols-1 gap-1">
+                <a
+                  href="/"
+                  className="w-full text-left px-4 py-3 text-xs font-semibold rounded-xl bg-white text-[#4A5741] hover:bg-[#4A5741]/10 border border-[#EAE1D2]/60 flex items-center justify-between min-h-[44px]"
+                >
+                  <span>🌐 Home Website</span>
+                  <span>↗</span>
+                </a>
                 {navItems.map((item) => {
                   const isActive = activeTab === item.id;
                   return (

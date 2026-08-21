@@ -209,13 +209,12 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children, activeTab, o
                 {mobileMenuOpen ? '✕' : '☰'}
               </button>
 
-              <a href="/" className="flex items-center gap-2 group">
-                <span className="font-serif text-lg sm:text-2xl font-semibold text-[#2C2A2A] tracking-tight group-hover:text-[#BF5B33] transition truncate max-w-[170px] sm:max-w-none">
-                  Family Trust Therapy
-                </span>
-                <span className="hidden xs:inline-block text-[10px] sm:text-xs bg-[#BF5B33]/10 text-[#BF5B33] font-sans font-semibold px-2 sm:px-2.5 py-0.5 rounded-full whitespace-nowrap">
-                  Staff Portal
-                </span>
+              <a href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+                <img src="/images/family-trust-therapy-logo.png" alt="Family Trust Therapy Logo" className="h-10 sm:h-12 w-10 sm:w-12 object-contain" />
+                <div>
+                  <span className="block font-serif font-bold text-lg sm:text-xl leading-tight text-[#2C2A2A]">Family Trust</span>
+                  <span className="block font-serif text-sm sm:text-base leading-tight text-[#2C2A2A]">Therapy</span>
+                </div>
               </a>
             </div>
 
@@ -235,14 +234,14 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children, activeTab, o
                 </button>
               )}
               <div className="hidden md:block text-right">
-                <p className="text-xs font-semibold text-[#2C2A2A]">
-                  {profile?.legalFirstName ? `${profile.legalFirstName} ${profile.legalLastName}` : user?.email}
+                <p className="text-xs sm:text-sm font-bold text-[#2C2A2A]">
+                  {profile?.legalFirstName ? `${profile.legalFirstName} ${profile.legalLastName}` : (user?.email || 'dev@austintarotreader.com')}
                 </p>
                 <p className="text-[11px] text-[#BF5B33] font-medium">{roleTitle}</p>
               </div>
               <button
                 onClick={logout}
-                className="text-[11px] sm:text-xs font-medium text-[#BF5B33] hover:text-[#a64e2b] border border-[#BF5B33]/30 px-2.5 sm:px-3 py-1.5 rounded-xl hover:bg-[#BF5B33]/5 transition min-h-[38px] flex items-center"
+                className="text-[11px] sm:text-xs font-medium text-[#BF5B33] hover:text-[#a64e2b] border border-[#BF5B33]/40 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full hover:bg-[#BF5B33]/5 transition min-h-[38px] flex items-center"
               >
                 Sign Out
               </button>
@@ -251,6 +250,12 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children, activeTab, o
 
           {/* Desktop & Tablet Nav Bar */}
           <nav className="hidden lg:flex space-x-1 overflow-x-auto no-scrollbar border-t border-[#EAE1D2]/60 pt-1 pb-1 touch-scroll">
+            <a
+              href="/"
+              className="px-3.5 py-2 text-xs font-semibold rounded-lg text-[#4A5741] hover:bg-[#4A5741]/10 transition whitespace-nowrap flex items-center gap-1"
+            >
+              🌐 Home Website
+            </a>
             {navItems.map((item) => {
               const isActive = activeTab === item.id;
               return (
@@ -269,19 +274,51 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children, activeTab, o
             })}
           </nav>
 
-          {/* Mobile Collapsible Navigation Menu */}
+          {/* Mobile Collapsible Navigation Menu (Accordion) */}
           {mobileMenuOpen && (
-            <div className="lg:hidden border-t border-[#EAE1D2] py-3 bg-[#F7F2E9]/95 backdrop-blur-md rounded-b-2xl animate-fade-in shadow-lg px-2 space-y-1 mb-2">
-              <div className="px-3 py-2 bg-white rounded-xl border border-[#EAE1D2] mb-2 flex items-center justify-between">
+            <div className="lg:hidden border-t border-[#EAE1D2] py-3 bg-[#F7F2E9]/95 backdrop-blur-md rounded-b-2xl animate-fade-in shadow-lg px-2 space-y-2 mb-2">
+              <div className="px-3 py-2.5 bg-white rounded-xl border border-[#EAE1D2] flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold text-[#2C2A2A]">
-                    {profile?.legalFirstName ? `${profile.legalFirstName} ${profile.legalLastName}` : user?.email}
+                  <p className="text-xs sm:text-sm font-bold text-[#2C2A2A]">
+                    {profile?.legalFirstName ? `${profile.legalFirstName} ${profile.legalLastName}` : (user?.email || 'dev@austintarotreader.com')}
                   </p>
                   <p className="text-[11px] text-[#BF5B33] font-medium">{roleTitle}</p>
                 </div>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="text-xs text-[#BF5B33] font-semibold border border-[#BF5B33]/30 px-3 py-1.5 rounded-full hover:bg-[#BF5B33]/10"
+                >
+                  Sign Out
+                </button>
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[#BF5B33] px-3 pt-1">Navigation Views</p>
+
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (unreadAlertsList.length > 0) {
+                      setActiveAlert(unreadAlertsList[0]);
+                    }
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full py-2.5 px-3 bg-[#BF5B33] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  🔔 Real-Time Notice ({unreadCount})
+                </button>
+              )}
+
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#BF5B33] px-3 pt-1">Portal Navigation Views</p>
               <div className="grid grid-cols-1 gap-1">
+                <a
+                  href="/"
+                  className="w-full text-left px-4 py-3 text-xs font-semibold rounded-xl bg-white text-[#4A5741] hover:bg-[#4A5741]/10 border border-[#EAE1D2]/60 flex items-center justify-between min-h-[44px]"
+                >
+                  <span>🌐 Home Website</span>
+                  <span>↗</span>
+                </a>
                 {navItems.map((item) => {
                   const isActive = activeTab === item.id;
                   return (
