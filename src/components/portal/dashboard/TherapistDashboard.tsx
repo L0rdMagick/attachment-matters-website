@@ -48,30 +48,8 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
     const colRef = collection(db, 'practiceNotifications');
     const unsubscribe = onSnapshot(
       colRef,
-      async (snapshot) => {
+      (snapshot) => {
         const notifs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as PracticeNotification));
-
-        try {
-          const clientList = await getClientsDirectory();
-          clientList.forEach((c: any) => {
-            if (c.lastActivityNotice && c.updatedAt) {
-              const exists = notifs.some((n) => n.clientId === c.uid && n.message === c.lastActivityNotice);
-              if (!exists) {
-                notifs.push({
-                  id: `client_act_${c.uid}`,
-                  type: 'profile_updated',
-                  title: '👤 Client Profile Updated',
-                  message: c.lastActivityNotice,
-                  clientId: c.uid,
-                  clientName: `${c.legalFirstName} ${c.legalLastName || ''}`.trim(),
-                  createdAt: c.updatedAt
-                });
-              }
-            }
-          });
-        } catch (cErr) {
-          console.warn("Client directory activity merge skipped:", cErr);
-        }
 
         notifs.sort((a, b) => {
           const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt ? new Date(a.createdAt).getTime() : Date.now());
