@@ -51,8 +51,8 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
       (snapshot) => {
         const notifs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as PracticeNotification));
         notifs.sort((a, b) => {
-          const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : new Date(a.createdAt || 0).getTime();
-          const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt || 0).getTime();
+          const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt ? new Date(a.createdAt).getTime() : Date.now());
+          const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt ? new Date(b.createdAt).getTime() : Date.now());
           return timeB - timeA;
         });
         setNotifications(notifs);

@@ -24,6 +24,19 @@ export async function getClientProfile(clientId: string): Promise<ClientProfileD
   if (snap.exists()) {
     return snap.data() as ClientProfileData;
   }
+  const userSnap = await getDoc(doc(db, 'users', clientId));
+  if (userSnap.exists()) {
+    const uData = userSnap.data();
+    return {
+      uid: clientId,
+      legalFirstName: uData.legalFirstName || '',
+      legalLastName: uData.legalLastName || '',
+      email: uData.email || '',
+      accountStatus: uData.status || 'active',
+      intakeStatus: 'not_started',
+      consentStatus: 'pending'
+    };
+  }
   return null;
 }
 
@@ -42,8 +55,11 @@ export async function updateClientProfile(
   const currentSnap = await getDoc(clientRef);
   const currentData = currentSnap.exists() ? currentSnap.data() as Partial<ClientProfileData> : {};
 
-  // Record audit log entry
-  const changedFields = Object.keys(updatedData);
+  // Record audit log entry for actual modified fields
+  const changedFields = Object.keys(updatedData).filter((key) => {
+    return JSON.stringify((updatedData as any)[key]) !== JSON.stringify((currentData as any)[key]);
+  });
+
   const previousValues: Record<string, any> = {};
   changedFields.forEach((key) => {
     previousValues[key] = (currentData as any)[key] ?? null;
@@ -59,7 +75,7 @@ export async function updateClientProfile(
   try {
     await addDoc(collection(db, 'auditEvents'), {
       actorUid,
-      actorRole,
+      actorRole: actorRole || 'client',
       targetUid: clientId,
       action: 'update_client_profile',
       resourcePath: `clients/${clientId}`,
@@ -72,16 +88,21 @@ export async function updateClientProfile(
     console.warn("Audit log creation skipped:", err);
   }
 
-  // Always record practice notification for client profile changes
-  const name = (updatedData.legalFirstName ? `${updatedData.legalFirstName} ${updatedData.legalLastName || ''}` : (currentData.legalFirstName ? `${currentData.legalFirstName} ${currentData.legalLastName || ''}` : 'Client')).trim();
-  await createPracticeNotification({
-    type: 'profile_updated',
-    title: '👤 Client Profile Saved / Updated',
-    message: `${name} updated profile information.`,
-    clientId,
-    clientName: name,
-    details: `Updated fields: ${changedFields.join(', ')}`
-  });
+  // Always record practice notification for client profile changes if fields changed
+  if (changedFields.length > 0) {
+    const firstName = updatedData.legalFirstName || currentData.legalFirstName || '';
+    const lastName = updatedData.legalLastName || currentData.legalLastName || '';
+    const name = (firstName ? `${firstName} ${lastName}` : 'Client').trim();
+
+    await createPracticeNotification({
+      type: 'profile_updated',
+      title: '👤 Client Profile Saved / Updated',
+      message: `${name} updated profile information.`,
+      clientId,
+      clientName: name,
+      details: `Updated fields: ${changedFields.join(', ')}`
+    });
+  }
 }
 
 /**
@@ -140,6 +161,17 @@ export async function deleteInsuranceCard(
     },
     { merge: true }
   );
+
+  const clientProfile = await getClientProfile(clientId);
+  const name = clientProfile ? `${clientProfile.legalFirstName} ${clientProfile.legalLastName || ''}`.trim() : 'Client';
+
+  await createPracticeNotification({
+    type: 'profile_updated',
+    title: '📇 Insurance Card Removed',
+    message: `${name} removed their insurance card image (${side} side).`,
+    clientId,
+    clientName: name
+  });
 }
 
 /**

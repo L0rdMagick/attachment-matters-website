@@ -545,4 +545,16 @@ export async function rescheduleAppointment(
       throw err;
     }
   }
+
+  if (apptSnap.exists()) {
+    const apptData = apptSnap.data() as AppointmentData;
+    await createPracticeNotification({
+      type: 'appointment_created',
+      title: '🔄 Appointment Rescheduled',
+      message: `${apptData.clientName || 'Client'} rescheduled session to ${new Date(newStartISO).toLocaleString()}.`,
+      clientId: apptData.clientId,
+      clientName: apptData.clientName || 'Client',
+      details: `New date/time: ${new Date(newStartISO).toLocaleString()}`
+    });
+  }
 }

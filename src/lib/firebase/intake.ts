@@ -50,7 +50,10 @@ export async function saveIntakeSubmission(
   );
 
   if (isFinalSubmit) {
-    const clientName = `${formData.legalFirstName || ''} ${formData.legalLastName || ''}`.trim() || 'Client';
+    const clientProfSnap = await getDoc(doc(db, 'clients', clientId));
+    const cData = clientProfSnap.exists() ? clientProfSnap.data() : {};
+    const clientName = (cData.legalFirstName ? `${cData.legalFirstName} ${cData.legalLastName || ''}` : 'Client').trim();
+
     await createPracticeNotification({
       type: 'intake_submitted',
       title: '📝 Intake Form Submitted',
