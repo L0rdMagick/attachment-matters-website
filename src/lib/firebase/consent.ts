@@ -128,6 +128,8 @@ export async function signConsentDocument(
     clientRef,
     {
       consentStatus: 'completed',
+      lastConsentSignedAt: serverTimestamp(),
+      lastConsentTitle: template.title,
       updatedAt: serverTimestamp()
     },
     { merge: true }

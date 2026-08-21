@@ -18,24 +18,57 @@ interface TherapistDashboardProps {
   onNavigate: (tab: string) => void;
 }
 
+interface PendingReviewItem {
+  uid: string;
+  legalFirstName: string;
+  legalLastName: string;
+  email?: string;
+  hasIntake: boolean;
+  hasConsent: boolean;
+  lastConsentTitle?: string;
+  updatedAt?: any;
+}
+
 export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNavigate }) => {
   const { user } = useAuth();
   const [todayAppointments, setTodayAppointments] = useState<AppointmentData[]>([]);
-  const [pendingIntakes, setPendingIntakes] = useState<ClientProfileData[]>([]);
+  const [pendingFormSubmissions, setPendingFormSubmissions] = useState<PendingReviewItem[]>([]);
   const [notifications, setNotifications] = useState<PracticeNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadDash = async () => {
     try {
-      const [allAppts, intakeClients, allClients, notifDocs] = await Promise.all([
+      const [allAppts, allClients, notifDocs] = await Promise.all([
         getAppointments({}),
-        getClientsDirectory({ intakeStatus: 'submitted', accountStatus: 'all' }),
         getClientsDirectory({ accountStatus: 'all' }),
         getPracticeNotifications()
       ]);
 
       setTodayAppointments(allAppts);
-      setPendingIntakes(intakeClients);
+
+      // Build list of clients who have submitted clinical intake questionnaires OR signed practice consent forms & agreements
+      const pendingList: PendingReviewItem[] = [];
+
+      allClients.forEach((c: any) => {
+        const hasSubmittedIntake = c.intakeStatus === 'submitted';
+        const hasCompletedConsent = c.consentStatus === 'completed' || !!c.lastConsentSignedAt;
+        const hasSignedNotif = notifDocs.some((n) => n.clientId === c.uid && n.type === 'document_signed');
+
+        if (hasSubmittedIntake || hasCompletedConsent || hasSignedNotif) {
+          pendingList.push({
+            uid: c.uid,
+            legalFirstName: c.legalFirstName || '',
+            legalLastName: c.legalLastName || '',
+            email: c.email || '',
+            hasIntake: hasSubmittedIntake,
+            hasConsent: hasCompletedConsent || hasSignedNotif,
+            lastConsentTitle: c.lastConsentTitle,
+            updatedAt: c.updatedAt || c.lastConsentSignedAt || c.lastActivityAt
+          });
+        }
+      });
+
+      setPendingFormSubmissions(pendingList);
 
       const combinedNotifs: PracticeNotification[] = [...notifDocs];
 
@@ -207,8 +240,8 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
             </div>
 
             <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-1">
-              <p className="text-xs font-semibold uppercase text-[#4A5741]">Intakes Pending Review</p>
-              <p className="text-3xl font-serif font-bold text-[#BF5B33]">{pendingIntakes.length}</p>
+              <p className="text-xs font-semibold uppercase text-[#4A5741]">Forms & Intakes Pending Review</p>
+              <p className="text-3xl font-serif font-bold text-[#BF5B33]">{pendingFormSubmissions.length}</p>
             </div>
 
             <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-1">
@@ -311,26 +344,55 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
         )}
       </div>
 
-      {/* Pending Intakes Section */}
-      {pendingIntakes.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 shadow-sm space-y-3">
-          <h3 className="text-base font-serif font-medium text-amber-900">
-            ⚠️ Intake Questionnaires Awaiting Review ({pendingIntakes.length})
-          </h3>
-          <div className="space-y-2">
-            {pendingIntakes.map((c) => (
-              <div key={c.uid} className="bg-white p-3.5 rounded-xl border border-amber-200 flex justify-between items-center text-xs">
-                <div>
-                  <strong className="text-[#2C2A2A]">{c.legalLastName}, {c.legalFirstName}</strong> — Submitted intake packet
+      {/* Pending Client Forms & Intake Questionnaires Section */}
+      {pendingFormSubmissions.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 shadow-sm space-y-3 font-sans">
+          <div className="border-b border-amber-200/80 pb-2">
+            <h3 className="text-base font-serif font-medium text-amber-900 flex items-center gap-2">
+              ⚠️ Client Forms & Intake Questionnaires Awaiting Review ({pendingFormSubmissions.length})
+            </h3>
+            <p className="text-xs text-amber-800/80 mt-0.5">
+              Clients who have submitted clinical intake packets or signed practice consent forms & agreements requiring clinician review.
+            </p>
+          </div>
+
+          <div className="space-y-2 pt-1">
+            {pendingFormSubmissions.map((c) => {
+              const clientName = `${c.legalLastName || ''}${c.legalLastName && c.legalFirstName ? ', ' : ''}${c.legalFirstName || ''}`.trim() || c.email || 'Client';
+              
+              let noticeLabel = '';
+              if (c.hasIntake && c.hasConsent) {
+                noticeLabel = 'Submitted clinical intake packet & signed practice consent agreements';
+              } else if (c.hasConsent) {
+                noticeLabel = c.lastConsentTitle
+                  ? `Signed practice consent agreement (${c.lastConsentTitle})`
+                  : 'Signed practice consent forms & legal agreements';
+              } else {
+                noticeLabel = 'Submitted clinical intake questionnaire packet';
+              }
+
+              return (
+                <div key={c.uid} className="bg-white p-4 rounded-xl border border-amber-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs shadow-xs">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <strong className="text-sm text-[#2C2A2A] font-semibold">{clientName}</strong>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-900 border border-amber-200">
+                        {c.hasConsent && !c.hasIntake ? '✍️ Signed Consent' : c.hasIntake && !c.hasConsent ? '📋 Intake Packet' : '📋 Intake & ✍️ Consent'}
+                      </span>
+                    </div>
+                    <p className="text-[#2C2A2A]/80 font-medium">
+                      {noticeLabel}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => onNavigate('clients')}
+                    className="px-4 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-semibold text-xs rounded-xl shadow-xs transition whitespace-nowrap"
+                  >
+                    Review Forms & Packet →
+                  </button>
                 </div>
-                <button
-                  onClick={() => onNavigate('clients')}
-                  className="px-3 py-1 bg-[#BF5B33] text-white font-semibold rounded-lg"
-                >
-                  Review Packet →
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
