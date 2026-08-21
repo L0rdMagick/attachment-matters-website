@@ -43,6 +43,21 @@ export async function getClientProfile(clientId: string): Promise<ClientProfileD
 import { createPracticeNotification } from './notifications';
 
 /**
+ * Helper to recursively convert undefined values for Firestore safety
+ */
+function sanitizePayload(obj: any): any {
+  if (obj === null || obj === undefined) return '';
+  if (typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(sanitizePayload);
+
+  const cleaned: Record<string, any> = {};
+  for (const [key, val] of Object.entries(obj)) {
+    cleaned[key] = val === undefined ? '' : sanitizePayload(val);
+  }
+  return cleaned;
+}
+
+/**
  * Update client profile with audit logging
  */
 export async function updateClientProfile(
@@ -65,9 +80,11 @@ export async function updateClientProfile(
     previousValues[key] = (currentData as any)[key] ?? null;
   });
 
+  const cleanData = sanitizePayload(updatedData);
+
   // Update client document safely
   await setDoc(clientRef, {
-    ...updatedData,
+    ...cleanData,
     updatedAt: serverTimestamp()
   }, { merge: true });
 
@@ -81,28 +98,30 @@ export async function updateClientProfile(
       resourcePath: `clients/${clientId}`,
       changedFields,
       previousValues,
-      newValues: updatedData,
+      newValues: cleanData,
       timestamp: serverTimestamp()
     });
   } catch (err) {
     console.warn("Audit log creation skipped:", err);
   }
 
-  // Always record practice notification for client profile changes if fields changed
-  if (changedFields.length > 0) {
-    const firstName = updatedData.legalFirstName || currentData.legalFirstName || '';
-    const lastName = updatedData.legalLastName || currentData.legalLastName || '';
-    const name = (firstName ? `${firstName} ${lastName}` : 'Client').trim();
+  // Always record practice notification for client profile changes
+  const firstName = updatedData.legalFirstName || currentData.legalFirstName || '';
+  const lastName = updatedData.legalLastName || currentData.legalLastName || '';
+  const name = (firstName ? `${firstName} ${lastName}` : 'Client').trim();
 
-    await createPracticeNotification({
-      type: 'profile_updated',
-      title: '👤 Client Profile Saved / Updated',
-      message: `${name} updated profile information.`,
-      clientId,
-      clientName: name,
-      details: `Updated fields: ${changedFields.join(', ')}`
-    });
-  }
+  const detailsText = changedFields.length > 0
+    ? `Updated fields: ${changedFields.join(', ')}`
+    : 'Client saved profile information.';
+
+  await createPracticeNotification({
+    type: 'profile_updated',
+    title: '👤 Client Profile Saved / Updated',
+    message: `${name} updated profile information.`,
+    clientId,
+    clientName: name,
+    details: detailsText
+  });
 }
 
 /**
