@@ -4,6 +4,7 @@ import { getSharedNotesForClient, saveSharedNote, publishSharedNote, deleteShare
 import { getClientsDirectory } from '../../../lib/firebase/clients';
 import type { SharedNoteData } from '../../../types/notes';
 import type { ClientProfileData } from '../../../types/client';
+import { PortalConfirmModal } from '../common/PortalConfirmModal';
 
 export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetClientId }) => {
   const { user, role } = useAuth();
@@ -18,6 +19,27 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
   const [loading, setLoading] = useState(true);
   const [editingNote, setEditingNote] = useState<Partial<SharedNoteData> | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Portal Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    details?: string;
+    icon?: string;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: 'danger' | 'warning' | 'info' | 'success';
+    onConfirm: () => void;
+    onCancel?: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
+
+  const closeConfirmModal = () => setConfirmModal((prev) => ({ ...prev, isOpen: false }));
 
   useEffect(() => {
     if (isTherapist) {
@@ -81,16 +103,29 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
     }
   };
 
-  const handleDeleteNote = async (noteId: string) => {
+  const handleDeleteNote = (noteId: string) => {
     if (!activeClientId) return;
-    if (!confirm("Are you sure you want to delete this shared summary?")) return;
-    try {
-      await deleteSharedNote(noteId);
-      const updated = await getSharedNotesForClient(activeClientId, isTherapist);
-      setNotes(updated);
-    } catch (err) {
-      console.error("Failed to delete shared note", err);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: '🗑️ Delete Shared Summary',
+      message: 'Are you sure you want to delete this shared session summary note?',
+      details: 'This will remove the summary from the client portal.',
+      icon: '🗑️',
+      confirmText: 'Delete Summary',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      onConfirm: async () => {
+        closeConfirmModal();
+        try {
+          await deleteSharedNote(noteId);
+          const updated = await getSharedNotesForClient(activeClientId, isTherapist);
+          setNotes(updated);
+        } catch (err) {
+          console.error("Failed to delete shared note", err);
+        }
+      },
+      onCancel: closeConfirmModal
+    });
   };
 
   if (loading) {
@@ -305,6 +340,20 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
           ))
         )}
       </div>
+
+      {/* Portal Confirm Modal */}
+      <PortalConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        details={confirmModal.details}
+        icon={confirmModal.icon}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={confirmModal.onCancel || closeConfirmModal}
+      />
     </div>
   );
 };

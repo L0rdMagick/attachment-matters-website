@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getClientsDirectory, deleteClientProfile, archiveClientProfile, unarchiveClientProfile, updateClientProfile } from '../../../lib/firebase/clients';
 import { useAuth } from '../../../context/AuthContext';
 import type { ClientProfileData } from '../../../types/client';
+import { PortalConfirmModal } from '../common/PortalConfirmModal';
 
 interface ClientDirectoryProps {
   onSelectClient: (clientId: string) => void;
@@ -14,6 +15,28 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({ onSelectClient
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [intakeFilter, setIntakeFilter] = useState('');
+
+  // Portal Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    details?: string;
+    icon?: string;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: 'danger' | 'warning' | 'info' | 'success';
+    onConfirm: () => void;
+    onCancel?: () => void;
+    isAlertOnly?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
+
+  const closeConfirmModal = () => setConfirmModal((prev) => ({ ...prev, isOpen: false }));
 
   const loadDirectory = async () => {
     setLoading(true);
@@ -41,56 +64,108 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({ onSelectClient
       setClients((prev) => prev.map((item) => item.uid === c.uid ? { ...item, allowSelfSchedulingOverride: overrideVal } : item));
     } catch (err) {
       console.error("Failed to update client self-scheduling permission", err);
-      alert("Failed to update client self-scheduling permission.");
     }
   };
 
-  const handleArchiveClient = async (c: ClientProfileData) => {
+  const handleArchiveClient = (c: ClientProfileData) => {
     const name = c.legalFirstName ? `${c.legalFirstName} ${c.legalLastName || ''}` : c.email;
-    if (!window.confirm(`📁 Archive client chart for ${name}?\n\nThis will revoke their portal sign-in and hide them from active booking dropdowns, while securely retaining their clinical records for HIPAA retention compliance.`)) {
-      return;
-    }
-
-    try {
-      await archiveClientProfile(c.uid, user?.uid || '', role || '');
-      await loadDirectory();
-      alert(`Client chart for ${name} has been archived. Portal access revoked.`);
-    } catch (err) {
-      console.error("Failed to archive client", err);
-      alert("Failed to archive client record.");
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: '📁 Archive Client Chart',
+      message: `Are you sure you want to archive the client chart for ${name}?`,
+      details: 'This will revoke their portal sign-in and hide them from active booking dropdowns, while securely retaining their clinical records for HIPAA retention compliance.',
+      icon: '📁',
+      confirmText: 'Yes, Archive Chart',
+      cancelText: 'Keep Active',
+      variant: 'warning',
+      onConfirm: async () => {
+        closeConfirmModal();
+        try {
+          await archiveClientProfile(c.uid, user?.uid || '', role || '');
+          await loadDirectory();
+          setConfirmModal({
+            isOpen: true,
+            title: '✓ Chart Archived',
+            message: `Client chart for ${name} has been archived and portal access revoked.`,
+            icon: '✓',
+            confirmText: 'OK',
+            variant: 'success',
+            isAlertOnly: true,
+            onConfirm: closeConfirmModal
+          });
+        } catch (err) {
+          console.error("Failed to archive client", err);
+        }
+      },
+      onCancel: closeConfirmModal
+    });
   };
 
-  const handleRestoreClient = async (c: ClientProfileData) => {
+  const handleRestoreClient = (c: ClientProfileData) => {
     const name = c.legalFirstName ? `${c.legalFirstName} ${c.legalLastName || ''}` : c.email;
-    if (!window.confirm(`↩️ Restore active status for ${name}?\n\nThis will restore their portal login access and include them in active scheduling dropdowns.`)) {
-      return;
-    }
-
-    try {
-      await unarchiveClientProfile(c.uid, user?.uid || '', role || '');
-      await loadDirectory();
-      alert(`Client chart for ${name} has been reactivated.`);
-    } catch (err) {
-      console.error("Failed to restore client", err);
-      alert("Failed to restore client record.");
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: '↩️ Restore Active Client Chart',
+      message: `Are you sure you want to restore active status for ${name}?`,
+      details: 'This will restore their portal login access and include them in active practice scheduling dropdowns.',
+      icon: '↩️',
+      confirmText: 'Yes, Restore Access',
+      cancelText: 'Keep Archived',
+      variant: 'info',
+      onConfirm: async () => {
+        closeConfirmModal();
+        try {
+          await unarchiveClientProfile(c.uid, user?.uid || '', role || '');
+          await loadDirectory();
+          setConfirmModal({
+            isOpen: true,
+            title: '✓ Access Restored',
+            message: `Client chart for ${name} has been reactivated successfully.`,
+            icon: '✓',
+            confirmText: 'OK',
+            variant: 'success',
+            isAlertOnly: true,
+            onConfirm: closeConfirmModal
+          });
+        } catch (err) {
+          console.error("Failed to restore client", err);
+        }
+      },
+      onCancel: closeConfirmModal
+    });
   };
 
-  const handleDeleteClient = async (c: ClientProfileData) => {
+  const handleDeleteClient = (c: ClientProfileData) => {
     const name = c.legalFirstName ? `${c.legalFirstName} ${c.legalLastName || ''}` : c.email;
-    if (!window.confirm(`⚠️ PERMANENT PURGE: Delete all database records for ${name} (${c.email})?\n\nThis will permanently wipe their profile, intake forms, agreements, and appointments from Firebase.`)) {
-      return;
-    }
-
-    try {
-      await deleteClientProfile(c.uid, c.email);
-      setClients((prev) => prev.filter((item) => item.uid !== c.uid && item.email !== c.email));
-      alert(`Client record for ${name} has been permanently deleted.`);
-    } catch (err) {
-      console.error("Failed to delete client", err);
-      alert("Failed to delete client record. Please try again.");
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: '⚠️ Permanent Delete Record',
+      message: `Permanently delete all database records for ${name} (${c.email})?`,
+      details: 'This action cannot be undone and will permanently wipe their profile, intake forms, and appointments from Firebase.',
+      icon: '🗑️',
+      confirmText: 'Delete Permanently',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      onConfirm: async () => {
+        closeConfirmModal();
+        try {
+          await deleteClientProfile(c.uid, c.email);
+          setClients((prev) => prev.filter((item) => item.uid !== c.uid && item.email !== c.email));
+          setConfirmModal({
+            isOpen: true,
+            title: '✓ Record Deleted',
+            message: `Client record for ${name} has been permanently deleted.`,
+            icon: '✓',
+            confirmText: 'OK',
+            variant: 'success',
+            isAlertOnly: true,
+            onConfirm: closeConfirmModal
+          });
+        } catch (err) {
+          console.error("Failed to delete client", err);
+        }
+      },
+    });
   };
 
   return (
@@ -235,7 +310,7 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({ onSelectClient
                           {c.legalLastName ? `${c.legalLastName}, ${c.legalFirstName}` : c.email}{' '}
                           {c.preferredName ? <span className="text-[#4A5741] font-normal">("{c.preferredName}")</span> : ''}
                         </td>
-                        <td className="py-4 px-6 text-[#2C2A2A]/80">{c.email}</td>
+                        <td className="py-4 px-6 text-[#2C2A2A]/80 break-all">{c.email}</td>
                         <td className="py-4 px-6">
                           <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium capitalize ${
                             isArchived ? 'bg-amber-100 text-amber-900 border border-amber-200' : 'bg-green-100 text-green-800'
@@ -312,6 +387,21 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({ onSelectClient
           </div>
         )}
       </div>
+
+      {/* Portal Confirm Modal */}
+      <PortalConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        details={confirmModal.details}
+        icon={confirmModal.icon}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={confirmModal.onCancel || closeConfirmModal}
+        isAlertOnly={confirmModal.isAlertOnly}
+      />
     </div>
   );
 };

@@ -9,6 +9,7 @@ import {
 } from '../../../lib/firebase/notes';
 import type { PrivateClinicalNoteData, NoteFormat, NoteAmendment } from '../../../types/notes';
 import type { ClientProfileData } from '../../../types/client';
+import { PortalConfirmModal } from '../common/PortalConfirmModal';
 
 export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = ({ targetClientId }) => {
   const { user, role } = useAuth();
@@ -22,6 +23,27 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
   const [notes, setNotes] = useState<PrivateClinicalNoteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Portal Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    details?: string;
+    icon?: string;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: 'danger' | 'warning' | 'info' | 'success';
+    onConfirm: () => void;
+    onCancel?: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
+
+  const closeConfirmModal = () => setConfirmModal((prev) => ({ ...prev, isOpen: false }));
 
   // Form state
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -147,15 +169,28 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
     }
   };
 
-  const handleFinalize = async (noteId: string) => {
-    if (!confirm("Are you sure you want to finalize this clinical note? Finalized notes cannot be edited, only amended.")) return;
-    try {
-      await finalizePrivateClinicalNote(noteId);
-      const updated = await getPrivateClinicalNotesForClient(activeClientId);
-      setNotes(updated);
-    } catch (err) {
-      console.error("Failed to finalize note", err);
-    }
+  const handleFinalize = (noteId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: '🔒 Finalize Clinical Note',
+      message: 'Are you sure you want to finalize this private clinical note?',
+      details: 'Finalized notes become part of the immutable medical record and cannot be edited, only amended.',
+      icon: '🔒',
+      confirmText: 'Yes, Finalize Note',
+      cancelText: 'Keep Draft',
+      variant: 'warning',
+      onConfirm: async () => {
+        closeConfirmModal();
+        try {
+          await finalizePrivateClinicalNote(noteId);
+          const updated = await getPrivateClinicalNotesForClient(activeClientId);
+          setNotes(updated);
+        } catch (err) {
+          console.error("Failed to finalize note", err);
+        }
+      },
+      onCancel: closeConfirmModal
+    });
   };
 
   const handleAddAmendment = async (e: React.FormEvent) => {
@@ -500,6 +535,20 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
           </div>
         </form>
       )}
+
+      {/* Portal Confirm Modal */}
+      <PortalConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        details={confirmModal.details}
+        icon={confirmModal.icon}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={confirmModal.onCancel || closeConfirmModal}
+      />
     </div>
   );
 };

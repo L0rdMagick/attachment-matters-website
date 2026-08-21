@@ -11,6 +11,7 @@ import { PrivateClinicalNotesView } from '../notes/PrivateClinicalNotesView';
 import { PrintableIntakeDocument } from '../intake/PrintableIntakeDocument';
 import { PrintableSignedConsentDocument } from '../consent/PrintableSignedConsentDocument';
 import { useAuth } from '../../../context/AuthContext';
+import { PortalConfirmModal } from '../common/PortalConfirmModal';
 
 interface ClientDetailViewProps {
   clientId: string;
@@ -48,7 +49,76 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
 
   // Admin Schedule Appointment Modal State (Must be declared at top level before conditional returns)
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [schedType, setSchedType] = useState(DEFAULT_AVAILABILITY_RULES.appointmentTypes[0]);
+
+  // Portal Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    details?: string;
+    icon?: string;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: 'danger' | 'warning' | 'info' | 'success';
+    onConfirm: () => void;
+    onCancel?: () => void;
+    isAlertOnly?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
+
+  const closeConfirmModal = () => setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+
+  const executeBooking = async (
+    startISO: string,
+    endISO: string,
+    schedType: any,
+    schedFormat: any
+  ) => {
+    if (!client) return;
+    try {
+      await bookAppointmentWithLock({
+        clientId: client.uid,
+        clientName: `${client.legalFirstName} ${client.legalLastName}`,
+        clientEmail: client.email || undefined,
+        therapistId: 'default_therapist',
+        appointmentTypeId: schedType.id,
+        appointmentTypeName: schedType.name,
+        startISO,
+        endISO,
+        timezone: rules.timezone || 'America/Chicago',
+        format: schedFormat,
+        locationOrLink: schedFormat === 'telehealth' ? 'https://familytrusttherapy.com/telehealth-room' : '123 Practice Way, Suite 100',
+        status: 'confirmed',
+        priceInCents: schedType.priceInCents,
+        syncStatus: 'pending'
+      }, true);
+
+      const appts = await getAppointments({ clientId: client.uid });
+      setClientAppointments(appts);
+      setShowScheduleModal(false);
+
+      setConfirmModal({
+        isOpen: true,
+        title: '✓ Session Scheduled',
+        message: `Appointment for ${client.legalFirstName} ${client.legalLastName} has been scheduled successfully!`,
+        icon: '🗓️',
+        confirmText: 'OK',
+        variant: 'success',
+        isAlertOnly: true,
+        onConfirm: closeConfirmModal
+      });
+    } catch (err: any) {
+      console.error("Booking error:", err);
+    } finally {
+      setSchedBooking(false);
+    }
+  };
+
+  const [schedType, setSchedType] = useState<any>(null);
   const [schedDate, setSchedDate] = useState(new Date().toISOString().split('T')[0]);
   const [schedTime, setSchedTime] = useState('09:00');
   const [schedFormat, setSchedFormat] = useState<'telehealth' | 'in_person'>('telehealth');
@@ -72,6 +142,9 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
         if (r) setRules(r);
         if (docs.length > 0) {
           setSelectedDoc(docs[0]);
+        }
+        if (r && r.appointmentTypes && r.appointmentTypes.length > 0) {
+          setSchedType(r.appointmentTypes[0]);
         }
       } catch (err) {
         console.error("Failed to load client chart", err);
@@ -118,12 +191,25 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
   };
 
   const handleReviewStatus = async (status: 'approved' | 'revision_requested') => {
+    if (!client) return;
     setReviewingIntake(true);
     try {
       await reviewIntakeSubmission(clientId, status, status === 'revision_requested' ? revisionNotesInput : undefined);
       await refreshIntake();
       setShowRevisionForm(false);
-      alert(`Intake submission marked as ${status.replace('_', ' ')}.`);
+      
+      setConfirmModal({
+        isOpen: true,
+        title: status === 'approved' ? '✓ Intake Approved' : '✏️ Revision Requested',
+        message: status === 'approved'
+          ? `Intake questionnaire for ${client.legalFirstName} ${client.legalLastName} has been approved.`
+          : `Correction request sent to ${client.legalFirstName} ${client.legalLastName}.`,
+        icon: status === 'approved' ? '✓' : '✏️',
+        confirmText: 'OK',
+        variant: status === 'approved' ? 'success' : 'warning',
+        isAlertOnly: true,
+        onConfirm: closeConfirmModal
+      });
     } catch (err: any) {
       console.error(err);
       alert("Failed to update intake review status.");
@@ -169,26 +255,12 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
     { id: 'audit', label: 'Audit History' }
   ];
 
-  const handleStatusChangeInChart = async (apptId: string, status: AppointmentStatus) => {
-    try {
-      await updateAppointmentStatus(apptId, status);
-      const appts = await getAppointments({ clientId });
-      setClientAppointments(appts);
-    } catch (err) {
-      console.error("Failed to update appointment status", err);
-    }
-  };
-
-  const upcomingAppts = clientAppointments.filter(a => a.status === 'confirmed' || a.status === 'requested' || a.status === 'rescheduled');
-  const pastAppts = clientAppointments.filter(a => a.status === 'completed' || a.status.startsWith('canceled'));
-
   const handleScheduleAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!client) return;
+    if (!client || !schedType) return;
     setSchedBooking(true);
     setSchedMessage(null);
 
-    // Check practice settings availability against all therapist appointments
     const allTherapistAppts = await getAppointments({ therapistId: 'default_therapist' });
     const availCheck = checkTherapistSlotAvailability(
       schedDate,
@@ -200,59 +272,54 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
       schedType?.bufferAfterMinutes || 0
     );
 
-    if (availCheck.hasDoubleBooking) {
-      const proceedDouble = confirm(
-        `⚠️ DOUBLE BOOKING WARNING:\n\n${availCheck.doubleBookingReason}\n\nDo you want to override and proceed with this double booking?`
-      );
-      if (!proceedDouble) {
-        setSchedBooking(false);
-        setShowScheduleModal(false);
-        return;
-      }
-    }
-
-    if (availCheck.isOutsideHours) {
-      const proceedOutside = confirm(
-        `⚠️ OUTSIDE SCHEDULED HOURS WARNING:\n\n${availCheck.outsideHoursReason}\n\nDo you want to override your practice settings and schedule this session outside of scheduled hours?`
-      );
-      if (!proceedOutside) {
-        setSchedBooking(false);
-        setShowScheduleModal(false);
-        return;
-      }
-    }
-
     const startISO = `${schedDate}T${schedTime}:00`;
     const endISO = new Date(new Date(startISO).getTime() + (schedType?.durationMinutes || 50) * 60000).toISOString();
 
-    try {
-      await bookAppointmentWithLock({
-        clientId: client.uid,
-        clientName: `${client.legalFirstName} ${client.legalLastName}`,
-        clientEmail: client.email || undefined,
-        therapistId: 'default_therapist',
-        appointmentTypeId: schedType.id,
-        appointmentTypeName: schedType.name,
-        startISO,
-        endISO,
-        timezone: rules.timezone || 'America/Chicago',
-        format: schedFormat,
-        locationOrLink: schedFormat === 'telehealth' ? 'https://familytrusttherapy.com/telehealth-room' : '123 Practice Way, Suite 100',
-        status: 'confirmed',
-        priceInCents: schedType.priceInCents,
-        syncStatus: 'pending'
-      }, true);
-
-      const appts = await getAppointments({ clientId: client.uid });
-      setClientAppointments(appts);
-      setShowScheduleModal(false);
-      alert(`Appointment for ${client.legalFirstName} ${client.legalLastName} scheduled successfully!`);
-    } catch (err: any) {
-      console.error(err);
-      setSchedMessage(err.message || "Failed to schedule appointment due to lock collision.");
-    } finally {
-      setSchedBooking(false);
+    if (availCheck.hasDoubleBooking) {
+      setConfirmModal({
+        isOpen: true,
+        title: '⚠️ Double Booking Warning',
+        message: 'The selected slot conflicts with another appointment in your calendar.',
+        details: availCheck.doubleBookingReason,
+        icon: '⚠️',
+        confirmText: 'Override & Double Book',
+        cancelText: 'Cancel & Change Slot',
+        variant: 'warning',
+        onConfirm: () => {
+          closeConfirmModal();
+          executeBooking(startISO, endISO, schedType, schedFormat);
+        },
+        onCancel: () => {
+          closeConfirmModal();
+          setSchedBooking(false);
+        }
+      });
+      return;
     }
+
+    if (availCheck.isOutsideHours) {
+      setConfirmModal({
+        isOpen: true,
+        title: '⚠️ Outside Scheduled Hours Warning',
+        message: 'The selected time falls outside of regular scheduled practice hours.',
+        details: availCheck.outsideHoursReason,
+        icon: '⚠️',
+        confirmText: 'Override & Schedule',
+        cancelText: 'Cancel & Change Slot',
+        variant: 'warning',
+        onConfirm: () => {
+          closeConfirmModal();
+          executeBooking(startISO, endISO, schedType, schedFormat);
+        },
+        onCancel: () => {
+          closeConfirmModal();
+          setSchedBooking(false);
+        }
+      });
+      return;
+    }
+
+    executeBooking(startISO, endISO, schedType, schedFormat);
   };
 
   return (
@@ -487,9 +554,9 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                 </div>
               ) : (
                 upcomingAppts.map((appt) => (
-                  <div key={appt.id} className="p-4 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2] flex justify-between items-center text-xs">
-                    <div>
-                      <div className="flex items-center gap-2">
+                  <div key={appt.id} className="p-4 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs overflow-hidden break-words">
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-sm">{appt.appointmentTypeName}</span>
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                           appt.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
@@ -502,16 +569,31 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-[#EAE1D2]">
                       <button
                         onClick={() => handleStatusChangeInChart(appt.id!, 'completed')}
-                        className="px-3 py-1.5 bg-[#4A5741] text-white font-semibold rounded-lg hover:bg-[#384232] transition"
+                        className="px-3.5 py-2 bg-[#4A5741] text-white font-semibold text-xs rounded-xl hover:bg-[#384232] transition min-h-[38px] flex items-center justify-center"
                       >
                         ✓ Mark Completed
                       </button>
                       <button
-                        onClick={() => handleStatusChangeInChart(appt.id!, 'canceled_by_practice')}
-                        className="px-3 py-1.5 border border-red-300 text-red-700 font-semibold rounded-lg hover:bg-red-50 transition"
+                        onClick={() => {
+                          setConfirmModal({
+                            isOpen: true,
+                            title: '🛑 Cancel Appointment',
+                            message: `Are you sure you want to cancel the scheduled ${appt.appointmentTypeName} session for ${client.legalFirstName} ${client.legalLastName}?`,
+                            icon: '🛑',
+                            confirmText: 'Yes, Cancel Session',
+                            cancelText: 'Keep Appointment',
+                            variant: 'danger',
+                            onConfirm: () => {
+                              closeConfirmModal();
+                              handleStatusChangeInChart(appt.id!, 'canceled_by_practice');
+                            },
+                            onCancel: closeConfirmModal
+                          });
+                        }}
+                        className="px-3.5 py-2 border border-red-300 text-red-700 font-semibold text-xs rounded-xl hover:bg-red-50 transition min-h-[38px] flex items-center justify-center"
                       >
                         Cancel
                       </button>
@@ -532,9 +614,9 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                 </div>
               ) : (
                 pastAppts.map((appt) => (
-                  <div key={appt.id} className="p-4 bg-white rounded-xl border border-[#EAE1D2] flex justify-between items-center text-xs">
+                  <div key={appt.id} className="p-4 bg-white rounded-xl border border-[#EAE1D2] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs overflow-hidden break-words">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-sm">{appt.appointmentTypeName}</span>
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                           appt.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-gray-100 text-gray-700 border border-gray-200'
@@ -680,7 +762,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                       <button
                         key={doc.id || doc.documentHash}
                         onClick={() => setSelectedDoc(doc)}
-                        className={`w-full text-left p-4 rounded-xl border text-xs transition flex flex-col gap-1 ${
+                        className={`w-full text-left p-4 rounded-xl border text-xs transition flex flex-col gap-1 overflow-hidden break-words ${
                           isSelected
                             ? 'bg-[#4A5741] text-white border-[#4A5741] shadow-sm'
                             : 'bg-[#F7F2E9] text-[#2C2A2A] border-[#EAE1D2] hover:bg-[#EAE1D2]/50'
@@ -695,7 +777,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                         <p className={`text-[11px] ${isSelected ? 'text-white/80' : 'text-[#2C2A2A]/60'}`}>
                           Version: {doc.templateVersion} | Signed by: {doc.clientTypedName}
                         </p>
-                        <p className={`text-[10px] font-mono ${isSelected ? 'text-white/70' : 'text-[#2C2A2A]/50'}`}>
+                        <p className={`text-[10px] font-mono ${isSelected ? 'text-white/70' : 'text-[#2C2A2A]/50'} break-all`}>
                           Hash: {doc.documentHash.substring(0, 20)}...
                         </p>
                       </button>
@@ -729,7 +811,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                 <h4 className="font-semibold text-xs uppercase tracking-wider text-[#4A5741] mb-2">Phone & Email</h4>
                 <p><strong>Primary Phone:</strong> {client.primaryPhone || 'N/A'}</p>
                 <p><strong>Alternate Phone:</strong> {client.alternatePhone || 'N/A'}</p>
-                <p><strong>Email Address:</strong> {client.email}</p>
+                <p className="break-all"><strong>Email Address:</strong> {client.email}</p>
                 <p><strong>Preferred Contact Method:</strong> <span className="capitalize">{client.preferredContactMethod || 'Email'}</span></p>
               </div>
 
@@ -930,6 +1012,21 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
           </div>
         </div>
       )}
+
+      {/* Portal Confirm Modal */}
+      <PortalConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        details={confirmModal.details}
+        icon={confirmModal.icon}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={confirmModal.onCancel || closeConfirmModal}
+        isAlertOnly={confirmModal.isAlertOnly}
+      />
     </div>
   );
 };

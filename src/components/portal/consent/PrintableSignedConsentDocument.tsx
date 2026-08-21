@@ -68,9 +68,9 @@ export const PrintableSignedConsentDocument: React.FC<PrintableSignedConsentDocu
           <span className="block font-bold uppercase tracking-wider text-gray-600 text-[10px]">Signer Legal Name</span>
           <span className="font-semibold text-sm text-gray-900">{signedDoc.clientTypedName || clientName}</span>
         </div>
-        <div>
+        <div className="overflow-hidden">
           <span className="block font-bold uppercase tracking-wider text-gray-600 text-[10px]">Client Account Email</span>
-          <span className="font-semibold text-gray-900">{clientEmail || 'N/A'}</span>
+          <span className="font-semibold text-gray-900 break-all break-words">{clientEmail || 'N/A'}</span>
         </div>
         <div>
           <span className="block font-bold uppercase tracking-wider text-gray-600 text-[10px]">Signed Date & Time</span>
