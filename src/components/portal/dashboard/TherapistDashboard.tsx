@@ -18,22 +18,29 @@ interface TherapistDashboardProps {
   onNavigate: (tab: string) => void;
 }
 
-interface IndividualFormSubmissionItem {
+export type ActivityCategory = 'all' | 'appointments' | 'profile' | 'intakes' | 'signed_forms';
+
+export interface UnifiedActivityItem {
   id: string;
-  clientId: string;
+  category: 'appointments' | 'profile' | 'intakes' | 'signed_forms';
+  badgeTitle: string;
   clientName: string;
-  itemType: 'signed_consent' | 'intake_form';
-  formTitle: string;
-  submittedAtISO?: string;
-  submittedAtFormatted: string;
+  message: string;
   details?: string;
+  timestampISO: string;
+  timestampFormatted: string;
+  actionButton?: {
+    label: string;
+    onClick: () => void;
+  };
+  deleteId?: string;
 }
 
 export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNavigate }) => {
   const { user } = useAuth();
   const [todayAppointments, setTodayAppointments] = useState<AppointmentData[]>([]);
-  const [pendingFormSubmissions, setPendingFormSubmissions] = useState<IndividualFormSubmissionItem[]>([]);
-  const [notifications, setNotifications] = useState<PracticeNotification[]>([]);
+  const [activityFeed, setActivityFeed] = useState<UnifiedActivityItem[]>([]);
+  const [activeFilter, setActiveFilter] = useState<ActivityCategory>('all');
   const [loading, setLoading] = useState(true);
 
   const loadDash = async () => {
@@ -47,10 +54,48 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
 
       setTodayAppointments(allAppts);
 
-      // Build individual pending review items for EVERY signed consent form and EVERY submitted intake form
-      const pendingItemsList: IndividualFormSubmissionItem[] = [];
+      const itemsMap = new Map<string, UnifiedActivityItem>();
 
-      // 1. Process all signed consent documents as individual notification items
+      // 1. Process Practice Notifications
+      notifDocs.forEach((notif) => {
+        const isCanceled = notif.type === 'appointment_canceled';
+        const isCreated = notif.type === 'appointment_created';
+        const isIntake = notif.type === 'intake_submitted';
+        const isDoc = notif.type === 'document_signed';
+        const isProfile = notif.type === 'profile_updated';
+
+        let category: UnifiedActivityItem['category'] = 'appointments';
+        if (isIntake) category = 'intakes';
+        else if (isDoc) category = 'signed_forms';
+        else if (isProfile) category = 'profile';
+
+        const isoTimestamp = notif.createdAtISO || (notif.createdAt?.seconds ? new Date(notif.createdAt.seconds * 1000).toISOString() : new Date().toISOString());
+        const formattedDate = new Date(isoTimestamp).toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        itemsMap.set(`notif_${notif.id}`, {
+          id: `notif_${notif.id}`,
+          category,
+          badgeTitle: notif.title || 'Notification',
+          clientName: notif.clientName || 'Client',
+          message: notif.message,
+          details: notif.details,
+          timestampISO: isoTimestamp,
+          timestampFormatted: formattedDate,
+          deleteId: notif.id,
+          actionButton: (isIntake || isDoc) ? {
+            label: isDoc ? 'Review Form →' : 'Review Packet →',
+            onClick: () => onNavigate('clients')
+          } : undefined
+        });
+      });
+
+      // 2. Process Signed Consent Documents
       signedDocsSnap.docs.forEach((docSnap) => {
         const d = docSnap.data();
         const client = allClients.find((c: any) => c.uid === d.clientId);
@@ -73,19 +118,26 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
           minute: '2-digit'
         });
 
-        pendingItemsList.push({
-          id: `signed_doc_${docSnap.id}`,
-          clientId: d.clientId || '',
-          clientName,
-          itemType: 'signed_consent',
-          formTitle: d.documentTitle || 'Practice Consent & Agreement',
-          submittedAtISO: isoTimestamp,
-          submittedAtFormatted: formattedDate,
-          details: `Version: ${d.templateVersion || 'v1.0'} | Audit Hash: ${d.documentHash || 'N/A'}`
-        });
+        const key = `signed_doc_${docSnap.id}`;
+        if (!itemsMap.has(key)) {
+          itemsMap.set(key, {
+            id: key,
+            category: 'signed_forms',
+            badgeTitle: '✍️ Signed Consent Form',
+            clientName,
+            message: d.documentTitle || 'Practice Consent & Agreement',
+            details: `Version: ${d.templateVersion || 'v1.0'} | Audit Hash: ${d.documentHash || 'N/A'}`,
+            timestampISO: isoTimestamp,
+            timestampFormatted: formattedDate,
+            actionButton: {
+              label: 'Review Form →',
+              onClick: () => onNavigate('clients')
+            }
+          });
+        }
       });
 
-      // 2. Process all intake questionnaire submissions as individual notification items
+      // 3. Process Intake Questionnaire Submissions
       allClients.forEach((c: any) => {
         if (c.intakeStatus === 'submitted') {
           const clientName = (c.legalFirstName ? `${c.legalLastName || ''}${c.legalLastName ? ', ' : ''}${c.legalFirstName}` : c.email || 'Client').trim();
@@ -98,95 +150,91 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
             minute: '2-digit'
           });
 
-          pendingItemsList.push({
-            id: `intake_sub_${c.uid}`,
-            clientId: c.uid,
-            clientName,
-            itemType: 'intake_form',
-            formTitle: 'Initial Clinical Intake Questionnaire',
-            submittedAtISO: isoTimestamp,
-            submittedAtFormatted: formattedDate,
-            details: 'Completed full clinical intake questionnaire packet.'
-          });
-        }
-      });
-
-      // Sort newest submissions first
-      pendingItemsList.sort((a, b) => {
-        const timeA = a.submittedAtISO ? new Date(a.submittedAtISO).getTime() : 0;
-        const timeB = b.submittedAtISO ? new Date(b.submittedAtISO).getTime() : 0;
-        return timeB - timeA;
-      });
-
-      setPendingFormSubmissions(pendingItemsList);
-
-      const combinedNotifs: PracticeNotification[] = [...notifDocs];
-
-      // Merge appointment booking/change events into activity feed
-      allAppts.forEach((appt) => {
-        const clientName = appt.clientName || appt.clientEmail || 'Client';
-        const dateStr = appt.startISO ? new Date(appt.startISO).toLocaleString() : 'N/A';
-        const apptNoticeMsg = `${clientName} booked session (${appt.appointmentTypeName || 'Therapy Session'}) for ${dateStr}.`;
-
-        const exists = combinedNotifs.some(
-          (n) => n.clientId === appt.clientId && n.message === apptNoticeMsg
-        );
-
-        if (!exists && appt.status !== 'canceled' && appt.status !== 'canceled_by_client') {
-          combinedNotifs.push({
-            id: `appt_act_${appt.id}`,
-            type: 'appointment_created',
-            title: '📅 New Appointment Booked',
-            message: apptNoticeMsg,
-            clientId: appt.clientId,
-            clientName,
-            details: `Status: ${appt.status} | Format: ${appt.format}`,
-            createdAt: appt.createdAt || appt.startISO
-          });
-        }
-      });
-
-      // Merge profile activity updates
-      allClients.forEach((c: any) => {
-        if (c.updatedAt || c.lastActivityAt) {
-          const clientName = (c.legalFirstName ? `${c.legalFirstName} ${c.legalLastName || ''}` : c.email || 'Client').trim();
-          const noticeMsg = c.lastActivityNotice || `${clientName} updated profile information.`;
-
-          const exists = combinedNotifs.some(
-            (n) => n.clientId === c.uid && (n.message === noticeMsg || n.title.includes('Profile'))
-          );
-
-          if (!exists) {
-            combinedNotifs.push({
-              id: `client_act_${c.uid}`,
-              type: 'profile_updated',
-              title: '👤 Client Profile Saved / Updated',
-              message: noticeMsg,
-              clientId: c.uid,
+          const key = `intake_sub_${c.uid}`;
+          if (!itemsMap.has(key)) {
+            itemsMap.set(key, {
+              id: key,
+              category: 'intakes',
+              badgeTitle: '📋 Intake Questionnaire',
               clientName,
-              details: `Email: ${c.email || 'N/A'}`,
-              createdAt: c.lastActivityAt || c.updatedAt
+              message: 'Initial Clinical Intake Questionnaire Submission',
+              details: 'Completed full clinical intake questionnaire packet.',
+              timestampISO: isoTimestamp,
+              timestampFormatted: formattedDate,
+              actionButton: {
+                label: 'Review Packet →',
+                onClick: () => onNavigate('clients')
+              }
             });
           }
         }
       });
 
-      const getNoticeTime = (n: any): number => {
-        if (n.createdAtISO) {
-          const t = new Date(n.createdAtISO).getTime();
-          if (!isNaN(t) && t > 0) return t;
-        }
-        if (n.createdAt?.seconds) return n.createdAt.seconds * 1000;
-        if (n.createdAt) {
-          const t = new Date(n.createdAt).getTime();
-          if (!isNaN(t) && t > 0) return t;
-        }
-        return Date.now();
-      };
+      // 4. Merge Appointment Bookings
+      allAppts.forEach((appt) => {
+        const clientName = appt.clientName || appt.clientEmail || 'Client';
+        const dateStr = appt.startISO ? new Date(appt.startISO).toLocaleString() : 'N/A';
+        const apptNoticeMsg = `${clientName} booked session (${appt.appointmentTypeName || 'Therapy Session'}) for ${dateStr}.`;
 
-      combinedNotifs.sort((a, b) => getNoticeTime(b) - getNoticeTime(a));
+        const key = `appt_act_${appt.id}`;
+        if (!itemsMap.has(key) && appt.status !== 'canceled' && appt.status !== 'canceled_by_client') {
+          const isoTimestamp = appt.createdAt || appt.startISO || new Date().toISOString();
+          const formattedDate = new Date(isoTimestamp).toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
 
-      setNotifications(combinedNotifs);
+          itemsMap.set(key, {
+            id: key,
+            category: 'appointments',
+            badgeTitle: '📅 New Appointment Booked',
+            clientName,
+            message: apptNoticeMsg,
+            details: `Status: ${appt.status} | Format: ${appt.format}`,
+            timestampISO: isoTimestamp,
+            timestampFormatted: formattedDate
+          });
+        }
+      });
+
+      // 5. Merge Profile Activity Updates
+      allClients.forEach((c: any) => {
+        if (c.updatedAt || c.lastActivityAt) {
+          const clientName = (c.legalFirstName ? `${c.legalFirstName} ${c.legalLastName || ''}` : c.email || 'Client').trim();
+          const noticeMsg = c.lastActivityNotice || `${clientName} updated profile information.`;
+          const key = `client_act_${c.uid}`;
+
+          if (!itemsMap.has(key)) {
+            const isoTimestamp = c.lastActivityAt || (c.updatedAt?.seconds ? new Date(c.updatedAt.seconds * 1000).toISOString() : new Date().toISOString());
+            const formattedDate = new Date(isoTimestamp).toLocaleString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+
+            itemsMap.set(key, {
+              id: key,
+              category: 'profile',
+              badgeTitle: '👤 Client Profile Saved / Updated',
+              clientName,
+              message: noticeMsg,
+              details: `Email: ${c.email || 'N/A'}`,
+              timestampISO: isoTimestamp,
+              timestampFormatted: formattedDate
+            });
+          }
+        }
+      });
+
+      const combinedList = Array.from(itemsMap.values());
+      combinedList.sort((a, b) => new Date(b.timestampISO).getTime() - new Date(a.timestampISO).getTime());
+
+      setActivityFeed(combinedList);
     } catch (err) {
       console.error("Failed to load therapist dashboard", err);
     } finally {
@@ -201,25 +249,8 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
     const colRef = collection(db, 'practiceNotifications');
     const unsubscribe = onSnapshot(
       colRef,
-      (snapshot) => {
-        const notifs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as PracticeNotification));
-
-        const getNoticeTime = (n: any): number => {
-          if (n.createdAtISO) {
-            const t = new Date(n.createdAtISO).getTime();
-            if (!isNaN(t) && t > 0) return t;
-          }
-          if (n.createdAt?.seconds) return n.createdAt.seconds * 1000;
-          if (n.createdAt) {
-            const t = new Date(n.createdAt).getTime();
-            if (!isNaN(t) && t > 0) return t;
-          }
-          return Date.now();
-        };
-
-        notifs.sort((a, b) => getNoticeTime(b) - getNoticeTime(a));
-
-        setNotifications(notifs);
+      () => {
+        loadDash();
       },
       (err) => {
         console.warn("Failed to subscribe to practice notifications:", err);
@@ -229,21 +260,35 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
     return () => unsubscribe();
   }, []);
 
-  const handleDeleteNotif = async (id?: string) => {
-    if (!id) return;
-    await deletePracticeNotification(id);
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const handleDeleteNotif = async (deleteId?: string, itemId?: string) => {
+    if (deleteId) {
+      await deletePracticeNotification(deleteId);
+    }
+    setActivityFeed((prev) => prev.filter((item) => item.id !== (itemId || deleteId)));
   };
 
   const handleClearAll = async () => {
     if (!window.confirm("Are you sure you want to delete all activity notifications?")) return;
     await clearAllPracticeNotifications();
-    setNotifications([]);
+    setActivityFeed([]);
   };
 
   if (loading) {
     return <div className="p-8 text-center bg-white border border-[#EAE1D2] rounded-2xl">Loading therapist dashboard...</div>;
   }
+
+  // Calculate counts for filters
+  const categoryCounts = {
+    all: activityFeed.length,
+    appointments: activityFeed.filter((i) => i.category === 'appointments').length,
+    profile: activityFeed.filter((i) => i.category === 'profile').length,
+    intakes: activityFeed.filter((i) => i.category === 'intakes').length,
+    signed_forms: activityFeed.filter((i) => i.category === 'signed_forms').length
+  };
+
+  const filteredFeed = activeFilter === 'all'
+    ? activityFeed
+    : activityFeed.filter((item) => item.category === activeFilter);
 
   return (
     <div className="space-y-6 sm:space-y-8 font-sans">
@@ -291,7 +336,7 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
 
             <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-6 shadow-xs space-y-1">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-[#4A5741]">Forms & Intakes Pending Review</p>
-              <p className="text-2xl sm:text-3xl font-serif font-bold text-[#BF5B33]">{pendingFormSubmissions.length}</p>
+              <p className="text-2xl sm:text-3xl font-serif font-bold text-[#BF5B33]">{categoryCounts.intakes + categoryCounts.signed_forms}</p>
             </div>
 
             <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-6 shadow-xs space-y-1 sm:col-span-2 lg:col-span-1">
@@ -304,147 +349,129 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
         );
       })()}
 
-      {/* Client Activity & Notification Center */}
-      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-8 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-[#EAE1D2] pb-3 gap-3">
+      {/* Combined Client Activity Updates Section */}
+      <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-8 shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-[#EAE1D2] pb-4 gap-3">
           <div>
             <h3 className="text-lg sm:text-xl font-serif text-[#2C2A2A] font-medium flex items-center gap-2">
-              🔔 Client Activity & Notifications ({notifications.length})
+              🔔 Client Activity Updates ({activityFeed.length})
             </h3>
             <p className="text-xs text-[#2C2A2A]/70 mt-0.5">
-              Real-time audit log of client profile updates, form submissions, signed agreements, bookings, and cancellations.
+              Combined real-time feed of client bookings, profile updates, intake questionnaires, and signed consent forms listed in chronological order.
             </p>
           </div>
 
-          {notifications.length > 0 && (
+          {activityFeed.length > 0 && (
             <button
               onClick={handleClearAll}
               className="w-full sm:w-auto px-3 py-2 text-xs text-red-600 hover:text-red-800 font-semibold bg-red-50 border border-red-200 rounded-xl transition min-h-[38px]"
             >
-              🗑️ Clear All Notifications
+              🗑️ Clear All Updates
             </button>
           )}
         </div>
 
-        {notifications.length > 0 ? (
-          <div className="space-y-3">
-            {notifications.map((notif) => {
-              const isCanceled = notif.type === 'appointment_canceled';
-              const isCreated = notif.type === 'appointment_created';
-              const isIntake = notif.type === 'intake_submitted';
-              const isDoc = notif.type === 'document_signed';
+        {/* Category Filter Buttons */}
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: 'all', label: 'All', count: categoryCounts.all },
+            { id: 'appointments', label: 'New Appointments', count: categoryCounts.appointments },
+            { id: 'profile', label: 'Profile Updates', count: categoryCounts.profile },
+            { id: 'intakes', label: 'Intakes', count: categoryCounts.intakes },
+            { id: 'signed_forms', label: 'Signed Forms', count: categoryCounts.signed_forms }
+          ].map((filter) => (
+            <button
+              key={filter.id}
+              onClick={() => setActiveFilter(filter.id as ActivityCategory)}
+              className={`px-3.5 py-2 text-xs font-semibold rounded-xl transition min-h-[38px] flex items-center gap-1.5 ${
+                activeFilter === filter.id
+                  ? 'bg-[#BF5B33] text-white shadow-xs'
+                  : 'bg-white text-[#2C2A2A] hover:bg-[#EAE1D2]/50 border border-[#EAE1D2]'
+              }`}
+            >
+              <span>{filter.label}</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                activeFilter === filter.id ? 'bg-white/20 text-white' : 'bg-[#EAE1D2] text-[#2C2A2A]'
+              }`}>
+                {filter.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Activity Items List */}
+        {filteredFeed.length > 0 ? (
+          <div className="space-y-3 pt-1">
+            {filteredFeed.map((item) => {
+              const isAppointment = item.category === 'appointments';
+              const isProfile = item.category === 'profile';
+              const isIntake = item.category === 'intakes';
+              const isSignedForm = item.category === 'signed_forms';
 
               return (
                 <div
-                  key={notif.id}
-                  className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs ${
-                    isCanceled ? 'bg-red-50/70 border-red-200 text-red-950' :
-                    isCreated ? 'bg-green-50/70 border-green-200 text-green-950' :
+                  key={item.id}
+                  className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-xs ${
+                    isAppointment ? 'bg-green-50/60 border-green-200 text-green-950' :
+                    isProfile ? 'bg-[#F7F2E9] border-[#EAE1D2] text-[#2C2A2A]' :
                     isIntake ? 'bg-amber-50/70 border-amber-200 text-amber-950' :
-                    isDoc ? 'bg-blue-50/70 border-blue-200 text-blue-950' :
+                    isSignedForm ? 'bg-blue-50/70 border-blue-200 text-blue-950' :
                     'bg-[#F7F2E9] border-[#EAE1D2] text-[#2C2A2A]'
                   }`}
                 >
                   <div className="space-y-1 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                        isCanceled ? 'bg-red-100 text-red-800 border border-red-200' :
-                        isCreated ? 'bg-green-100 text-green-800 border border-green-200' :
-                        isIntake ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                        isDoc ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                      <strong className="text-sm font-semibold text-[#2C2A2A]">{item.clientName}</strong>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                        isAppointment ? 'bg-green-100 text-green-800 border-green-200' :
+                        isProfile ? 'bg-gray-100 text-gray-800 border-gray-200' :
+                        isIntake ? 'bg-amber-100 text-amber-900 border-amber-200' :
+                        isSignedForm ? 'bg-blue-100 text-blue-900 border-blue-200' :
                         'bg-gray-100 text-gray-700'
                       }`}>
-                        {notif.title}
-                      </span>
-                      <span className="text-[11px] text-gray-500 font-medium">
-                        {notif.createdAt?.seconds
-                          ? new Date(notif.createdAt.seconds * 1000).toLocaleString()
-                          : (notif.createdAt ? new Date(notif.createdAt).toLocaleString() : 'Just now')}
-                      </span>
-                    </div>
-
-                    <p className="font-semibold text-xs sm:text-sm">{notif.message}</p>
-                    {notif.details && (
-                      <div className="text-[11px] bg-white/90 p-3 rounded-xl border border-gray-200/80 mt-2 space-y-1 font-mono text-[#2C2A2A]">
-                        <strong className="block text-[10px] font-sans font-bold uppercase tracking-wider text-[#BF5B33]">
-                          Detailed Audit & Form Summary:
-                        </strong>
-                        <div className="whitespace-pre-line leading-relaxed text-[11px] font-sans opacity-95">
-                          {notif.details}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => handleDeleteNotif(notif.id)}
-                    className="w-full sm:w-auto text-[11px] font-semibold text-gray-600 hover:text-red-700 px-3 py-2 bg-white hover:bg-red-50 border border-gray-200 rounded-xl transition whitespace-nowrap min-h-[38px] flex items-center justify-center"
-                    title="Delete notification"
-                  >
-                    🗑️ Delete
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="p-6 text-center text-xs text-[#2C2A2A]/60 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2]">
-            No recent client activity notifications. Client updates, bookings, submissions, and cancellations will appear here.
-          </div>
-        )}
-      </div>
-
-      {/* Pending Client Forms & Intake Questionnaires Section */}
-      {pendingFormSubmissions.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-3 font-sans">
-          <div className="border-b border-amber-200/80 pb-2">
-            <h3 className="text-base font-serif font-medium text-amber-900 flex items-center gap-2">
-              ⚠️ Client Forms & Intake Questionnaires Awaiting Review ({pendingFormSubmissions.length})
-            </h3>
-            <p className="text-xs text-amber-800/80 mt-0.5">
-              Clients who have submitted clinical intake packets or signed practice consent forms & agreements requiring clinician review.
-            </p>
-          </div>
-
-          <div className="space-y-2.5 pt-1">
-            {pendingFormSubmissions.map((item) => {
-              const isConsent = item.itemType === 'signed_consent';
-
-              return (
-                <div key={item.id} className="bg-white p-4 rounded-xl border border-amber-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs shadow-xs">
-                  <div className="space-y-1 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <strong className="text-sm text-[#2C2A2A] font-semibold">{item.clientName}</strong>
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                        isConsent ? 'bg-blue-100 text-blue-900 border-blue-200' : 'bg-amber-100 text-amber-900 border-amber-200'
-                      }`}>
-                        {isConsent ? '✍️ Signed Consent Form' : '📋 Intake Questionnaire'}
+                        {item.badgeTitle}
                       </span>
                       <span className="text-[11px] text-gray-500 font-medium ml-auto sm:ml-0">
-                        🕒 {item.submittedAtFormatted}
+                        🕒 {item.timestampFormatted}
                       </span>
                     </div>
-                    <p className="text-[#2C2A2A] font-bold text-xs">
-                      {item.formTitle}
-                    </p>
+
+                    <p className="font-semibold text-xs sm:text-sm text-[#2C2A2A] mt-0.5">{item.message}</p>
+
                     {item.details && (
                       <p className="text-[11px] text-gray-600 italic">
                         {item.details}
                       </p>
                     )}
                   </div>
-                  <button
-                    onClick={() => onNavigate('clients')}
-                    className="w-full sm:w-auto px-4 py-2.5 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-semibold text-xs rounded-xl shadow-xs transition whitespace-nowrap min-h-[40px] flex items-center justify-center"
-                  >
-                    {isConsent ? 'Review Form →' : 'Review Packet →'}
-                  </button>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-200/50 justify-end">
+                    {item.actionButton && (
+                      <button
+                        onClick={item.actionButton.onClick}
+                        className="w-full sm:w-auto px-4 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-semibold text-xs rounded-xl shadow-xs transition whitespace-nowrap min-h-[38px] flex items-center justify-center"
+                      >
+                        {item.actionButton.label}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteNotif(item.deleteId, item.id)}
+                      className="text-[11px] font-semibold text-gray-600 hover:text-red-700 px-3 py-2 bg-white hover:bg-red-50 border border-gray-200 rounded-xl transition whitespace-nowrap min-h-[38px] flex items-center justify-center"
+                      title="Dismiss or delete update"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
               );
             })}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="p-6 text-center text-xs text-[#2C2A2A]/60 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2]">
+            No activity updates found for the selected category.
+          </div>
+        )}
+      </div>
     </div>
   );
 };
