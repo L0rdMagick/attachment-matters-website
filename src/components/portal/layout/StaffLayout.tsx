@@ -23,47 +23,63 @@ interface PopupNoticeAlert {
 
 export const StaffLayout: React.FC<StaffLayoutProps> = ({ children, activeTab, onTabChange }) => {
   const { user, profile, role, logout } = useAuth();
-  const [activeAlert, setActiveAlert] = useState<PopupNoticeAlert | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadAlertsList, setUnreadAlertsList] = useState<PopupNoticeAlert[]>([]);
 
   useEffect(() => {
     if (!user) return;
 
-    // Clean real-time listener for practice notifications & client activity popups
     const colNotifs = collection(db, 'practiceNotifications');
-    const unsubNotifs = onSnapshot(
-      colNotifs,
-      (snapshot) => {
-        const unreadNotifs = snapshot.docs
-          .map((d) => ({ id: d.id, ...d.data() } as any))
-          .filter((n) => n.read === false);
+    const colCancels = collection(db, 'cancellationAlerts');
 
-        if (unreadNotifs.length > 0) {
-          // Sort newest first so the latest client change pops up immediately
-          unreadNotifs.sort((a, b) => {
-            const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt ? new Date(a.createdAt).getTime() : Date.now());
-            const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt ? new Date(b.createdAt).getTime() : Date.now());
-            return timeB - timeA;
-          });
+    const unsubNotifs = onSnapshot(colNotifs, (snapshot) => {
+      const unreadNotifs = snapshot.docs
+        .map((d) => ({ id: d.id, sourceCollection: 'practiceNotifications', ...d.data() } as any))
+        .filter((n) => n.read !== true);
 
-          const latest = unreadNotifs[0];
+      const unsubCancels = onSnapshot(colCancels, (snapCancels) => {
+        const unreadCancels = snapCancels.docs
+          .map((d) => ({
+            id: d.id,
+            sourceCollection: 'cancellationAlerts',
+            type: 'appointment_canceled',
+            title: '🛑 Appointment Canceled by Client',
+            message: `${d.data().clientName || 'Client'} canceled session (${d.data().appointmentTypeName || 'Therapy Session'}).`,
+            clientName: d.data().clientName || 'Client',
+            details: d.data().reason || '',
+            createdAt: d.data().canceledAt,
+            read: d.data().read
+          }))
+          .filter((c) => c.read !== true);
+
+        const allUnread = [...unreadNotifs, ...unreadCancels];
+        allUnread.sort((a, b) => {
+          const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt ? new Date(a.createdAt).getTime() : Date.now());
+          const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt ? new Date(b.createdAt).getTime() : Date.now());
+          return timeB - timeA;
+        });
+
+        setUnreadCount(allUnread.length);
+        setUnreadAlertsList(allUnread);
+
+        if (allUnread.length > 0) {
+          const latest = allUnread[0];
           setActiveAlert({
             id: latest.id,
             type: latest.type,
             title: latest.title || 'Client Portal Notice',
             message: latest.message || '',
             clientName: latest.clientName || 'Client',
-            details: latest.details || latest.reason || '',
+            details: latest.details || '',
             createdAt: latest.createdAt,
-            sourceCollection: 'practiceNotifications'
+            sourceCollection: latest.sourceCollection
           });
         } else {
           setActiveAlert(null);
         }
-      },
-      (err) => {
-        console.warn("Practice notification listener error:", err);
-      }
-    );
+      });
+      return () => unsubCancels();
+    });
 
     return () => unsubNotifs();
   }, [user]);
@@ -74,7 +90,9 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children, activeTab, o
       await updateDoc(doc(db, activeAlert.sourceCollection, activeAlert.id), {
         read: true
       });
-      setActiveAlert(null);
+      const remaining = unreadAlertsList.filter((a) => a.id !== activeAlert.id);
+      setUnreadAlertsList(remaining);
+      setActiveAlert(remaining.length > 0 ? remaining[0] : null);
     } catch (err) {
       console.error("Failed to dismiss notice", err);
       setActiveAlert(null);
@@ -168,6 +186,20 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children, activeTab, o
             </div>
 
             <div className="flex items-center gap-4">
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (unreadAlertsList.length > 0) {
+                      setActiveAlert(unreadAlertsList[0]);
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl animate-bounce flex items-center gap-1.5 shadow-md transition"
+                  title="Click to view real-time notice"
+                >
+                  🔔 Real-Time Notice ({unreadCount})
+                </button>
+              )}
               <div className="hidden sm:block text-right">
                 <p className="text-xs font-semibold text-[#2C2A2A]">
                   {profile?.legalFirstName ? `${profile.legalFirstName} ${profile.legalLastName}` : user?.email}
