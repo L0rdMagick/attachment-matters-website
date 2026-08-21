@@ -25,21 +25,22 @@ export interface PracticeNotification {
  * Add a new practice notification event
  */
 export async function createPracticeNotification(notification: Omit<PracticeNotification, 'id' | 'createdAt' | 'read'>) {
-  try {
-    const cleanPayload: Record<string, any> = {
-      type: notification.type || 'profile_updated',
-      title: notification.title || 'Client Activity Notice',
-      message: notification.message || '',
-      clientId: notification.clientId || 'unknown',
-      clientName: notification.clientName || 'Client',
-      details: notification.details || '',
-      read: false,
-      createdAt: serverTimestamp()
-    };
+  const cleanPayload: Record<string, any> = {
+    type: notification.type || 'profile_updated',
+    title: notification.title || 'Client Activity Notice',
+    message: notification.message || '',
+    clientId: notification.clientId || 'unknown',
+    clientName: notification.clientName || 'Client',
+    details: notification.details || '',
+    read: false,
+    createdAt: serverTimestamp()
+  };
 
+  try {
     await addDoc(collection(db, 'practiceNotifications'), cleanPayload);
   } catch (err) {
-    console.warn("Failed to create practice notification:", err);
+    console.error("Failed to create practice notification in Firestore:", err);
+    throw err;
   }
 }
 

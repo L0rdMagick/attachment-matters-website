@@ -82,9 +82,17 @@ export async function updateClientProfile(
 
   const cleanData = sanitizePayload(updatedData);
 
-  // Update client document safely
+  const firstName = updatedData.legalFirstName || currentData.legalFirstName || '';
+  const lastName = updatedData.legalLastName || currentData.legalLastName || '';
+  const name = (firstName ? `${firstName} ${lastName}` : 'Client').trim();
+
+  const activityNotice = `${name} updated profile information (${changedFields.length > 0 ? changedFields.join(', ') : 'saved details'}).`;
+
+  // Update client document safely with activity timestamp & notice summary
   await setDoc(clientRef, {
     ...cleanData,
+    lastActivityAt: serverTimestamp(),
+    lastActivityNotice: activityNotice,
     updatedAt: serverTimestamp()
   }, { merge: true });
 

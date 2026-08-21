@@ -110,7 +110,10 @@ export const ClientProfileView: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) {
+      setMessage({ type: 'error', text: 'You must be logged in as a client to save profile changes.' });
+      return;
+    }
     setSaving(true);
     setMessage(null);
 
