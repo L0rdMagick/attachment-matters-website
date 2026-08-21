@@ -173,95 +173,106 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
         </div>
       )}
 
-      {/* Editor Modal / Form for Therapist */}
+      {/* Shared Summary Editor Overlay Modal */}
       {isTherapist && editingNote && (
-        <form onSubmit={handleSaveNote} className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-4">
-          <h3 className="text-lg font-serif text-[#2C2A2A] font-medium border-b border-[#EAE1D2] pb-2">
-            {editingNote.id ? 'Edit Shared Summary' : 'New Shared Session Summary'}
-          </h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans animate-fade-in">
+          <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📢</span>
+                <h3 className="text-lg font-serif text-[#2C2A2A] font-medium">
+                  {editingNote.id ? 'Edit Shared Summary' : 'New Shared Session Summary'}
+                </h3>
+              </div>
+              <button type="button" onClick={() => setEditingNote(null)} className="text-gray-400 hover:text-gray-600 font-bold text-sm">✕</button>
+            </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-1">
-              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Start Date</label>
-              <input
-                type="date"
-                required
-                value={editingNote.startDate || ''}
-                onChange={(e) => setEditingNote({ ...editingNote, startDate: e.target.value })}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-              />
-            </div>
-            <div className="sm:col-span-1">
-              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Goal Due Date (End Date)</label>
-              <input
-                type="date"
-                value={editingNote.endDate || ''}
-                onChange={(e) => setEditingNote({ ...editingNote, endDate: e.target.value })}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-              />
-            </div>
-            <div className="sm:col-span-1">
-              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Title / Focus</label>
-              <input
-                type="text"
-                required
-                value={editingNote.title || ''}
-                onChange={(e) => setEditingNote({ ...editingNote, title: e.target.value })}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-                placeholder="e.g. Grounding Exercises & Co-Regulation"
-              />
-            </div>
-          </div>
+            <form onSubmit={handleSaveNote} className="space-y-4 bg-white p-5 rounded-xl border border-[#EAE1D2]">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={editingNote.startDate || ''}
+                    onChange={(e) => setEditingNote({ ...editingNote, startDate: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                  />
+                </div>
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Goal Due Date (End Date)</label>
+                  <input
+                    type="date"
+                    value={editingNote.endDate || ''}
+                    onChange={(e) => setEditingNote({ ...editingNote, endDate: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                  />
+                </div>
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Title / Focus</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingNote.title || ''}
+                    onChange={(e) => setEditingNote({ ...editingNote, title: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                    placeholder="e.g. Grounding Exercises & Co-Regulation"
+                  />
+                </div>
+              </div>
 
-          <div>
-            <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Session Recap & Key Takeaways</label>
-            <textarea
-              rows={3}
-              required
-              value={editingNote.recapSummary || ''}
-              onChange={(e) => setEditingNote({ ...editingNote, recapSummary: e.target.value })}
-              className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-            />
-          </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Key Takeaways & Session Insights</label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={editingNote.recapSummary || ''}
+                    onChange={(e) => setEditingNote({ ...editingNote, recapSummary: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                    placeholder="Bullet points or summary of therapeutic progress discussed during session..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Homework & Action Items Assigned</label>
+                  <textarea
+                    rows={2}
+                    value={editingNote.homeworkAssigned || ''}
+                    onChange={(e) => setEditingNote({ ...editingNote, homeworkAssigned: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                    placeholder="Worksheets, exercises, practice tasks assigned to client..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Goals for Next Session</label>
+                  <textarea
+                    rows={2}
+                    value={editingNote.goalsForNextSession || ''}
+                    onChange={(e) => setEditingNote({ ...editingNote, goalsForNextSession: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                  />
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Homework / Exercises</label>
-              <textarea
-                rows={2}
-                value={editingNote.homeworkAssigned || ''}
-                onChange={(e) => setEditingNote({ ...editingNote, homeworkAssigned: e.target.value })}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Goals for Next Session</label>
-              <textarea
-                rows={2}
-                value={editingNote.goalsForNextSession || ''}
-                onChange={(e) => setEditingNote({ ...editingNote, goalsForNextSession: e.target.value })}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-              />
-            </div>
+              <div className="flex justify-end gap-3 pt-3 border-t border-[#EAE1D2]">
+                <button
+                  type="button"
+                  onClick={() => setEditingNote(null)}
+                  className="px-4 py-2 bg-[#EAE1D2] hover:bg-[#e0d4c1] text-[#2C2A2A] font-semibold text-xs rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2 bg-[#BF5B33] text-white text-xs font-semibold rounded-xl hover:bg-[#a64e2b] disabled:opacity-50 transition shadow-xs"
+                >
+                  {saving ? 'Saving Summary...' : 'Save Summary'}
+                </button>
+              </div>
+            </form>
           </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={() => setEditingNote(null)}
-              className="px-4 py-2 bg-gray-100 text-gray-700 text-xs font-semibold rounded-xl"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-4 py-2 bg-[#BF5B33] text-white text-xs font-semibold rounded-xl shadow-sm"
-            >
-              {saving ? 'Saving...' : 'Save Summary'}
-            </button>
-          </div>
-        </form>
+        </div>
       )}
 
       {/* Notes List */}

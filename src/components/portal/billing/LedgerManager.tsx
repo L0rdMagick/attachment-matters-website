@@ -267,84 +267,86 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
         </div>
       )}
 
-      {/* New Invoice Form */}
+      {/* New Invoice Overlay Modal */}
       {isStaff && showNewInv && (
-        <form onSubmit={handleCreateInvoice} className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-4">
-          <h3 className="text-lg font-serif text-[#2C2A2A] font-medium border-b border-[#EAE1D2] pb-2">
-            Create Client Invoice
-          </h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans animate-fade-in">
+          <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">💳</span>
+                <h3 className="text-lg font-serif text-[#2C2A2A] font-medium">
+                  Create Client Invoice
+                </h3>
+              </div>
+              <button type="button" onClick={() => setShowNewInv(false)} className="text-gray-400 hover:text-gray-600 font-bold text-sm">✕</button>
+            </div>
 
-          {!targetClientId && (
-            <div>
-              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
-                Assign Invoice To Client
-              </label>
-              <select
-                value={selectedClientId}
-                onChange={(e) => setSelectedClientId(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white font-medium text-[#2C2A2A]"
-              >
-                {clientList.map((c) => (
-                  <option key={c.uid} value={c.uid}>
-                    {c.legalFirstName} {c.legalLastName} ({c.email || 'No Email'})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+            <form onSubmit={handleCreateInvoice} className="space-y-4 bg-white p-5 rounded-xl border border-[#EAE1D2]">
+              {!targetClientId && (
+                <PortalClientSelector
+                  clients={clientList}
+                  selectedClientId={selectedClientId}
+                  onSelectClient={(id) => setSelectedClientId(id)}
+                  label="Assign Invoice To Client *"
+                  className="w-full"
+                />
+              )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Description</label>
-              <input
-                type="text"
-                required
-                value={invDesc}
-                onChange={(e) => setInvDesc(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-                placeholder="50-Min Individual Therapy Session"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Amount ($ USD)</label>
-              <input
-                type="number"
-                step="0.01"
-                required
-                value={invAmount}
-                onChange={(e) => setInvAmount(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-                placeholder="150.00"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Due Date</label>
-              <input
-                type="date"
-                required
-                value={invDueDate}
-                onChange={(e) => setInvDueDate(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-              />
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-3">
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Description / Clinical Service Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={invDesc}
+                    onChange={(e) => setInvDesc(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none focus:ring-2 focus:ring-[#BF5B33]/20"
+                    placeholder="e.g. 50-Min Individual Therapy Session"
+                  />
+                </div>
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Amount ($ USD) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={invAmount}
+                    onChange={(e) => setInvAmount(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                    placeholder="150.00"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Payment Due Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={invDueDate}
+                    onChange={(e) => setInvDueDate(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-[#EAE1D2]">
+                <button
+                  type="button"
+                  onClick={() => setShowNewInv(false)}
+                  className="px-4 py-2 bg-[#EAE1D2] hover:bg-[#e0d4c1] text-[#2C2A2A] font-semibold text-xs rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingInv}
+                  className="px-5 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl disabled:opacity-50 transition shadow-xs"
+                >
+                  {submittingInv ? 'Issuing Invoice...' : 'Generate & Issue Invoice'}
+                </button>
+              </div>
+            </form>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={() => setShowNewInv(false)}
-              className="px-4 py-2 bg-gray-100 text-xs font-semibold rounded-xl"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submittingInv}
-              className="px-4 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl disabled:opacity-50 transition"
-            >
-              {submittingInv ? 'Issuing Invoice...' : 'Issue Invoice'}
-            </button>
-          </div>
-        </form>
+        </div>
       )}
 
       {/* Record Payment Form */}

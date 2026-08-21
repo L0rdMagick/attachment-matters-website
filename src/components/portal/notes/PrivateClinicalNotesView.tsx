@@ -251,143 +251,150 @@ export const PrivateClinicalNotesView: React.FC<{ targetClientId?: string }> = (
         </div>
       )}
 
-      {/* New / Edit Note Form */}
+      {/* New / Edit Note Overlay Modal */}
       {showEditor && (
-        <form onSubmit={handleSaveNote} className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-3">
-            <h3 className="text-lg font-serif text-[#2C2A2A] font-medium">
-              {editingNoteId ? 'Edit Draft Clinical Note' : 'New Confidential Progress Note'}
-            </h3>
-            <button type="button" onClick={() => setShowEditor(false)} className="text-xs text-gray-500 hover:text-gray-800">Cancel</button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans animate-fade-in">
+          <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">✍️</span>
+                <h3 className="text-lg font-serif text-[#2C2A2A] font-medium">
+                  {editingNoteId ? 'Edit Draft Clinical Note' : 'New Confidential Progress Note'}
+                </h3>
+              </div>
+              <button type="button" onClick={() => setShowEditor(false)} className="text-gray-400 hover:text-gray-600 font-bold text-sm">✕</button>
+            </div>
+
+            <form onSubmit={handleSaveNote} className="space-y-4 bg-white p-5 rounded-xl border border-[#EAE1D2]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Session Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={sessionDate}
+                    onChange={(e) => setSessionDate(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Format Type</label>
+                  <select
+                    value={noteFormat}
+                    onChange={(e) => setNoteFormat(e.target.value as NoteFormat)}
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white"
+                  >
+                    <option value="DAP">DAP (Data, Assessment, Plan)</option>
+                    <option value="SOAP">SOAP (Subjective, Objective, Assessment, Plan)</option>
+                  </select>
+                </div>
+              </div>
+
+              {noteFormat === 'DAP' ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Data (Subjective & Objective Clinical Data)</label>
+                    <textarea
+                      required
+                      rows={3}
+                      value={dapData}
+                      onChange={(e) => setDapData(e.target.value)}
+                      className="w-full p-3 rounded-xl border border-[#EAE1D2] text-xs outline-none focus:ring-2 focus:ring-[#BF5B33]/20"
+                      placeholder="Client presentation, reported symptoms, emotional state, session content..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Assessment (Diagnostic Impression & Progress)</label>
+                    <textarea
+                      required
+                      rows={2}
+                      value={dapAssessment}
+                      onChange={(e) => setDapAssessment(e.target.value)}
+                      className="w-full p-3 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                      placeholder="Clinical synthesis, diagnostic impression, risk assessment..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Plan (Treatment & Next Steps)</label>
+                    <textarea
+                      required
+                      rows={2}
+                      value={dapPlan}
+                      onChange={(e) => setDapPlan(e.target.value)}
+                      className="w-full p-3 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                      placeholder="Interventions planned, homework, follow-up..."
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Subjective (Client Statements & Self-Report)</label>
+                    <textarea
+                      required
+                      rows={2}
+                      value={soapSubjective}
+                      onChange={(e) => setSoapSubjective(e.target.value)}
+                      className="w-full p-3 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                      placeholder="Direct quotes, reported mood, chief complaint..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Objective (Therapist Observations & Affect)</label>
+                    <textarea
+                      required
+                      rows={2}
+                      value={soapObjective}
+                      onChange={(e) => setSoapObjective(e.target.value)}
+                      className="w-full p-3 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                      placeholder="Appearance, affect, behavioral observations, mental status..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Assessment (Diagnostic & Clinical Synthesis)</label>
+                    <textarea
+                      required
+                      rows={2}
+                      value={soapAssessment}
+                      onChange={(e) => setSoapAssessment(e.target.value)}
+                      className="w-full p-3 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                      placeholder="Clinical synthesis, diagnostic impression, treatment response..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Plan (Treatment Plan Updates)</label>
+                    <textarea
+                      required
+                      rows={2}
+                      value={soapPlan}
+                      onChange={(e) => setSoapPlan(e.target.value)}
+                      className="w-full p-3 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                      placeholder="Frequency, referral needs, homework, follow-up..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-[#EAE1D2]">
+                <button
+                  type="button"
+                  onClick={() => setShowEditor(false)}
+                  className="px-4 py-2 bg-[#EAE1D2] hover:bg-[#e0d4c1] text-[#2C2A2A] font-semibold text-xs rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2 bg-[#BF5B33] text-white text-xs font-semibold rounded-xl hover:bg-[#a64e2b] disabled:opacity-50 transition shadow-xs"
+                >
+                  {saving ? 'Saving Note...' : (editingNoteId ? 'Update Draft Note' : 'Save Draft Note')}
+                </button>
+              </div>
+            </form>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Session Date</label>
-              <input
-                type="date"
-                required
-                value={sessionDate}
-                onChange={(e) => setSessionDate(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Format Type</label>
-              <select
-                value={noteFormat}
-                onChange={(e) => setNoteFormat(e.target.value as NoteFormat)}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white"
-              >
-                <option value="DAP">DAP (Data, Assessment, Plan)</option>
-                <option value="SOAP">SOAP (Subjective, Objective, Assessment, Plan)</option>
-              </select>
-            </div>
-          </div>
-
-          {noteFormat === 'DAP' ? (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Data (Subjective & Objective Clinical Data)</label>
-                <textarea
-                  required
-                  rows={3}
-                  value={dapData}
-                  onChange={(e) => setDapData(e.target.value)}
-                  className="w-full p-3 rounded-xl border border-[#EAE1D2] text-xs outline-none focus:ring-2 focus:ring-[#BF5B33]/20"
-                  placeholder="Client presentation, reported symptoms, emotional state, session content..."
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Assessment (Clinical Impression & Risk Evaluation)</label>
-                <textarea
-                  required
-                  rows={3}
-                  value={dapAssessment}
-                  onChange={(e) => setDapAssessment(e.target.value)}
-                  className="w-full p-3 rounded-xl border border-[#EAE1D2] text-xs outline-none focus:ring-2 focus:ring-[#BF5B33]/20"
-                  placeholder="Clinical analysis, progress toward treatment goals, risk assessment..."
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Plan (Interventions & Future Directions)</label>
-                <textarea
-                  required
-                  rows={2}
-                  value={dapPlan}
-                  onChange={(e) => setDapPlan(e.target.value)}
-                  className="w-full p-3 rounded-xl border border-[#EAE1D2] text-xs outline-none focus:ring-2 focus:ring-[#BF5B33]/20"
-                  placeholder="Planned therapeutic interventions, homework, next scheduled appointment..."
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Subjective (Client Report)</label>
-                <textarea
-                  required
-                  rows={2}
-                  value={soapSubjective}
-                  onChange={(e) => setSoapSubjective(e.target.value)}
-                  className="w-full p-3 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-                  placeholder="Direct quotes, reported concerns, subjective experience..."
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Objective (Clinician Observations)</label>
-                <textarea
-                  required
-                  rows={2}
-                  value={soapObjective}
-                  onChange={(e) => setSoapObjective(e.target.value)}
-                  className="w-full p-3 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-                  placeholder="Mental status exam, affect, motor behavior, observable symptoms..."
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Assessment (Diagnostic & Clinical Synthesis)</label>
-                <textarea
-                  required
-                  rows={2}
-                  value={soapAssessment}
-                  onChange={(e) => setSoapAssessment(e.target.value)}
-                  className="w-full p-3 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-                  placeholder="Clinical synthesis, diagnostic impression, treatment response..."
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Plan (Treatment Plan Updates)</label>
-                <textarea
-                  required
-                  rows={2}
-                  value={soapPlan}
-                  onChange={(e) => setSoapPlan(e.target.value)}
-                  className="w-full p-3 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-                  placeholder="Frequency, referral needs, homework, follow-up..."
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setShowEditor(false)}
-              className="px-4 py-2 border border-[#EAE1D2] text-xs rounded-xl hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-5 py-2 bg-[#BF5B33] text-white text-xs font-semibold rounded-xl hover:bg-[#a64e2b] disabled:opacity-50 transition"
-            >
-              {saving ? 'Saving Note...' : (editingNoteId ? 'Update Draft Note' : 'Save Draft Note')}
-            </button>
-          </div>
-        </form>
+        </div>
       )}
 
       {/* Note Timeline */}
