@@ -2,12 +2,14 @@ export interface FormSection {
   id: string;
   title: string;
   content: string;
+  placeholder?: string;
 }
 
 export interface ConsentTemplateData {
   id: string;
   title: string;
   category: string;
+  formType?: 'consent' | 'questionnaire'; // 'consent' = Read & Sign, 'questionnaire' = Fillable questions
   textContent: string;
   version: string;
   isActive: boolean;
@@ -24,6 +26,7 @@ export interface SignedDocumentData {
   templateVersion: string;
   documentTitle: string;
   exactTextSnapshot: string;
+  answers?: Record<string, string>; // Maps section/question ID to client's answer string
   clientTypedName: string;
   signatureDataUrl?: string; // Drawn signature canvas PNG base64
   signedAtISO: string;

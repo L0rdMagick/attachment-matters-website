@@ -23,6 +23,8 @@ export const ConsentSigner: React.FC = () => {
 
   const [isEditingSigned, setIsEditingSigned] = useState(false);
 
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+
   useEffect(() => {
     if (!user) return;
     async function loadData() {
@@ -43,61 +45,12 @@ export const ConsentSigner: React.FC = () => {
     loadData();
   }, [user]);
 
-  // Helper to accurately map screen CSS coordinates to canvas buffer pixels (fixes pointer alignment & touch support)
-  const getCoordinates = (
-    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
-  ) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    const clientX = 'touches' in e && e.touches.length > 0 ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-    const clientY = 'touches' in e && e.touches.length > 0 ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-
-    const scaleX = canvas.width / (rect.width || 1);
-    const scaleY = canvas.height / (rect.height || 1);
-
-    return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY
-    };
+  const handleAnswerChange = (questionId: string, val: string) => {
+    setAnswers((prev) => ({ ...prev, [questionId]: val }));
   };
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const coords = getCoordinates(e);
-    ctx.beginPath();
-    ctx.moveTo(coords.x, coords.y);
-    setIsDrawing(true);
-  };
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const coords = getCoordinates(e);
-    ctx.lineTo(coords.x, coords.y);
-    ctx.strokeStyle = '#2C2A2A';
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
-
-  const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const handleNA = (questionId: string) => {
+    setAnswers((prev) => ({ ...prev, [questionId]: 'N/A' }));
   };
 
   const handleSelectTemplate = (template: ConsentTemplateData) => {
@@ -105,6 +58,7 @@ export const ConsentSigner: React.FC = () => {
     setIsEditingSigned(false);
     setTypedSignature('');
     setAcknowledged(false);
+    setAnswers({});
     clearCanvas();
     setMessage(null);
   };
@@ -120,6 +74,24 @@ export const ConsentSigner: React.FC = () => {
   const handleSignDocument = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !selectedTemplate) return;
+
+    const isQuestionnaire = selectedTemplate.formType === 'questionnaire' || selectedTemplate.category.toLowerCase() === 'intake';
+
+    if (isQuestionnaire && selectedTemplate.sections && selectedTemplate.sections.length > 0) {
+      const unanswered = selectedTemplate.sections.filter(
+        (sec) => !answers[sec.id] || !answers[sec.id].trim()
+      );
+      if (unanswered.length > 0) {
+        showAlert(
+          '⚠️ All Questions Required',
+          `Please provide an answer for all questions before submitting (${unanswered.length} question(s) remaining). You can click the "N/A" button next to any question you choose to skip.`,
+          'warning',
+          '⚠️'
+        );
+        return;
+      }
+    }
+
     if (!typedSignature.trim()) {
       showAlert('⚠️ Signature Required', 'Please type your full legal name as your signature.', 'danger', '⚠️');
       return;
@@ -146,17 +118,29 @@ export const ConsentSigner: React.FC = () => {
         }
       }
 
+      // Format snapshot text if questionnaire
+      let formattedTextSnapshot = selectedTemplate.textContent;
+      if (isQuestionnaire && selectedTemplate.sections && selectedTemplate.sections.length > 0) {
+        formattedTextSnapshot = `${selectedTemplate.title.toUpperCase()}\n\n` +
+          selectedTemplate.sections
+            .map((sec) => `${sec.title}\nClient Response: ${answers[sec.id] || 'N/A'}`)
+            .join('\n\n');
+      }
+
       const docHash = await signConsentDocument(
         user.uid,
         selectedTemplate,
         typedSignature.trim(),
-        signatureDataUrl
+        signatureDataUrl,
+        answers,
+        formattedTextSnapshot
       );
 
       setMessage(`Document successfully signed and archived! Unique Audit Hash: ${docHash}`);
       setTypedSignature('');
       setAcknowledged(false);
       setIsEditingSigned(false);
+      setAnswers({});
       clearCanvas();
 
       try {
@@ -166,7 +150,7 @@ export const ConsentSigner: React.FC = () => {
         console.warn("Could not refresh signed documents list immediately:", refreshErr);
       }
 
-      showAlert('✓ Document Signed', `Successfully signed "${selectedTemplate.title}". Your legal agreement has been archived.`, 'success', '📄');
+      showAlert('✓ Document Signed', `Successfully submitted "${selectedTemplate.title}". Your completed record has been archived.`, 'success', '📄');
     } catch (err: any) {
       console.error("Failed to sign document", err);
       showAlert('⚠️ Signature Error', err.message || 'Failed to submit electronic signature.', 'danger', '⚠️');
@@ -256,24 +240,92 @@ export const ConsentSigner: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Formatted Document Text & Sections */}
-                {selectedTemplate.sections && selectedTemplate.sections.length > 0 ? (
-                  <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-xl p-4 sm:p-5 text-xs text-[#2C2A2A] leading-relaxed max-h-[400px] overflow-y-auto space-y-4 font-sans">
-                    {selectedTemplate.sections.map((sec, idx) => (
-                      <div key={sec.id || idx} className="bg-white p-4 rounded-xl border border-[#EAE1D2] space-y-1.5 shadow-xs">
-                        <h4 className="font-serif font-bold text-sm text-[#2C2A2A] border-b border-[#EAE1D2] pb-1">
-                          {sec.title}
-                        </h4>
-                        <p className="text-xs text-[#2C2A2A]/90 whitespace-pre-wrap leading-relaxed">
-                          {sec.content}
-                        </p>
-                      </div>
-                    ))}
+                {/* Questionnaire Form vs Consent Read & Sign Form */}
+                {selectedTemplate.formType === 'questionnaire' || selectedTemplate.category.toLowerCase() === 'intake' ? (
+                  <div className="space-y-4">
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 flex items-center justify-between gap-2">
+                      <span>📋 <strong>Required Questionnaire:</strong> Please answer all questions below. You may click the <strong>N/A</strong> button to quickly mark any question.</span>
+                    </div>
+
+                    <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+                      {selectedTemplate.sections && selectedTemplate.sections.length > 0 ? (
+                        selectedTemplate.sections.map((sec, idx) => {
+                          const currentVal = answers[sec.id] || '';
+                          const isAnswered = currentVal.trim().length > 0;
+                          const isNA = currentVal === 'N/A';
+
+                          return (
+                            <div key={sec.id || idx} className="bg-[#F7F2E9]/60 p-4 sm:p-5 rounded-2xl border border-[#EAE1D2] space-y-3 shadow-xs">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <h4 className="font-serif font-bold text-sm text-[#2C2A2A]">
+                                    {sec.title} <span className="text-[#BF5B33]">*</span>
+                                  </h4>
+                                  {sec.content && (
+                                    <p className="text-xs text-[#2C2A2A]/70 mt-1 leading-relaxed">{sec.content}</p>
+                                  )}
+                                </div>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${
+                                  isAnswered
+                                    ? (isNA ? 'bg-gray-100 text-gray-700 border-gray-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300')
+                                    : 'bg-amber-100 text-amber-900 border-amber-300'
+                                }`}>
+                                  {isAnswered ? (isNA ? '🏷️ N/A' : '✓ Answered') : '⚠️ Required'}
+                                </span>
+                              </div>
+
+                              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                <textarea
+                                  rows={2}
+                                  required
+                                  value={currentVal}
+                                  onChange={(e) => handleAnswerChange(sec.id, e.target.value)}
+                                  className="flex-1 p-3 rounded-xl border border-[#EAE1D2] bg-white text-xs font-sans text-[#2C2A2A] outline-none focus:ring-2 focus:ring-[#BF5B33]/30 leading-relaxed"
+                                  placeholder="Type your response here or click N/A..."
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleNA(sec.id)}
+                                  className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1 shrink-0 ${
+                                    isNA
+                                      ? 'bg-[#4A5741] text-white border-[#4A5741]'
+                                      : 'bg-white text-[#2C2A2A] border-[#EAE1D2] hover:bg-[#EAE1D2]/60'
+                                  }`}
+                                  title="Fill N/A for this question"
+                                >
+                                  🚫 N/A
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-xl p-5 text-xs text-[#2C2A2A] leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap font-mono">
+                          {selectedTemplate.textContent}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ) : (
-                  <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-xl p-5 text-xs text-[#2C2A2A] leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap font-mono">
-                    {selectedTemplate.textContent}
-                  </div>
+                  /* Standard Read & Sign Consent Document Text */
+                  selectedTemplate.sections && selectedTemplate.sections.length > 0 ? (
+                    <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-xl p-4 sm:p-5 text-xs text-[#2C2A2A] leading-relaxed max-h-[400px] overflow-y-auto space-y-4 font-sans">
+                      {selectedTemplate.sections.map((sec, idx) => (
+                        <div key={sec.id || idx} className="bg-white p-4 rounded-xl border border-[#EAE1D2] space-y-1.5 shadow-xs">
+                          <h4 className="font-serif font-bold text-sm text-[#2C2A2A] border-b border-[#EAE1D2] pb-1">
+                            {sec.title}
+                          </h4>
+                          <p className="text-xs text-[#2C2A2A]/90 whitespace-pre-wrap leading-relaxed">
+                            {sec.content}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-xl p-5 text-xs text-[#2C2A2A] leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap font-mono">
+                      {selectedTemplate.textContent}
+                    </div>
+                  )
                 )}
 
                 {/* E-Signature Form */}

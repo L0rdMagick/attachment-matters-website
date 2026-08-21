@@ -292,6 +292,39 @@ export const TemplateManagerView: React.FC = () => {
                     />
                   </div>
 
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Form Functionality Type *</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, formType: 'consent' })}
+                        className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition ${
+                          (formData.formType || 'consent') === 'consent'
+                            ? 'bg-[#4A5741] text-white border-[#4A5741] shadow-xs'
+                            : 'bg-white text-[#2C2A2A] border-[#EAE1D2] hover:bg-[#F7F2E9]'
+                        }`}
+                      >
+                        <span>✍️ Read & Sign Consent Agreement</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, formType: 'questionnaire' })}
+                        className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition ${
+                          formData.formType === 'questionnaire'
+                            ? 'bg-[#BF5B33] text-white border-[#BF5B33] shadow-xs'
+                            : 'bg-white text-[#2C2A2A] border-[#EAE1D2] hover:bg-[#F7F2E9]'
+                        }`}
+                      >
+                        <span>📋 Interactive Client Questionnaire</span>
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-[#2C2A2A]/70 mt-1.5">
+                      {formData.formType === 'questionnaire'
+                        ? 'Clients will be presented with input text fields below each question. All questions are required, with N/A quick-fill buttons.'
+                        : 'Clients will read the agreement text and execute an electronic signature at the bottom.'}
+                    </p>
+                  </div>
+
                   <div>
                     <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Category</label>
                     <input
@@ -299,7 +332,7 @@ export const TemplateManagerView: React.FC = () => {
                       value={formData.category || ''}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                       className="w-full p-2.5 rounded-xl border border-[#EAE1D2] bg-[#F7F2E9]/40 text-xs font-medium outline-none"
-                      placeholder="e.g., Clinical Treatment, Billing Policy"
+                      placeholder="e.g., Clinical Treatment, Billing Policy, Intake"
                     />
                   </div>
 
@@ -326,19 +359,25 @@ export const TemplateManagerView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Section-by-Section Editor */}
+                {/* Section / Question Editor */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="text-sm font-serif font-bold text-[#2C2A2A]">Document Sections</h4>
-                      <p className="text-[11px] text-[#2C2A2A]/70">Add or edit section titles and text below each section. Changes format automatically for client view.</p>
+                      <h4 className="text-sm font-serif font-bold text-[#2C2A2A]">
+                        {formData.formType === 'questionnaire' ? 'Questionnaire Prompts & Questions' : 'Document Sections'}
+                      </h4>
+                      <p className="text-[11px] text-[#2C2A2A]/70">
+                        {formData.formType === 'questionnaire'
+                          ? 'Add questions for the client to answer. Each question will render an answer text field with a quick N/A button.'
+                          : 'Add or edit section titles and text below each section.'}
+                      </p>
                     </div>
                     <button
                       type="button"
                       onClick={handleAddSection}
                       className="px-3 py-1.5 bg-[#4A5741] hover:bg-[#384232] text-white text-xs font-semibold rounded-xl transition shadow-xs flex items-center gap-1"
                     >
-                      ➕ Add New Section
+                      {formData.formType === 'questionnaire' ? '➕ Add Question' : '➕ Add New Section'}
                     </button>
                   </div>
 

@@ -23,6 +23,7 @@ export const DEFAULT_CONSENT_TEMPLATES: ConsentTemplateData[] = [
     id: 'intake-v1',
     title: 'Initial Client Clinical Intake Questionnaire',
     category: 'Intake',
+    formType: 'questionnaire',
     version: 'v1.4 (2026)',
     isActive: true,
     requiredForIntake: true,
@@ -31,66 +32,47 @@ export const DEFAULT_CONSENT_TEMPLATES: ConsentTemplateData[] = [
     sections: [
       {
         id: 'sec-1',
-        title: 'SECTION 1: REASON FOR SEEKING CLINICAL TREATMENT & GOALS',
-        content: `1.1 Primary Reason for Therapy Presentation & Symptoms
-Comprehensive presentation details, primary concerns, and emotional/relational status.
-
-1.2 Reported Symptoms & Presenting Concerns
-Trauma / PTSD Symptoms • Sleep Disturbance • Grief / Loss • Anxiety • Mood Regulation
-
-1.3 Primary Treatment Goals & Desired Outcomes
-Client-centered goals and clinical milestones for therapeutic outcomes.`
+        title: '1.1 Primary Reason for Seeking Therapy & Symptoms',
+        content: 'Please describe your primary presenting concerns, emotional symptoms, and why you are seeking therapy at this time.'
       },
       {
         id: 'sec-2',
-        title: 'SECTION 2: TREATMENT & MEDICAL HISTORY',
-        content: `2.1 Prior Psychotherapy / Counseling History
-Previous counseling experience, inpatient/outpatient treatment, and prior clinical outcomes.
-
-2.2 Current Prescription & OTC Medications
-List of current medications, dosages, and prescribing clinicians.
-
-2.3 Relevant Medical Conditions & History
-Chronic medical conditions, injuries, physical health factors impacting clinical care.
-
-2.4 Current Healthcare & Medical Providers
-Primary care physician and psychiatric/specialist provider disclosures.`
+        title: '1.2 Primary Treatment Goals & Desired Outcomes',
+        content: 'What are your main goals for counseling? What changes or improvements would you like to see?'
       },
       {
         id: 'sec-3',
-        title: 'SECTION 3: SOCIAL HISTORY, SAFETY ASSESSMENT & ADDITIONAL NOTES',
-        content: `3.1 Social History & Relationship Background
-Relationship status, employment/educational history, living situation, and support systems.
-
-3.2 Safety Screening Assessment Record
-Standard Columbia-SSRS Safety Assessment screening for self-harm and suicidal ideation.
-
-3.3 Additional Client Disclosures & Notes
-Additional context, preferences, or confidential notes provided by client.`
+        title: '2.1 Prior Psychotherapy & Psychiatric Treatment History',
+        content: 'Please list any previous counseling, mental health diagnosis, or psychiatric hospitalizations.'
+      },
+      {
+        id: 'sec-4',
+        title: '2.2 Current Prescription & OTC Medications',
+        content: 'List all current prescription medications, dosages, and prescribing clinicians.'
+      },
+      {
+        id: 'sec-5',
+        title: '2.3 Relevant Medical Conditions & Healthcare Providers',
+        content: 'List any relevant physical medical conditions, surgeries, or primary care providers.'
+      },
+      {
+        id: 'sec-6',
+        title: '3.1 Social History, Relationship Status & Employment',
+        content: 'Describe your current relationship status, living arrangement, support system, and employment/schooling.'
+      },
+      {
+        id: 'sec-7',
+        title: '3.2 Safety Screening & Additional Clinical Disclosures',
+        content: 'Include any relevant safety history (self-harm, suicidal thoughts, substance use) or additional notes for your clinician.'
       }
     ],
-    textContent: `FAMILY TRUST THERAPY - INITIAL CLIENT CLINICAL INTAKE QUESTIONNAIRE
-
-SECTION 1: REASON FOR SEEKING CLINICAL TREATMENT & GOALS
-1.1 Primary Reason for Therapy Presentation & Symptoms
-1.2 Reported Symptoms & Presenting Concerns
-1.3 Primary Treatment Goals & Desired Outcomes
-
-SECTION 2: TREATMENT & MEDICAL HISTORY
-2.1 Prior Psychotherapy / Counseling History
-2.2 Current Prescription & OTC Medications
-2.3 Relevant Medical Conditions & History
-2.4 Current Healthcare & Medical Providers
-
-SECTION 3: SOCIAL HISTORY, SAFETY ASSESSMENT & ADDITIONAL NOTES
-3.1 Social History & Relationship Background
-3.2 Safety Screening Assessment Record
-3.3 Additional Client Disclosures & Notes`
+    textContent: `FAMILY TRUST THERAPY - INITIAL CLIENT CLINICAL INTAKE QUESTIONNAIRE`
   },
   {
     id: 'informed_consent',
     title: 'Informed Consent for Psychotherapy',
     category: 'Clinical Treatment',
+    formType: 'consent',
     version: 'v1.0',
     isActive: true,
     requiredForIntake: true,
@@ -118,24 +100,13 @@ SECTION 3: SOCIAL HISTORY, SAFETY ASSESSMENT & ADDITIONAL NOTES
         content: 'You have the right to request changes to treatment plans, seek a second opinion, or discontinue treatment at any time.'
       }
     ],
-    textContent: `FAMILY TRUST THERAPY - INFORMED CONSENT FOR PSYCHOTHERAPY
-
-1. Nature of Psychotherapy Services
-Psychotherapy is a collaborative process between client and clinician designed to assist you in addressing personal, emotional, or relational goals.
-
-2. Confidentiality & Legal Exceptions
-Information disclosed during therapy sessions is protected by law and professional ethics. Exceptions to confidentiality include: (a) suspicion of child, elder, or vulnerable adult abuse/neglect, (b) serious threat of imminent harm to self or others, or (c) court order.
-
-3. Cancellation & Attendance Policy
-Scheduled appointments require 24 hours cancellation notice. Late cancellations or no-shows may incur a standard cancellation fee.
-
-4. Client Rights & Voluntary Participation
-You have the right to request changes to treatment plans, seek a second opinion, or discontinue treatment at any time.`
+    textContent: `FAMILY TRUST THERAPY - INFORMED CONSENT FOR PSYCHOTHERAPY`
   },
   {
     id: 'telehealth_consent',
     title: 'Telehealth Services Informed Consent',
     category: 'Service Delivery',
+    formType: 'consent',
     version: 'v1.0',
     isActive: true,
     requiredForIntake: true,
@@ -158,21 +129,13 @@ You have the right to request changes to treatment plans, seek a second opinion,
         content: 'In the event of a technological disruption during a crisis, staff will contact your emergency phone number or emergency services (911/988). You must verify your physical address at the beginning of each session.'
       }
     ],
-    textContent: `TELEHEALTH SERVICES CONSENT ACKNOWLEDGMENT
-
-1. Nature of Telehealth Services
-Telehealth involves the delivery of mental healthcare services using interactive audio/video technologies.
-
-2. Confidentiality & Security
-Sessions are conducted via encrypted, HIPAA-aligned video platforms. You are responsible for ensuring a private, quiet space on your end.
-
-3. Emergency Protocol & Physical Location
-In the event of a technological disruption during a crisis, staff will contact your emergency phone number or emergency services (911/988). You must verify your physical address at the beginning of each session.`
+    textContent: `TELEHEALTH SERVICES CONSENT ACKNOWLEDGMENT`
   },
   {
     id: 'financial_policy',
     title: 'Financial Responsibility & Cancellation Agreement',
     category: 'Billing Policy',
+    formType: 'consent',
     version: 'v1.0',
     isActive: true,
     requiredForIntake: true,
@@ -195,16 +158,7 @@ In the event of a technological disruption during a crisis, staff will contact y
         content: 'Sessions canceled with less than 24 hours notice will be charged a standard cancellation fee.'
       }
     ],
-    textContent: `FINANCIAL RESPONSIBILITY & PAYMENT AGREEMENT
-
-1. Practice Fee Schedule & Payment Terms
-Payment or copays are due at the time of service unless alternative arrangements are established.
-
-2. Outstanding Balances & Billing
-Statements are generated monthly. Balances unpaid past 30 days are subject to administrative review.
-
-3. Late Cancellation Policy
-Sessions canceled with less than 24 hours notice will be charged a standard cancellation fee.`
+    textContent: `FINANCIAL RESPONSIBILITY & PAYMENT AGREEMENT`
   }
 ];
 
@@ -418,7 +372,9 @@ export async function signConsentDocument(
   clientId: string,
   template: ConsentTemplateData,
   clientTypedName: string,
-  signatureDataUrl?: string
+  signatureDataUrl?: string,
+  answers?: Record<string, string>,
+  exactTextSnapshotOverride?: string
 ): Promise<string> {
   const documentHash = `DOC_${template.id}_${Date.now()}_${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 
@@ -427,7 +383,8 @@ export async function signConsentDocument(
     templateId: template.id,
     templateVersion: template.version,
     documentTitle: template.title,
-    exactTextSnapshot: template.textContent, // Freezes exact document text at signing time!
+    exactTextSnapshot: exactTextSnapshotOverride || template.textContent, // Freezes exact document text at signing time!
+    answers: answers || {},
     clientTypedName,
     signatureDataUrl: signatureDataUrl || null,
     signedAtISO: new Date().toISOString(),
