@@ -39,8 +39,7 @@ export async function createPracticeNotification(notification: Omit<PracticeNoti
   try {
     await addDoc(collection(db, 'practiceNotifications'), cleanPayload);
   } catch (err) {
-    console.error("Failed to create practice notification in Firestore:", err);
-    throw err;
+    console.warn("Failed to create practice notification in Firestore:", err);
   }
 }
 

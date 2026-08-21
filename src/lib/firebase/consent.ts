@@ -102,7 +102,7 @@ export async function signConsentDocument(
     documentTitle: template.title,
     exactTextSnapshot: template.textContent, // Freezes exact document text at signing time!
     clientTypedName,
-    signatureDataUrl,
+    signatureDataUrl: signatureDataUrl || null,
     signedAtISO: new Date().toISOString(),
     documentHash,
     status: 'signed'
@@ -124,13 +124,17 @@ export async function signConsentDocument(
     { merge: true }
   );
 
-  await createPracticeNotification({
-    type: 'document_signed',
-    title: '📄 Consent Agreement Signed',
-    message: `${clientTypedName} electronically signed ${template.title}.`,
-    clientId,
-    clientName: clientTypedName
-  });
+  try {
+    await createPracticeNotification({
+      type: 'document_signed',
+      title: '📄 Consent Agreement Signed',
+      message: `${clientTypedName} electronically signed ${template.title}.`,
+      clientId,
+      clientName: clientTypedName
+    });
+  } catch (notifErr) {
+    console.warn("Failed to dispatch practice notification for document sign:", notifErr);
+  }
 
   return documentHash;
 }

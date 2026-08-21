@@ -149,15 +149,20 @@ export const ConsentSigner: React.FC = () => {
         signatureDataUrl
       );
 
-      // Refresh signed docs
-      const updatedSigned = await getSignedDocuments(user.uid);
-      setSignedDocs(updatedSigned);
       setMessage(`Document successfully signed and archived! Unique Audit Hash: ${docHash}`);
       setTypedSignature('');
       setAcknowledged(false);
       clearCanvas();
+
+      // Refresh signed docs safely
+      try {
+        const updatedSigned = await getSignedDocuments(user.uid);
+        setSignedDocs(updatedSigned);
+      } catch (refreshErr) {
+        console.warn("Could not refresh signed documents list immediately:", refreshErr);
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Failed to sign consent document:", err);
       alert("Failed to record document signature. Please try again.");
     } finally {
       setSigning(false);
