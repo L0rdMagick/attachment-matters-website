@@ -29,8 +29,8 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
     try {
       const [allAppts, intakeClients, allClients, notifDocs] = await Promise.all([
         getAppointments({}),
-        getClientsDirectory({ intakeStatus: 'submitted' }),
-        getClientsDirectory(),
+        getClientsDirectory({ intakeStatus: 'submitted', accountStatus: 'all' }),
+        getClientsDirectory({ accountStatus: 'all' }),
         getPracticeNotifications()
       ]);
 

@@ -177,9 +177,47 @@ const MainPortalContent: React.FC = () => {
     );
   }
 
+class PortalErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error("Portal Component Error caught by boundary:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 max-w-lg mx-auto my-12 bg-white border-2 border-red-300 rounded-3xl text-center space-y-4 shadow-xl font-sans">
+          <div className="w-12 h-12 bg-red-100 text-red-700 rounded-full flex items-center justify-center mx-auto font-bold text-xl">
+            ⚠️
+          </div>
+          <h2 className="text-xl font-serif text-[#2C2A2A] font-bold">Portal Render Recovered</h2>
+          <p className="text-xs text-red-600 bg-red-50 p-3 rounded-xl border border-red-200">
+            {this.state.error?.message || 'A temporary component display issue occurred.'}
+          </p>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="px-6 py-2.5 bg-[#BF5B33] text-white text-xs font-semibold rounded-xl hover:bg-[#a64e2b] transition"
+          >
+            🔄 Reload Portal View
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
   // Therapist / Admin Staff Experience
   return (
-    <>
+    <PortalErrorBoundary>
       {isOwner && <RoleSwitcherBanner />}
       <StaffLayout
         activeTab={activeTab}
@@ -203,7 +241,7 @@ const MainPortalContent: React.FC = () => {
         {activeTab === 'billing' && <LedgerManager />}
         {activeTab === 'intake-templates' && <TemplateManagerView />}
       </StaffLayout>
-    </>
+    </PortalErrorBoundary>
   );
 };
 
