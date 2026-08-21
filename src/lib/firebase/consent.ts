@@ -12,7 +12,11 @@ import {
 import { db } from './config';
 import type { ConsentTemplateData, SignedDocumentData } from '../../types/consent';
 
-// Pre-configured practice consent templates
+import { deleteDoc } from 'firebase/firestore';
+
+const STORAGE_KEY = 'practice_form_templates_v1';
+
+// Pre-configured practice consent templates with structured sections
 export const DEFAULT_CONSENT_TEMPLATES: ConsentTemplateData[] = [
   {
     id: 'informed_consent',
@@ -21,12 +25,43 @@ export const DEFAULT_CONSENT_TEMPLATES: ConsentTemplateData[] = [
     version: 'v1.0',
     isActive: true,
     requiredForIntake: true,
+    description: 'Legal agreement covering therapeutic process, confidentiality parameters, mandatory reporting, and client rights.',
+    lastUpdated: '2026-08-01',
+    sections: [
+      {
+        id: 'sec-1',
+        title: '1. Nature of Psychotherapy Services',
+        content: 'Psychotherapy is a collaborative process between client and clinician designed to assist you in addressing personal, emotional, or relational goals.'
+      },
+      {
+        id: 'sec-2',
+        title: '2. Confidentiality & Legal Exceptions',
+        content: 'Information disclosed during therapy sessions is protected by law and professional ethics. Exceptions to confidentiality include: (a) suspicion of child, elder, or vulnerable adult abuse/neglect, (b) serious threat of imminent harm to self or others, or (c) court order.'
+      },
+      {
+        id: 'sec-3',
+        title: '3. Cancellation & Attendance Policy',
+        content: 'Scheduled appointments require 24 hours cancellation notice. Late cancellations or no-shows may incur a standard cancellation fee.'
+      },
+      {
+        id: 'sec-4',
+        title: '4. Client Rights & Voluntary Participation',
+        content: 'You have the right to request changes to treatment plans, seek a second opinion, or discontinue treatment at any time.'
+      }
+    ],
     textContent: `FAMILY TRUST THERAPY - INFORMED CONSENT FOR PSYCHOTHERAPY
 
-1. Services Offered: Psychotherapy is a collaborative process between client and clinician designed to assist you in addressing personal, emotional, or relational goals.
-2. Confidentiality: Information disclosed during therapy sessions is protected by law and professional ethics. Exceptions to confidentiality include: (a) suspicion of child, elder, or vulnerable adult abuse/neglect, (b) serious threat of imminent harm to self or others, or (c) court order.
-3. Appointments & Cancellations: Scheduled appointments require 24 hours cancellation notice. Late cancellations or no-shows may incur a cancellation fee.
-4. Client Rights: You have the right to request changes to treatment plans, seek a second opinion, or discontinue treatment at any time.`
+1. Nature of Psychotherapy Services
+Psychotherapy is a collaborative process between client and clinician designed to assist you in addressing personal, emotional, or relational goals.
+
+2. Confidentiality & Legal Exceptions
+Information disclosed during therapy sessions is protected by law and professional ethics. Exceptions to confidentiality include: (a) suspicion of child, elder, or vulnerable adult abuse/neglect, (b) serious threat of imminent harm to self or others, or (c) court order.
+
+3. Cancellation & Attendance Policy
+Scheduled appointments require 24 hours cancellation notice. Late cancellations or no-shows may incur a standard cancellation fee.
+
+4. Client Rights & Voluntary Participation
+You have the right to request changes to treatment plans, seek a second opinion, or discontinue treatment at any time.`
   },
   {
     id: 'telehealth_consent',
@@ -35,11 +70,35 @@ export const DEFAULT_CONSENT_TEMPLATES: ConsentTemplateData[] = [
     version: 'v1.0',
     isActive: true,
     requiredForIntake: true,
+    description: 'Specialized consent for HIPAA-compliant audio/video sessions, emergency protocols, and technical requirements.',
+    lastUpdated: '2026-08-01',
+    sections: [
+      {
+        id: 'sec-1',
+        title: '1. Nature of Telehealth Services',
+        content: 'Telehealth involves the delivery of mental healthcare services using interactive audio/video technologies.'
+      },
+      {
+        id: 'sec-2',
+        title: '2. Confidentiality & Security',
+        content: 'Sessions are conducted via encrypted, HIPAA-aligned video platforms. You are responsible for ensuring a private, quiet space on your end.'
+      },
+      {
+        id: 'sec-3',
+        title: '3. Emergency Protocol & Physical Location',
+        content: 'In the event of a technological disruption during a crisis, staff will contact your emergency phone number or emergency services (911/988). You must verify your physical address at the beginning of each session.'
+      }
+    ],
     textContent: `TELEHEALTH SERVICES CONSENT ACKNOWLEDGMENT
 
-1. Nature of Telehealth: Telehealth involves the delivery of mental healthcare services using interactive audio/video technologies.
-2. Confidentiality & Security: Sessions are conducted via encrypted, HIPAA-aligned video platforms. You are responsible for ensuring a private, quiet space on your end.
-3. Emergency Protocol: In the event of a technological disruption during a crisis, staff will contact your emergency phone number or emergency services (911/988).`
+1. Nature of Telehealth Services
+Telehealth involves the delivery of mental healthcare services using interactive audio/video technologies.
+
+2. Confidentiality & Security
+Sessions are conducted via encrypted, HIPAA-aligned video platforms. You are responsible for ensuring a private, quiet space on your end.
+
+3. Emergency Protocol & Physical Location
+In the event of a technological disruption during a crisis, staff will contact your emergency phone number or emergency services (911/988). You must verify your physical address at the beginning of each session.`
   },
   {
     id: 'financial_policy',
@@ -48,27 +107,133 @@ export const DEFAULT_CONSENT_TEMPLATES: ConsentTemplateData[] = [
     version: 'v1.0',
     isActive: true,
     requiredForIntake: true,
+    description: 'Fee schedule, payment terms, insurance claim policies, and financial authorization.',
+    lastUpdated: '2026-08-01',
+    sections: [
+      {
+        id: 'sec-1',
+        title: '1. Practice Fee Schedule & Payment Terms',
+        content: 'Payment or copays are due at the time of service unless alternative arrangements are established.'
+      },
+      {
+        id: 'sec-2',
+        title: '2. Outstanding Balances & Billing',
+        content: 'Statements are generated monthly. Balances unpaid past 30 days are subject to administrative review.'
+      },
+      {
+        id: 'sec-3',
+        title: '3. Late Cancellation Policy',
+        content: 'Sessions canceled with less than 24 hours notice will be charged a standard cancellation fee.'
+      }
+    ],
     textContent: `FINANCIAL RESPONSIBILITY & PAYMENT AGREEMENT
 
-1. Payment Terms: Payment or copays are due at the time of service unless alternative arrangements are established.
-2. Outstanding Balances: Statements are generated monthly. Balances unpaid past 30 days are subject to administrative review.
-3. Cancellation Fee: Sessions canceled with less than 24 hours notice will be charged a standard cancellation fee.`
+1. Practice Fee Schedule & Payment Terms
+Payment or copays are due at the time of service unless alternative arrangements are established.
+
+2. Outstanding Balances & Billing
+Statements are generated monthly. Balances unpaid past 30 days are subject to administrative review.
+
+3. Late Cancellation Policy
+Sessions canceled with less than 24 hours notice will be charged a standard cancellation fee.`
   }
 ];
 
 /**
- * Fetch all active consent templates
+ * Helper to sync templates with localStorage
+ */
+function getLocalTemplates(): ConsentTemplateData[] | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch (err) {
+    console.warn("Could not read local templates:", err);
+  }
+  return null;
+}
+
+function saveLocalTemplates(templates: ConsentTemplateData[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+  } catch (err) {
+    console.warn("Could not save local templates:", err);
+  }
+}
+
+/**
+ * Fetch all active consent templates (Firestore + LocalStorage Sync)
  */
 export async function getConsentTemplates(): Promise<ConsentTemplateData[]> {
-  const colRef = collection(db, 'consentTemplates');
-  const snap = await getDocs(colRef);
+  try {
+    const colRef = collection(db, 'consentTemplates');
+    const snap = await getDocs(colRef);
 
-  if (snap.empty) {
-    // Return default templates if empty in Firestore
-    return DEFAULT_CONSENT_TEMPLATES;
+    if (!snap.empty) {
+      const fsTemplates = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ConsentTemplateData));
+      const activeOnly = fsTemplates.filter(t => t.isActive !== false);
+      saveLocalTemplates(activeOnly);
+      return activeOnly;
+    }
+  } catch (err) {
+    console.warn("Could not fetch templates from Firestore, using local/default fallback:", err);
   }
 
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as ConsentTemplateData));
+  // Fallback to localStorage or default
+  const local = getLocalTemplates();
+  if (local && local.length > 0) {
+    return local;
+  }
+
+  saveLocalTemplates(DEFAULT_CONSENT_TEMPLATES);
+  return DEFAULT_CONSENT_TEMPLATES;
+}
+
+/**
+ * Save / Update a consent template (Firestore + LocalStorage Sync)
+ */
+export async function saveConsentTemplate(template: ConsentTemplateData): Promise<void> {
+  // Update Firestore
+  try {
+    const docRef = doc(db, 'consentTemplates', template.id);
+    await setDoc(docRef, {
+      ...template,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  } catch (err) {
+    console.warn("Could not save template to Firestore, saved locally:", err);
+  }
+
+  // Update Local Storage
+  const current = (await getConsentTemplates()) || [];
+  const idx = current.findIndex(t => t.id === template.id);
+  let updatedList: ConsentTemplateData[];
+  if (idx >= 0) {
+    updatedList = [...current];
+    updatedList[idx] = template;
+  } else {
+    updatedList = [...current, template];
+  }
+  saveLocalTemplates(updatedList);
+}
+
+/**
+ * Delete a consent template (Firestore + LocalStorage Sync)
+ */
+export async function deleteConsentTemplate(templateId: string): Promise<void> {
+  // Update Firestore
+  try {
+    const docRef = doc(db, 'consentTemplates', templateId);
+    await deleteDoc(docRef);
+  } catch (err) {
+    console.warn("Could not delete template from Firestore, deleted locally:", err);
+  }
+
+  // Update Local Storage
+  const current = (await getConsentTemplates()) || [];
+  const updatedList = current.filter(t => t.id !== templateId);
+  saveLocalTemplates(updatedList);
 }
 
 /**

@@ -267,10 +267,25 @@ export const ConsentSigner: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Exact Document Text Scroll Area */}
-                <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-xl p-5 text-xs text-[#2C2A2A] leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap font-mono">
-                  {selectedTemplate.textContent}
-                </div>
+                {/* Formatted Document Text & Sections */}
+                {selectedTemplate.sections && selectedTemplate.sections.length > 0 ? (
+                  <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-xl p-4 sm:p-5 text-xs text-[#2C2A2A] leading-relaxed max-h-[400px] overflow-y-auto space-y-4 font-sans">
+                    {selectedTemplate.sections.map((sec, idx) => (
+                      <div key={sec.id || idx} className="bg-white p-4 rounded-xl border border-[#EAE1D2] space-y-1.5 shadow-xs">
+                        <h4 className="font-serif font-bold text-sm text-[#2C2A2A] border-b border-[#EAE1D2] pb-1">
+                          {sec.title}
+                        </h4>
+                        <p className="text-xs text-[#2C2A2A]/90 whitespace-pre-wrap leading-relaxed">
+                          {sec.content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-xl p-5 text-xs text-[#2C2A2A] leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap font-mono">
+                    {selectedTemplate.textContent}
+                  </div>
+                )}
 
                 {/* E-Signature Form */}
                 <form onSubmit={handleSignDocument} className="space-y-4 border-t border-[#EAE1D2] pt-4">

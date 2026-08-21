@@ -1,3 +1,9 @@
+export interface FormSection {
+  id: string;
+  title: string;
+  content: string;
+}
+
 export interface ConsentTemplateData {
   id: string;
   title: string;
@@ -6,6 +12,9 @@ export interface ConsentTemplateData {
   version: string;
   isActive: boolean;
   requiredForIntake: boolean;
+  description?: string;
+  sections?: FormSection[];
+  lastUpdated?: string;
 }
 
 export interface SignedDocumentData {
