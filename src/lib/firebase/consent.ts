@@ -108,6 +108,15 @@ export async function signConsentDocument(
     status: 'signed'
   };
 
+  // Check if previously signed to determine if this is an update
+  let isUpdate = false;
+  try {
+    const existingDocs = await getSignedDocuments(clientId);
+    isUpdate = existingDocs.some((d) => d.templateId === template.id);
+  } catch (checkErr) {
+    console.warn("Could not check existing signed documents:", checkErr);
+  }
+
   await addDoc(collection(db, 'signedDocuments'), {
     ...signedDoc,
     createdAt: serverTimestamp()
@@ -125,12 +134,27 @@ export async function signConsentDocument(
   );
 
   try {
+    const formattedTimestamp = new Date().toLocaleString('en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    });
+
+    const detailsStr = [
+      `Document: ${template.title}`,
+      `Category: ${template.category} (${template.version})`,
+      `Signer Legal Name: ${clientTypedName}`,
+      `Action: ${isUpdate ? 'Re-signed & Updated Agreement' : 'New Signature Executed'}`,
+      `Audit Hash: ${documentHash}`,
+      `Signed At: ${formattedTimestamp}`
+    ].join('\n');
+
     await createPracticeNotification({
       type: 'document_signed',
-      title: '📄 Consent Agreement Signed',
-      message: `${clientTypedName} electronically signed ${template.title}.`,
+      title: isUpdate ? '📄 Consent Agreement Updated' : '📄 Consent Agreement Signed',
+      message: `${clientTypedName} ${isUpdate ? 'updated and re-signed' : 'electronically signed'} ${template.title}.`,
       clientId,
-      clientName: clientTypedName
+      clientName: clientTypedName,
+      details: detailsStr
     });
   } catch (notifErr) {
     console.warn("Failed to dispatch practice notification for document sign:", notifErr);

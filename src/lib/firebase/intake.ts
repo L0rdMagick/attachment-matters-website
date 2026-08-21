@@ -35,6 +35,17 @@ export async function saveIntakeSubmission(
     ...(isFinalSubmit ? { submittedAt: serverTimestamp() } : {})
   };
 
+  // Check if intake was previously submitted to determine if this is an update
+  let isUpdate = false;
+  try {
+    const existingSnap = await getDoc(docRef);
+    if (existingSnap.exists() && existingSnap.data()?.status === 'submitted') {
+      isUpdate = true;
+    }
+  } catch (checkErr) {
+    console.warn("Could not check existing intake submission:", checkErr);
+  }
+
   await setDoc(docRef, payload, { merge: true });
 
   // Update intake status in client document
@@ -54,12 +65,48 @@ export async function saveIntakeSubmission(
     const cData = clientProfSnap.exists() ? clientProfSnap.data() : {};
     const clientName = (cData.legalFirstName ? `${cData.legalFirstName} ${cData.legalLastName || ''}` : 'Client').trim();
 
+    const formattedTimestamp = new Date().toLocaleString('en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    });
+
+    const keyDetails: string[] = [];
+    keyDetails.push(`Action: ${isUpdate ? 'Intake Form Re-submitted & Updated' : 'Initial Clinical Intake Submitted'}`);
+    
+    if (formData.reasonForTherapy?.trim()) {
+      const truncatedReason = formData.reasonForTherapy.trim().substring(0, 120);
+      keyDetails.push(`Primary Presentation: "${truncatedReason}${formData.reasonForTherapy.length > 120 ? '...' : ''}"`);
+    }
+
+    if (formData.therapyGoals?.trim()) {
+      const truncatedGoals = formData.therapyGoals.trim().substring(0, 120);
+      keyDetails.push(`Treatment Goals: "${truncatedGoals}${formData.therapyGoals.length > 120 ? '...' : ''}"`);
+    }
+
+    if (formData.currentSymptoms && formData.currentSymptoms.length > 0) {
+      keyDetails.push(`Reported Symptoms (${formData.currentSymptoms.length}): ${formData.currentSymptoms.slice(0, 6).join(', ')}${formData.currentSymptoms.length > 6 ? '...' : ''}`);
+    }
+
+    if (formData.safetyScreeningAnswers) {
+      const safetyFlags: string[] = [];
+      if (formData.safetyScreeningAnswers.suicidalIdeationPastMonth) safetyFlags.push('⚠️ Suicidal Ideation (Past Month)');
+      if (formData.safetyScreeningAnswers.selfHarmHistory) safetyFlags.push('⚠️ Self-Harm History');
+      if (safetyFlags.length > 0) {
+        keyDetails.push(`Safety Screening Alerts: ${safetyFlags.join(' | ')}`);
+      } else {
+        keyDetails.push(`Safety Screening: No immediate suicidal ideation or self-harm reported.`);
+      }
+    }
+
+    keyDetails.push(`Submitted At: ${formattedTimestamp}`);
+
     await createPracticeNotification({
       type: 'intake_submitted',
-      title: '📝 Intake Form Submitted',
-      message: `${clientName} submitted their initial clinical intake questionnaire.`,
+      title: isUpdate ? '📝 Intake Form Updated' : '📝 Intake Form Submitted',
+      message: `${clientName} ${isUpdate ? 'updated and re-submitted' : 'submitted'} their initial clinical intake questionnaire.`,
       clientId,
-      clientName
+      clientName,
+      details: keyDetails.join('\n')
     });
   }
 }

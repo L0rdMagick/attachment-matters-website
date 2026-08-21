@@ -19,6 +19,8 @@ export const ConsentSigner: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
+  const [isEditingSigned, setIsEditingSigned] = useState(false);
+
   useEffect(() => {
     if (!user) return;
     async function loadData() {
@@ -98,6 +100,7 @@ export const ConsentSigner: React.FC = () => {
 
   const handleSelectTemplate = (template: ConsentTemplateData) => {
     setSelectedTemplate(template);
+    setIsEditingSigned(false);
     setTypedSignature('');
     setAcknowledged(false);
     clearCanvas();
@@ -152,6 +155,7 @@ export const ConsentSigner: React.FC = () => {
       setMessage(`Document successfully signed and archived! Unique Audit Hash: ${docHash}`);
       setTypedSignature('');
       setAcknowledged(false);
+      setIsEditingSigned(false);
       clearCanvas();
 
       // Refresh signed docs safely
@@ -218,12 +222,29 @@ export const ConsentSigner: React.FC = () => {
         {/* Selected Document Text & Signing Form / Printable View */}
         <div className="md:col-span-2 space-y-6">
           {selectedTemplate && (
-            isAlreadySigned(selectedTemplate.id) && getSignedDocForTemplate(selectedTemplate.id) ? (
-              <PrintableSignedConsentDocument
-                clientName={profile?.legalFirstName ? `${profile.legalFirstName} ${profile.legalLastName}` : (user?.email || '')}
-                clientEmail={user?.email || ''}
-                signedDoc={getSignedDocForTemplate(selectedTemplate.id)!}
-              />
+            isAlreadySigned(selectedTemplate.id) && !isEditingSigned && getSignedDocForTemplate(selectedTemplate.id) ? (
+              <div className="space-y-4">
+                <div className="flex justify-end no-print print:hidden">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const existingDoc = getSignedDocForTemplate(selectedTemplate.id);
+                      if (existingDoc?.clientTypedName) {
+                        setTypedSignature(existingDoc.clientTypedName);
+                      }
+                      setIsEditingSigned(true);
+                    }}
+                    className="px-4 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5"
+                  >
+                    ✏️ Update / Re-Sign Agreement
+                  </button>
+                </div>
+                <PrintableSignedConsentDocument
+                  clientName={profile?.legalFirstName ? `${profile.legalFirstName} ${profile.legalLastName}` : (user?.email || '')}
+                  clientEmail={user?.email || ''}
+                  signedDoc={getSignedDocForTemplate(selectedTemplate.id)!}
+                />
+              </div>
             ) : (
               <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
                 <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-4">

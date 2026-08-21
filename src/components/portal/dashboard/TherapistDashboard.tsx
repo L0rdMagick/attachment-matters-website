@@ -264,9 +264,14 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
 
                     <p className="font-semibold text-sm">{notif.message}</p>
                     {notif.details && (
-                      <p className="text-[11px] opacity-85 italic bg-white/60 p-2 rounded-lg border border-gray-200/60 mt-1 whitespace-pre-line">
-                        Details: {notif.details}
-                      </p>
+                      <div className="text-[11px] bg-white/90 p-3 rounded-xl border border-gray-200/80 mt-2 space-y-1 font-mono text-[#2C2A2A]">
+                        <strong className="block text-[10px] font-sans font-bold uppercase tracking-wider text-[#BF5B33]">
+                          Detailed Audit & Form Summary:
+                        </strong>
+                        <div className="whitespace-pre-line leading-relaxed text-[11px] font-sans opacity-95">
+                          {notif.details}
+                        </div>
+                      </div>
                     )}
                   </div>
 
