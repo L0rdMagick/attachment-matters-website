@@ -114,9 +114,6 @@ export async function updateClientProfile(
   }
 
   // Always record practice notification for client profile changes
-  const firstName = updatedData.legalFirstName || currentData.legalFirstName || '';
-  const lastName = updatedData.legalLastName || currentData.legalLastName || '';
-  const name = (firstName ? `${firstName} ${lastName}` : 'Client').trim();
 
   const detailsText = changedFields.length > 0
     ? `Updated fields: ${changedFields.join(', ')}`
