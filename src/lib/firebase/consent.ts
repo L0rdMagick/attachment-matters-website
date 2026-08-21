@@ -345,21 +345,74 @@ export async function deleteConsentTemplate(templateId: string): Promise<void> {
   saveLocalTemplates(updatedList);
 }
 
+const STORAGE_SIGNED_DOCS_KEY = 'practice_signed_documents_v1';
+
+function getLocalSignedDocuments(clientId?: string): SignedDocumentData[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_SIGNED_DOCS_KEY);
+    if (raw) {
+      const all: SignedDocumentData[] = JSON.parse(raw);
+      if (clientId) {
+        return all.filter((d) => d.clientId === clientId);
+      }
+      return all;
+    }
+  } catch (err) {
+    console.warn("Could not read local signed documents:", err);
+  }
+  return [];
+}
+
+function saveLocalSignedDocument(docToSave: SignedDocumentData): void {
+  try {
+    const all = getLocalSignedDocuments();
+    const idx = all.findIndex((d) => d.documentHash === docToSave.documentHash || (d.clientId === docToSave.clientId && d.templateId === docToSave.templateId));
+    let updated: SignedDocumentData[];
+    if (idx >= 0) {
+      updated = [...all];
+      updated[idx] = docToSave;
+    } else {
+      updated = [docToSave, ...all];
+    }
+    localStorage.setItem(STORAGE_SIGNED_DOCS_KEY, JSON.stringify(updated));
+  } catch (err) {
+    console.warn("Could not save local signed document:", err);
+  }
+}
+
 /**
- * Fetch signed documents for a client
+ * Fetch signed documents for a client (Firestore + LocalStorage Sync)
  */
 export async function getSignedDocuments(clientId: string): Promise<SignedDocumentData[]> {
-  const colRef = collection(db, 'signedDocuments');
-  const q = query(colRef, where('clientId', '==', clientId));
-  const snap = await getDocs(q);
+  let fsDocs: SignedDocumentData[] = [];
+  try {
+    const colRef = collection(db, 'signedDocuments');
+    const q = query(colRef, where('clientId', '==', clientId));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      fsDocs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as SignedDocumentData));
+    }
+  } catch (err) {
+    console.warn("Could not fetch signed documents from Firestore, using local fallback:", err);
+  }
 
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as SignedDocumentData));
+  const localDocs = getLocalSignedDocuments(clientId);
+
+  // Merge Firestore docs with LocalStorage docs (by documentHash or templateId)
+  const docMap = new Map<string, SignedDocumentData>();
+  localDocs.forEach((d) => docMap.set(d.documentHash || `${d.clientId}_${d.templateId}`, d));
+  fsDocs.forEach((d) => docMap.set(d.documentHash || `${d.clientId}_${d.templateId}`, d));
+
+  const merged = Array.from(docMap.values());
+  // Update local cache
+  merged.forEach((d) => saveLocalSignedDocument(d));
+  return merged;
 }
 
 import { createPracticeNotification } from './notifications';
 
 /**
- * Sign & Freeze Consent Document
+ * Sign & Freeze Consent Document (Firestore + LocalStorage Sync)
  */
 export async function signConsentDocument(
   clientId: string,
@@ -391,27 +444,40 @@ export async function signConsentDocument(
     console.warn("Could not check existing signed documents:", checkErr);
   }
 
-  await addDoc(collection(db, 'signedDocuments'), {
-    ...signedDoc,
-    createdAt: serverTimestamp()
-  });
+  // 1. Immediately save to LocalStorage cache
+  saveLocalSignedDocument(signedDoc);
 
-  // Update consent status in client document
-  const clientRef = doc(db, 'clients', clientId);
-  await setDoc(
-    clientRef,
-    {
-      consentStatus: 'completed',
-      lastConsentSignedAt: serverTimestamp(),
-      lastConsentTitle: template.title,
-      updatedAt: serverTimestamp()
-    },
-    { merge: true }
-  );
+  // 2. Save to Firestore
+  try {
+    await addDoc(collection(db, 'signedDocuments'), {
+      ...signedDoc,
+      createdAt: serverTimestamp()
+    });
+  } catch (fsErr) {
+    console.warn("Could not save signed document to Firestore, saved locally:", fsErr);
+  }
+
+  // 3. Update consent status in client document
+  try {
+    const clientRef = doc(db, 'clients', clientId);
+    await setDoc(
+      clientRef,
+      {
+        consentStatus: 'completed',
+        lastConsentSignedAt: serverTimestamp(),
+        lastConsentTitle: template.title,
+        updatedAt: serverTimestamp()
+      },
+      { merge: true }
+    );
+  } catch (cErr) {
+    console.warn("Could not update client consent status in Firestore:", cErr);
+  }
 
   try {
     let clientDisplayName = clientTypedName;
     try {
+      const clientRef = doc(db, 'clients', clientId);
       const cSnap = await getDoc(clientRef);
       if (cSnap.exists()) {
         const cData = cSnap.data();
