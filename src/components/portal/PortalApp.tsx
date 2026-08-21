@@ -217,10 +217,14 @@ class PortalErrorBoundary extends React.Component<{ children: React.ReactNode },
   );
 };
 
+import { PortalModalProvider } from './common/PortalModalContext';
+
 export const PortalApp: React.FC = () => {
   return (
     <AuthProvider>
-      <MainPortalContent />
+      <PortalModalProvider>
+        <MainPortalContent />
+      </PortalModalProvider>
     </AuthProvider>
   );
 };

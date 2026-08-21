@@ -13,9 +13,11 @@ import {
 import { getClientsDirectory } from '../../../lib/firebase/clients';
 import type { AppointmentData, AppointmentStatus, AvailabilityRules } from '../../../types/scheduling';
 import type { ClientProfileData } from '../../../types/client';
+import { usePortalModal } from '../common/PortalModalContext';
 
 export const TherapistCalendar: React.FC = () => {
   const { user } = useAuth();
+  const { showConfirm, showAlert } = usePortalModal();
   const [appointments, setAppointments] = useState<AppointmentData[]>([]);
   const [clientList, setClientList] = useState<ClientProfileData[]>([]);
   const [rules, setRules] = useState<AvailabilityRules>(DEFAULT_AVAILABILITY_RULES);
@@ -46,6 +48,39 @@ export const TherapistCalendar: React.FC = () => {
   const [rescheduleSlot, setRescheduleSlot] = useState<string | null>(null);
   const [rescheduleNote, setRescheduleNote] = useState('');
   const [rescheduling, setRescheduling] = useState(false);
+
+  const executeBooking = async (startISO: string, endISO: string, selectedClientObj?: ClientProfileData) => {
+    try {
+      await bookAppointmentWithLock({
+        clientId: selectedClientId,
+        clientName: selectedClientObj ? `${selectedClientObj.legalFirstName} ${selectedClientObj.legalLastName}` : undefined,
+        clientEmail: selectedClientObj?.email || undefined,
+        therapistId: 'default_therapist',
+        appointmentTypeId: schedType.id,
+        appointmentTypeName: schedType.name,
+        startISO,
+        endISO,
+        timezone: rules.timezone || 'America/Chicago',
+        format: schedFormat,
+        locationOrLink: schedFormat === 'telehealth' ? 'https://familytrusttherapy.com/telehealth-room' : '123 Practice Way, Suite 100',
+        status: 'confirmed',
+        notes: schedNote.trim() || undefined,
+        priceInCents: schedType.priceInCents,
+        syncStatus: 'pending'
+      }, true);
+
+      const updated = await getAppointments({ therapistId: 'default_therapist' });
+      setAppointments(updated);
+      setShowScheduleModal(false);
+
+      showAlert('✓ Session Scheduled', `Appointment for ${selectedClientObj?.legalFirstName || 'Client'} scheduled successfully!`, 'success', '🗓️');
+    } catch (err: any) {
+      console.error(err);
+      setSchedMessage(err.message || "Failed to schedule appointment due to lock collision.");
+    } finally {
+      setSchedBooking(false);
+    }
+  };
 
   useEffect(() => {
     async function loadAppts() {
@@ -190,67 +225,45 @@ export const TherapistCalendar: React.FC = () => {
       schedType?.bufferAfterMinutes || 0
     );
 
-    if (availCheck.hasDoubleBooking) {
-      const proceedDouble = confirm(
-        `⚠️ DOUBLE BOOKING WARNING:\n\n${availCheck.doubleBookingReason}\n\nDo you want to override and proceed with this double booking?`
-      );
-      if (!proceedDouble) {
-        setSchedBooking(false);
-        setShowScheduleModal(false);
-        return;
-      }
-    }
-
-    if (availCheck.isOutsideHours) {
-      const proceedOutside = confirm(
-        `⚠️ OUTSIDE SCHEDULED HOURS WARNING:\n\n${availCheck.outsideHoursReason}\n\nDo you want to override your practice settings and schedule this session outside of scheduled hours?`
-      );
-      if (!proceedOutside) {
-        setSchedBooking(false);
-        setShowScheduleModal(false);
-        return;
-      }
-    }
-
     const startISO = `${schedDate}T${schedTime}:00`;
     const endISO = new Date(new Date(startISO).getTime() + (schedType?.durationMinutes || 50) * 60000).toISOString();
     const selectedClientObj = clientList.find(c => c.uid === selectedClientId);
 
-    try {
-      await bookAppointmentWithLock({
-        clientId: selectedClientId,
-        clientName: selectedClientObj ? `${selectedClientObj.legalFirstName} ${selectedClientObj.legalLastName}` : undefined,
-        clientEmail: selectedClientObj?.email || undefined,
-        therapistId: 'default_therapist',
-        appointmentTypeId: schedType.id,
-        appointmentTypeName: schedType.name,
-        startISO,
-        endISO,
-        timezone: rules.timezone || 'America/Chicago',
-        format: schedFormat,
-        locationOrLink: schedFormat === 'telehealth' ? 'https://familytrusttherapy.com/telehealth-room' : '123 Practice Way, Suite 100',
-        status: 'confirmed',
-        notes: schedNote.trim() || undefined,
-        priceInCents: schedType.priceInCents,
-        syncStatus: 'pending'
-      }, true);
-
-      const updated = await getAppointments({ therapistId: 'default_therapist' });
-      setAppointments(updated);
-      setShowScheduleModal(false);
-      setSchedNote('');
-
-      setNoticeModal({
-        title: "Appointment Scheduled",
-        message: `Clinical session (${schedType.name}) for ${selectedClientObj ? `${selectedClientObj.legalFirstName} ${selectedClientObj.legalLastName}` : 'Client'} booked for ${new Date(startISO).toLocaleString()}.`,
-        type: "success"
+    if (availCheck.hasDoubleBooking) {
+      showConfirm({
+        title: '⚠️ Double Booking Warning',
+        message: 'The selected time conflicts with an existing appointment in your calendar.',
+        details: availCheck.doubleBookingReason,
+        icon: '⚠️',
+        confirmText: 'Override & Double Book',
+        cancelText: 'Cancel & Change Slot',
+        variant: 'warning',
+        onConfirm: () => executeBooking(startISO, endISO, selectedClientObj),
+        onCancel: () => {
+          setSchedBooking(false);
+        }
       });
-    } catch (err: any) {
-      console.error(err);
-      setSchedMessage(err.message || "Failed to schedule appointment.");
-    } finally {
-      setSchedBooking(false);
+      return;
     }
+
+    if (availCheck.isOutsideHours) {
+      showConfirm({
+        title: '⚠️ Outside Scheduled Hours Warning',
+        message: 'The selected time falls outside of regular scheduled practice hours.',
+        details: availCheck.outsideHoursReason,
+        icon: '⚠️',
+        confirmText: 'Override & Schedule',
+        cancelText: 'Cancel & Change Slot',
+        variant: 'warning',
+        onConfirm: () => executeBooking(startISO, endISO, selectedClientObj),
+        onCancel: () => {
+          setSchedBooking(false);
+        }
+      });
+      return;
+    }
+
+    executeBooking(startISO, endISO, selectedClientObj);
   };
 
   if (loading) {

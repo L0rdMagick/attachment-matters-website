@@ -10,6 +10,7 @@ import {
 } from '../../../lib/firebase/notifications';
 import type { AppointmentData } from '../../../types/scheduling';
 import type { ClientProfileData } from '../../../types/client';
+import { usePortalModal } from '../common/PortalModalContext';
 
 import { collection, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../../../lib/firebase/config';
@@ -38,6 +39,7 @@ export interface UnifiedActivityItem {
 
 export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNavigate }) => {
   const { user } = useAuth();
+  const { showConfirm } = usePortalModal();
   const [todayAppointments, setTodayAppointments] = useState<AppointmentData[]>([]);
   const [activityFeed, setActivityFeed] = useState<UnifiedActivityItem[]>([]);
   const [activeFilter, setActiveFilter] = useState<ActivityCategory>('all');
@@ -267,10 +269,20 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
     setActivityFeed((prev) => prev.filter((item) => item.id !== (itemId || deleteId)));
   };
 
-  const handleClearAll = async () => {
-    if (!window.confirm("Are you sure you want to delete all activity notifications?")) return;
-    await clearAllPracticeNotifications();
-    setActivityFeed([]);
+  const handleClearAll = () => {
+    showConfirm({
+      title: '🗑️ Clear All Activity Updates',
+      message: 'Are you sure you want to clear all client activity updates and notifications?',
+      details: 'This will remove the notifications from your feed. (Submitted clinical forms remain saved in client medical charts).',
+      icon: '🗑️',
+      confirmText: 'Yes, Clear All',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      onConfirm: async () => {
+        await clearAllPracticeNotifications();
+        setActivityFeed([]);
+      }
+    });
   };
 
   if (loading) {

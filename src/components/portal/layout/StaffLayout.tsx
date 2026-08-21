@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../lib/firebase/config';
+import { usePortalModal } from '../common/PortalModalContext';
 
 interface StaffLayoutProps {
   children: React.ReactNode;
@@ -32,10 +33,23 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
   onRoleOverrideChange
 }) => {
   const { user, profile, role, logout } = useAuth();
+  const { showConfirm } = usePortalModal();
   const [activeAlert, setActiveAlert] = useState<PopupNoticeAlert | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadAlertsList, setUnreadAlertsList] = useState<PopupNoticeAlert[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleConfirmSignOut = () => {
+    showConfirm({
+      title: '🚪 Confirm Sign Out',
+      message: 'Are you sure you want to sign out of the Family Trust Therapy portal?',
+      icon: '🚪',
+      confirmText: 'Yes, Sign Out',
+      cancelText: 'Stay Logged In',
+      variant: 'warning',
+      onConfirm: () => logout()
+    });
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -245,7 +259,7 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
                 <p className="text-[11px] text-[#BF5B33] font-medium">{roleTitle}</p>
               </div>
               <button
-                onClick={logout}
+                onClick={handleConfirmSignOut}
                 className="text-[11px] sm:text-xs font-medium text-[#BF5B33] hover:text-[#a64e2b] border border-[#BF5B33]/40 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full hover:bg-[#BF5B33]/5 transition min-h-[38px] flex items-center"
               >
                 Sign Out
@@ -313,7 +327,7 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    logout();
+                    handleConfirmSignOut();
                   }}
                   className="text-xs text-[#BF5B33] font-semibold border border-[#BF5B33]/30 px-3 py-1.5 rounded-full hover:bg-[#BF5B33]/10"
                 >

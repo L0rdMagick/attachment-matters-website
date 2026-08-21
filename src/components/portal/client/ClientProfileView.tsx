@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { getClientProfile, updateClientProfile, uploadInsuranceCard, deleteInsuranceCard } from '../../../lib/firebase/clients';
 import type { ClientProfileData } from '../../../types/client';
+import { usePortalModal } from '../common/PortalModalContext';
 
 export const ClientProfileView: React.FC = () => {
   const { user, role } = useAuth();
+  const { showConfirm } = usePortalModal();
   const [profile, setProfile] = useState<ClientProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -184,25 +186,33 @@ export const ClientProfileView: React.FC = () => {
     }
   };
 
-  const handleInsuranceDelete = async (side: 'front' | 'back') => {
+  const handleInsuranceDelete = (side: 'front' | 'back') => {
     if (!user) return;
-    if (!window.confirm(`Are you sure you want to delete the ${side} insurance card file?`)) return;
-
-    try {
-      await deleteInsuranceCard(user.uid, side);
-      setProfile((prev) =>
-        prev
-          ? {
-              ...prev,
-              [side === 'front' ? 'insuranceCardFrontPath' : 'insuranceCardBackPath']: undefined
-            }
-          : null
-      );
-      setMessage({ type: 'success', text: `Insurance card (${side}) removed successfully.` });
-    } catch (err: any) {
-      console.error(err);
-      setMessage({ type: 'error', text: `Failed to remove insurance card (${side}).` });
-    }
+    showConfirm({
+      title: `🗑️ Remove Insurance Card (${side.toUpperCase()})`,
+      message: `Are you sure you want to delete your uploaded ${side} insurance card image file?`,
+      icon: '🗑️',
+      confirmText: 'Yes, Delete Image',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await deleteInsuranceCard(user.uid, side);
+          setProfile((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  [side === 'front' ? 'insuranceCardFrontPath' : 'insuranceCardBackPath']: undefined
+                }
+              : null
+          );
+          setMessage({ type: 'success', text: `Insurance card (${side}) removed successfully.` });
+        } catch (err: any) {
+          console.error(err);
+          setMessage({ type: 'error', text: `Failed to remove insurance card (${side}).` });
+        }
+      }
+    });
   };
 
   if (loading) {

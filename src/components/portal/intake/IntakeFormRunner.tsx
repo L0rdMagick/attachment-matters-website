@@ -3,9 +3,11 @@ import { useAuth } from '../../../context/AuthContext';
 import { getIntakeSubmission, saveIntakeSubmission } from '../../../lib/firebase/intake';
 import type { IntakeSubmissionData } from '../../../types/intake';
 import { PrintableIntakeDocument } from './PrintableIntakeDocument';
+import { usePortalModal } from '../common/PortalModalContext';
 
 export const IntakeFormRunner: React.FC = () => {
   const { user, profile } = useAuth();
+  const { showAlert } = usePortalModal();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -38,13 +40,13 @@ export const IntakeFormRunner: React.FC = () => {
 
   const symptomOptions = [
     'Anxiety / Panic',
-    'Depression / Sadness',
+    'Depression / Low Mood',
     'Trauma / PTSD Symptoms',
-    'Relationship Difficulties',
-    'Stress / Burnout',
+    'Relational / Attachment Conflicts',
+    'Family / Parenting Challenges',
     'Grief / Loss',
-    'Sleep Disturbance',
-    'Self-Esteem Concerns'
+    'Emotional Regulation',
+    'Stress / Burnout'
   ];
 
   useEffect(() => {
@@ -56,8 +58,8 @@ export const IntakeFormRunner: React.FC = () => {
           if (data.status === 'submitted' || data.status === 'approved') {
             setSubmitted(true);
           }
-          if (data.status === 'revision_requested') {
-            setRevisionNotes(data.revisionNotes || 'Your therapist has requested corrections to your intake form.');
+          if (data.status === 'revision_requested' && data.revisionNotes) {
+            setRevisionNotes(data.revisionNotes);
           }
 
           setReasonForTherapy(data.reasonForTherapy || '');
@@ -126,7 +128,7 @@ export const IntakeFormRunner: React.FC = () => {
     setSaving(true);
     try {
       await saveIntakeSubmission(user.uid, getFormData(), false);
-      alert("Draft saved successfully! You can return to complete this form at any time.");
+      showAlert('💾 Draft Saved', 'Your intake draft has been saved. You can return to complete it at any time.', 'success', '💾');
     } catch (err) {
       console.error("Failed to save draft", err);
     } finally {
@@ -139,13 +141,13 @@ export const IntakeFormRunner: React.FC = () => {
     if (!user) return;
 
     if (!reasonForTherapy.trim()) {
-      alert("Please fill out what brings you to therapy in Step 1.");
+      showAlert('⚠️ Section 1 Incomplete', 'Please describe your primary reason for seeking therapy in Step 1.', 'warning', '⚠️');
       setStep(1);
       return;
     }
 
     if (!therapyGoals.trim()) {
-      alert("Please fill out your therapy goals in Step 1.");
+      showAlert('⚠️ Section 1 Incomplete', 'Please describe your goals for therapy in Step 1.', 'warning', '⚠️');
       setStep(1);
       return;
     }
@@ -154,9 +156,10 @@ export const IntakeFormRunner: React.FC = () => {
     try {
       await saveIntakeSubmission(user.uid, getFormData(), true);
       setSubmitted(true);
+      showAlert('✓ Packet Submitted', 'Your clinical intake packet has been securely submitted to your therapist.', 'success', '✓');
     } catch (err: any) {
       console.error("Failed to submit intake", err);
-      alert(`Failed to submit intake form: ${err.message || 'Please check your information and try again.'}`);
+      showAlert('⚠️ Submission Error', err.message || 'Failed to submit intake packet. Please check your responses and try again.', 'danger', '⚠️');
     } finally {
       setSaving(false);
     }

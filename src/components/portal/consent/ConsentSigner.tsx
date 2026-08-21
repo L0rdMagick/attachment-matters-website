@@ -3,9 +3,11 @@ import { useAuth } from '../../../context/AuthContext';
 import { getConsentTemplates, getSignedDocuments, signConsentDocument } from '../../../lib/firebase/consent';
 import type { ConsentTemplateData, SignedDocumentData } from '../../../types/consent';
 import { PrintableSignedConsentDocument } from './PrintableSignedConsentDocument';
+import { usePortalModal } from '../common/PortalModalContext';
 
 export const ConsentSigner: React.FC = () => {
   const { user, profile } = useAuth();
+  const { showAlert } = usePortalModal();
   const [templates, setTemplates] = useState<ConsentTemplateData[]>([]);
   const [signedDocs, setSignedDocs] = useState<SignedDocumentData[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<ConsentTemplateData | null>(null);
