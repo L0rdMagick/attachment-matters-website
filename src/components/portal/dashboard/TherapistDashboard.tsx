@@ -11,64 +11,114 @@ import {
 import type { AppointmentData } from '../../../types/scheduling';
 import type { ClientProfileData } from '../../../types/client';
 
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../../../lib/firebase/config';
 
 interface TherapistDashboardProps {
   onNavigate: (tab: string) => void;
 }
 
-interface PendingReviewItem {
-  uid: string;
-  legalFirstName: string;
-  legalLastName: string;
-  email?: string;
-  hasIntake: boolean;
-  hasConsent: boolean;
-  lastConsentTitle?: string;
-  updatedAt?: any;
+interface IndividualFormSubmissionItem {
+  id: string;
+  clientId: string;
+  clientName: string;
+  itemType: 'signed_consent' | 'intake_form';
+  formTitle: string;
+  submittedAtISO?: string;
+  submittedAtFormatted: string;
+  details?: string;
 }
 
 export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNavigate }) => {
   const { user } = useAuth();
   const [todayAppointments, setTodayAppointments] = useState<AppointmentData[]>([]);
-  const [pendingFormSubmissions, setPendingFormSubmissions] = useState<PendingReviewItem[]>([]);
+  const [pendingFormSubmissions, setPendingFormSubmissions] = useState<IndividualFormSubmissionItem[]>([]);
   const [notifications, setNotifications] = useState<PracticeNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadDash = async () => {
     try {
-      const [allAppts, allClients, notifDocs] = await Promise.all([
+      const [allAppts, allClients, notifDocs, signedDocsSnap] = await Promise.all([
         getAppointments({}),
         getClientsDirectory({ accountStatus: 'all' }),
-        getPracticeNotifications()
+        getPracticeNotifications(),
+        getDocs(collection(db, 'signedDocuments'))
       ]);
 
       setTodayAppointments(allAppts);
 
-      // Build list of clients who have submitted clinical intake questionnaires OR signed practice consent forms & agreements
-      const pendingList: PendingReviewItem[] = [];
+      // Build individual pending review items for EVERY signed consent form and EVERY submitted intake form
+      const pendingItemsList: IndividualFormSubmissionItem[] = [];
 
+      // 1. Process all signed consent documents as individual notification items
+      signedDocsSnap.docs.forEach((docSnap) => {
+        const d = docSnap.data();
+        const client = allClients.find((c: any) => c.uid === d.clientId);
+
+        let clientName = '';
+        if (client?.legalFirstName) {
+          clientName = `${client.legalLastName || ''}${client.legalLastName ? ', ' : ''}${client.legalFirstName}`.trim();
+        } else if (d.clientTypedName) {
+          clientName = d.clientTypedName;
+        } else {
+          clientName = client?.email || 'Client';
+        }
+
+        const isoTimestamp = d.signedAtISO || (d.createdAt?.seconds ? new Date(d.createdAt.seconds * 1000).toISOString() : new Date().toISOString());
+        const formattedDate = new Date(isoTimestamp).toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        pendingItemsList.push({
+          id: `signed_doc_${docSnap.id}`,
+          clientId: d.clientId || '',
+          clientName,
+          itemType: 'signed_consent',
+          formTitle: d.documentTitle || 'Practice Consent & Agreement',
+          submittedAtISO: isoTimestamp,
+          submittedAtFormatted: formattedDate,
+          details: `Version: ${d.templateVersion || 'v1.0'} | Audit Hash: ${d.documentHash || 'N/A'}`
+        });
+      });
+
+      // 2. Process all intake questionnaire submissions as individual notification items
       allClients.forEach((c: any) => {
-        const hasSubmittedIntake = c.intakeStatus === 'submitted';
-        const hasCompletedConsent = c.consentStatus === 'completed' || !!c.lastConsentSignedAt;
-        const hasSignedNotif = notifDocs.some((n) => n.clientId === c.uid && n.type === 'document_signed');
+        if (c.intakeStatus === 'submitted') {
+          const clientName = (c.legalFirstName ? `${c.legalLastName || ''}${c.legalLastName ? ', ' : ''}${c.legalFirstName}` : c.email || 'Client').trim();
+          const isoTimestamp = c.updatedAt?.seconds ? new Date(c.updatedAt.seconds * 1000).toISOString() : (c.updatedAt ? new Date(c.updatedAt).toISOString() : new Date().toISOString());
+          const formattedDate = new Date(isoTimestamp).toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
 
-        if (hasSubmittedIntake || hasCompletedConsent || hasSignedNotif) {
-          pendingList.push({
-            uid: c.uid,
-            legalFirstName: c.legalFirstName || '',
-            legalLastName: c.legalLastName || '',
-            email: c.email || '',
-            hasIntake: hasSubmittedIntake,
-            hasConsent: hasCompletedConsent || hasSignedNotif,
-            lastConsentTitle: c.lastConsentTitle,
-            updatedAt: c.updatedAt || c.lastConsentSignedAt || c.lastActivityAt
+          pendingItemsList.push({
+            id: `intake_sub_${c.uid}`,
+            clientId: c.uid,
+            clientName,
+            itemType: 'intake_form',
+            formTitle: 'Initial Clinical Intake Questionnaire',
+            submittedAtISO: isoTimestamp,
+            submittedAtFormatted: formattedDate,
+            details: 'Completed full clinical intake questionnaire packet.'
           });
         }
       });
 
-      setPendingFormSubmissions(pendingList);
+      // Sort newest submissions first
+      pendingItemsList.sort((a, b) => {
+        const timeA = a.submittedAtISO ? new Date(a.submittedAtISO).getTime() : 0;
+        const timeB = b.submittedAtISO ? new Date(b.submittedAtISO).getTime() : 0;
+        return timeB - timeA;
+      });
+
+      setPendingFormSubmissions(pendingItemsList);
 
       const combinedNotifs: PracticeNotification[] = [...notifDocs];
 
@@ -356,39 +406,38 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
             </p>
           </div>
 
-          <div className="space-y-2 pt-1">
-            {pendingFormSubmissions.map((c) => {
-              const clientName = `${c.legalLastName || ''}${c.legalLastName && c.legalFirstName ? ', ' : ''}${c.legalFirstName || ''}`.trim() || c.email || 'Client';
-              
-              let noticeLabel = '';
-              if (c.hasIntake && c.hasConsent) {
-                noticeLabel = 'Submitted clinical intake packet & signed practice consent agreements';
-              } else if (c.hasConsent) {
-                noticeLabel = c.lastConsentTitle
-                  ? `Signed practice consent agreement (${c.lastConsentTitle})`
-                  : 'Signed practice consent forms & legal agreements';
-              } else {
-                noticeLabel = 'Submitted clinical intake questionnaire packet';
-              }
+          <div className="space-y-2.5 pt-1">
+            {pendingFormSubmissions.map((item) => {
+              const isConsent = item.itemType === 'signed_consent';
 
               return (
-                <div key={c.uid} className="bg-white p-4 rounded-xl border border-amber-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs shadow-xs">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <strong className="text-sm text-[#2C2A2A] font-semibold">{clientName}</strong>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-900 border border-amber-200">
-                        {c.hasConsent && !c.hasIntake ? '✍️ Signed Consent' : c.hasIntake && !c.hasConsent ? '📋 Intake Packet' : '📋 Intake & ✍️ Consent'}
+                <div key={item.id} className="bg-white p-4 rounded-xl border border-amber-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs shadow-xs">
+                  <div className="space-y-1 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <strong className="text-sm text-[#2C2A2A] font-semibold">{item.clientName}</strong>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                        isConsent ? 'bg-blue-100 text-blue-900 border-blue-200' : 'bg-amber-100 text-amber-900 border-amber-200'
+                      }`}>
+                        {isConsent ? '✍️ Signed Consent Form' : '📋 Intake Questionnaire'}
+                      </span>
+                      <span className="text-[11px] text-gray-500 font-medium ml-auto sm:ml-0">
+                        🕒 {item.submittedAtFormatted}
                       </span>
                     </div>
-                    <p className="text-[#2C2A2A]/80 font-medium">
-                      {noticeLabel}
+                    <p className="text-[#2C2A2A] font-bold text-xs">
+                      {item.formTitle}
                     </p>
+                    {item.details && (
+                      <p className="text-[11px] text-gray-600 italic">
+                        {item.details}
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={() => onNavigate('clients')}
-                    className="px-4 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-semibold text-xs rounded-xl shadow-xs transition whitespace-nowrap"
+                    className="px-4 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-semibold text-xs rounded-xl shadow-xs transition whitespace-nowrap self-end sm:self-center"
                   >
-                    Review Forms & Packet →
+                    {isConsent ? 'Review Form →' : 'Review Packet →'}
                   </button>
                 </div>
               );
