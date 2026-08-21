@@ -23,6 +23,7 @@ interface PopupNoticeAlert {
 
 export const StaffLayout: React.FC<StaffLayoutProps> = ({ children, activeTab, onTabChange }) => {
   const { user, profile, role, logout } = useAuth();
+  const [activeAlert, setActiveAlert] = useState<PopupNoticeAlert | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadAlertsList, setUnreadAlertsList] = useState<PopupNoticeAlert[]>([]);
 
