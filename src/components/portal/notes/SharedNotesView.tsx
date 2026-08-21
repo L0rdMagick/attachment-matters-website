@@ -305,7 +305,18 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
 
                   {isTherapist && !note.isPublished && (
                     <button
-                      onClick={() => handlePublish(note.id!)}
+                      onClick={() => {
+                        showConfirm({
+                          title: '📢 Publish Session Summary',
+                          message: `Are you sure you want to publish "${note.title}" to the client portal?`,
+                          details: 'Once published, this summary will be visible to the client when they log into their portal.',
+                          icon: '📢',
+                          confirmText: 'Yes, Publish Note',
+                          cancelText: 'Keep as Draft',
+                          variant: 'info',
+                          onConfirm: () => handlePublish(note.id!)
+                        });
+                      }}
                       className="px-3 py-1 bg-[#4A5741] text-white text-xs font-semibold rounded-lg hover:bg-[#384232] transition"
                     >
                       📢 Publish to Client

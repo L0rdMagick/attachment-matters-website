@@ -379,7 +379,18 @@ export const TherapistCalendar: React.FC = () => {
                   <div className="flex items-center gap-2 shrink-0 flex-wrap">
                     {a.status !== 'completed' && (
                       <button
-                        onClick={() => handleStatusChange(a.id!, 'completed')}
+                        onClick={() => {
+                          showConfirm({
+                            title: '✓ Mark Session Completed',
+                            message: `Confirm completion of session for ${a.clientName || 'Client'} (${a.appointmentTypeName || 'Therapy Session'})?`,
+                            details: 'This will update the appointment status to completed and move it to past session history.',
+                            icon: '✓',
+                            confirmText: 'Yes, Mark Completed',
+                            cancelText: 'Cancel',
+                            variant: 'success',
+                            onConfirm: () => handleStatusChange(a.id!, 'completed')
+                          });
+                        }}
                         className="px-3 py-1.5 bg-[#4A5741] text-white font-semibold rounded-lg hover:bg-[#384232] transition"
                       >
                         ✓ Mark Completed

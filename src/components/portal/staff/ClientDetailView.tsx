@@ -571,7 +571,23 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
 
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-[#EAE1D2]">
                       <button
-                        onClick={() => handleStatusChangeInChart(appt.id!, 'completed')}
+                        onClick={() => {
+                          setConfirmModal({
+                            isOpen: true,
+                            title: '✓ Mark Session Completed',
+                            message: `Confirm completion of the ${appt.appointmentTypeName} session for ${client.legalFirstName} ${client.legalLastName}?`,
+                            details: 'This will update the appointment status to completed and move it to past session history.',
+                            icon: '✓',
+                            confirmText: 'Yes, Mark Completed',
+                            cancelText: 'Cancel',
+                            variant: 'success',
+                            onConfirm: () => {
+                              closeConfirmModal();
+                              handleStatusChangeInChart(appt.id!, 'completed');
+                            },
+                            onCancel: closeConfirmModal
+                          });
+                        }}
                         className="px-3.5 py-2 bg-[#4A5741] text-white font-semibold text-xs rounded-xl hover:bg-[#384232] transition min-h-[38px] flex items-center justify-center"
                       >
                         ✓ Mark Completed

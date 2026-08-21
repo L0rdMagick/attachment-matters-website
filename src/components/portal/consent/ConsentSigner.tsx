@@ -129,50 +129,61 @@ export const ConsentSigner: React.FC = () => {
       return;
     }
 
-    setSigning(true);
-    setMessage(null);
+    showConfirm({
+      title: '✒️ Execute Electronic Signature',
+      message: `Are you sure you want to sign and submit "${selectedTemplate.title}"?`,
+      details: `By clicking confirm, your typed legal signature ("${typedSignature.trim()}") will be immutably recorded with an audit timestamp and cryptographic hash.`,
+      icon: '✒️',
+      confirmText: 'Sign & Submit Agreement',
+      cancelText: 'Cancel & Review',
+      variant: 'warning',
+      onConfirm: async () => {
+        setSigning(true);
+        setMessage(null);
 
-    try {
-      let signatureDataUrl: string | undefined = undefined;
-      if (canvasRef.current) {
-        // Check if canvas has actual drawn content
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const pixelData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-          const hasPixels = pixelData.some((channel) => channel !== 0);
-          if (hasPixels) {
-            signatureDataUrl = canvas.toDataURL();
+        try {
+          let signatureDataUrl: string | undefined = undefined;
+          if (canvasRef.current) {
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              const pixelData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+              const hasPixels = pixelData.some((channel) => channel !== 0);
+              if (hasPixels) {
+                signatureDataUrl = canvas.toDataURL();
+              }
+            }
           }
+
+          const docHash = await signConsentDocument(
+            user.uid,
+            selectedTemplate,
+            typedSignature.trim(),
+            signatureDataUrl
+          );
+
+          setMessage(`Document successfully signed and archived! Unique Audit Hash: ${docHash}`);
+          setTypedSignature('');
+          setAcknowledged(false);
+          setIsEditingSigned(false);
+          clearCanvas();
+
+          try {
+            const updatedSigned = await getSignedDocuments(user.uid);
+            setSignedDocs(updatedSigned);
+          } catch (refreshErr) {
+            console.warn("Could not refresh signed documents list immediately:", refreshErr);
+          }
+
+          showAlert('✓ Document Signed', `Successfully signed "${selectedTemplate.title}". Your legal agreement has been archived.`, 'success', '📄');
+        } catch (err: any) {
+          console.error("Failed to sign document", err);
+          showAlert('⚠️ Signature Error', err.message || 'Failed to submit electronic signature.', 'danger', '⚠️');
+        } finally {
+          setSigning(false);
         }
       }
-
-      const docHash = await signConsentDocument(
-        user.uid,
-        selectedTemplate,
-        typedSignature.trim(),
-        signatureDataUrl
-      );
-
-      setMessage(`Document successfully signed and archived! Unique Audit Hash: ${docHash}`);
-      setTypedSignature('');
-      setAcknowledged(false);
-      setIsEditingSigned(false);
-      clearCanvas();
-
-      // Refresh signed docs safely
-      try {
-        const updatedSigned = await getSignedDocuments(user.uid);
-        setSignedDocs(updatedSigned);
-      } catch (refreshErr) {
-        console.warn("Could not refresh signed documents list immediately:", refreshErr);
-      }
-    } catch (err) {
-      console.error("Failed to sign consent document:", err);
-      alert("Failed to record document signature. Please try again.");
-    } finally {
-      setSigning(false);
-    }
+    });
   };
 
   if (loading) {

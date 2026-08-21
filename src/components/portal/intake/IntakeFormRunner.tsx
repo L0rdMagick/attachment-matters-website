@@ -152,17 +152,28 @@ export const IntakeFormRunner: React.FC = () => {
       return;
     }
 
-    setSaving(true);
-    try {
-      await saveIntakeSubmission(user.uid, getFormData(), true);
-      setSubmitted(true);
-      showAlert('✓ Packet Submitted', 'Your clinical intake packet has been securely submitted to your therapist.', 'success', '✓');
-    } catch (err: any) {
-      console.error("Failed to submit intake", err);
-      showAlert('⚠️ Submission Error', err.message || 'Failed to submit intake packet. Please check your responses and try again.', 'danger', '⚠️');
-    } finally {
-      setSaving(false);
-    }
+    showConfirm({
+      title: '📋 Submit Clinical Intake Packet',
+      message: 'Are you ready to submit your completed initial clinical background and intake questionnaire to your therapist?',
+      details: 'Once submitted, your responses will be securely archived in your clinical chart for therapist review.',
+      icon: '📋',
+      confirmText: 'Submit Intake Packet',
+      cancelText: 'Review Responses',
+      variant: 'info',
+      onConfirm: async () => {
+        setSaving(true);
+        try {
+          await saveIntakeSubmission(user.uid, getFormData(), true);
+          setSubmitted(true);
+          showAlert('✓ Packet Submitted', 'Your clinical intake packet has been securely submitted to your therapist.', 'success', '✓');
+        } catch (err: any) {
+          console.error("Failed to submit intake", err);
+          showAlert('⚠️ Submission Error', err.message || 'Failed to submit intake packet. Please check your responses and try again.', 'danger', '⚠️');
+        } finally {
+          setSaving(false);
+        }
+      }
+    });
   };
 
   const renderPrintableDocument = () => (

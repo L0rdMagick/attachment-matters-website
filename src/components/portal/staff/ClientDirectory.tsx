@@ -58,13 +58,33 @@ export const ClientDirectory: React.FC<ClientDirectoryProps> = ({ onSelectClient
     loadDirectory();
   }, [searchQuery, statusFilter, intakeFilter]);
 
-  const handleSelfSchedulingOverrideChange = async (c: ClientProfileData, overrideVal: 'global' | 'allowed' | 'restricted') => {
-    try {
-      await updateClientProfile(c.uid, { allowSelfSchedulingOverride: overrideVal }, user?.uid || '', role || '');
-      setClients((prev) => prev.map((item) => item.uid === c.uid ? { ...item, allowSelfSchedulingOverride: overrideVal } : item));
-    } catch (err) {
-      console.error("Failed to update client self-scheduling permission", err);
-    }
+  const handleSelfSchedulingOverrideChange = (c: ClientProfileData, overrideVal: 'global' | 'allowed' | 'restricted') => {
+    const name = c.legalFirstName ? `${c.legalFirstName} ${c.legalLastName || ''}` : c.email;
+    const label = overrideVal === 'allowed' ? 'Allowed' : overrideVal === 'restricted' ? 'Restricted' : 'Practice Global';
+    setConfirmModal({
+      isOpen: true,
+      title: '⚙️ Change Self-Scheduling Access',
+      message: `Change self-scheduling permission for ${name} to "${label}"?`,
+      details: overrideVal === 'restricted' 
+        ? 'Restricting self-scheduling prevents the client from booking sessions independently in their portal.'
+        : overrideVal === 'allowed'
+        ? 'Allowing override permits the client to self-schedule regardless of global practice restrictions.'
+        : 'Reverting to Practice Global aligns the client with global practice availability settings.',
+      icon: '⚙️',
+      confirmText: 'Confirm Permission Change',
+      cancelText: 'Cancel',
+      variant: overrideVal === 'restricted' ? 'warning' : 'info',
+      onConfirm: async () => {
+        closeConfirmModal();
+        try {
+          await updateClientProfile(c.uid, { allowSelfSchedulingOverride: overrideVal }, user?.uid || '', role || '');
+          setClients((prev) => prev.map((item) => item.uid === c.uid ? { ...item, allowSelfSchedulingOverride: overrideVal } : item));
+        } catch (err) {
+          console.error("Failed to update client self-scheduling permission", err);
+        }
+      },
+      onCancel: closeConfirmModal
+    });
   };
 
   const handleArchiveClient = (c: ClientProfileData) => {
