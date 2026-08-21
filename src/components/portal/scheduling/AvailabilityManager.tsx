@@ -2,13 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { getAvailabilityRules, saveAvailabilityRules } from '../../../lib/firebase/scheduling';
 import type { AvailabilityRules, AppointmentType } from '../../../types/scheduling';
+import { usePortalModal } from '../common/PortalModalContext';
 
 export const AvailabilityManager: React.FC = () => {
   const { user } = useAuth();
+  const { showConfirm, showAlert } = usePortalModal();
   const [rules, setRules] = useState<AvailabilityRules | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [savingSection, setSavingSection] = useState<'hours' | 'types' | 'parameters' | null>(null);
+
+  // Add Custom Appointment Type Modal state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newTypeName, setNewTypeName] = useState('');
+  const [newTypeFeeUsd, setNewTypeFeeUsd] = useState('150.00');
+  const [newTypeDuration, setNewTypeDuration] = useState(50);
+  const [newTypeBufferBefore, setNewTypeBufferBefore] = useState(5);
+  const [newTypeBufferAfter, setNewTypeBufferAfter] = useState(5);
+  const [newTypeFormat, setNewTypeFormat] = useState<'either' | 'telehealth' | 'in_person'>('either');
 
   useEffect(() => {
     if (!user) return;
@@ -25,20 +35,24 @@ export const AvailabilityManager: React.FC = () => {
     loadRules();
   }, [user]);
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!rules || !user) return;
-    setSaving(true);
-    setMessage(null);
+  const handleSaveSection = async (section: 'hours' | 'types' | 'parameters', updatedRules?: AvailabilityRules) => {
+    const targetRules = updatedRules || rules;
+    if (!targetRules || !user) return;
+    setSavingSection(section);
 
     try {
-      await saveAvailabilityRules({ ...rules, therapistId: user.uid });
-      setMessage("Availability rules and appointment pricing saved successfully.");
+      await saveAvailabilityRules({ ...targetRules, therapistId: user.uid });
+      const labels = {
+        hours: 'Weekly Working Hours',
+        types: 'Configured Appointment Types',
+        parameters: 'Practice Booking Parameters'
+      };
+      showAlert('✓ Saved Successfully', `${labels[section]} have been updated and saved to practice configuration.`, 'success', '✓');
     } catch (err) {
       console.error(err);
-      setMessage("Failed to save rules. Please try again.");
+      showAlert('⚠️ Save Error', 'Failed to save settings section. Please try again.', 'danger', '⚠️');
     } finally {
-      setSaving(false);
+      setSavingSection(null);
     }
   };
 
@@ -63,28 +77,70 @@ export const AvailabilityManager: React.FC = () => {
     setRules({ ...rules, appointmentTypes: updated });
   };
 
-  const addAppointmentType = () => {
+  const openAddAppointmentTypeModal = () => {
+    setNewTypeName('');
+    setNewTypeFeeUsd('150.00');
+    setNewTypeDuration(50);
+    setNewTypeBufferBefore(5);
+    setNewTypeBufferAfter(5);
+    setNewTypeFormat('either');
+    setShowAddModal(true);
+  };
+
+  const handleConfirmAddAppointmentType = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!rules) return;
+    if (!newTypeName.trim()) {
+      showAlert('⚠️ Title Required', 'Please enter a title for the new custom appointment type.', 'warning', '⚠️');
+      return;
+    }
+
+    const feeInCents = Math.round(parseFloat(newTypeFeeUsd || '0') * 100);
+
     const newType: AppointmentType = {
       id: `custom_${Date.now()}`,
-      name: 'New Custom Therapy Session',
-      durationMinutes: 50,
-      priceInCents: 15000,
-      bufferBeforeMinutes: 5,
-      bufferAfterMinutes: 5,
-      format: 'either'
+      name: newTypeName.trim(),
+      durationMinutes: newTypeDuration,
+      priceInCents: feeInCents,
+      bufferBeforeMinutes: newTypeBufferBefore,
+      bufferAfterMinutes: newTypeBufferAfter,
+      format: newTypeFormat
     };
-    setRules({ ...rules, appointmentTypes: [...rules.appointmentTypes, newType] });
+
+    const updatedRules: AvailabilityRules = {
+      ...rules,
+      appointmentTypes: [...rules.appointmentTypes, newType]
+    };
+
+    setRules(updatedRules);
+    setShowAddModal(false);
+    handleSaveSection('types', updatedRules);
   };
 
   const removeAppointmentType = (index: number) => {
     if (!rules) return;
     if (rules.appointmentTypes.length <= 1) {
-      alert("At least one appointment type must remain configured.");
+      showAlert('⚠️ Cannot Delete', 'At least one appointment type must remain configured for practice booking.', 'warning', '⚠️');
       return;
     }
-    const updated = rules.appointmentTypes.filter((_, i) => i !== index);
-    setRules({ ...rules, appointmentTypes: updated });
+
+    const targetType = rules.appointmentTypes[index];
+
+    showConfirm({
+      title: '🗑️ Delete Appointment Type',
+      message: `Are you sure you want to delete "${targetType.name}"?`,
+      details: 'Clients will no longer be able to select or book this appointment type in the portal.',
+      icon: '🗑️',
+      confirmText: 'Yes, Delete Type',
+      cancelText: 'Keep Type',
+      variant: 'danger',
+      onConfirm: () => {
+        const updated = rules.appointmentTypes.filter((_, i) => i !== index);
+        const updatedRules = { ...rules, appointmentTypes: updated };
+        setRules(updatedRules);
+        handleSaveSection('types', updatedRules);
+      }
+    });
   };
 
   if (loading) {
@@ -110,7 +166,7 @@ export const AvailabilityManager: React.FC = () => {
         </div>
       )}
 
-      <form onSubmit={handleSave} className="space-y-8">
+      <div className="space-y-8">
         {/* Working Hours by Day */}
         <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
           <h3 className="text-xl font-serif text-[#2C2A2A] font-medium border-b border-[#EAE1D2] pb-3">
@@ -158,6 +214,17 @@ export const AvailabilityManager: React.FC = () => {
               );
             })}
           </div>
+
+          <div className="pt-4 border-t border-[#EAE1D2] flex justify-end">
+            <button
+              type="button"
+              disabled={savingSection === 'hours'}
+              onClick={() => handleSaveSection('hours')}
+              className="py-2.5 px-6 bg-[#4A5741] hover:bg-[#384232] text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {savingSection === 'hours' ? 'Saving Hours...' : '✓ Save Working Hours'}
+            </button>
+          </div>
         </div>
 
         {/* Appointment Types & Pricing (Fully Customizable) */}
@@ -173,10 +240,10 @@ export const AvailabilityManager: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={addAppointmentType}
-              className="px-3.5 py-1.5 bg-[#4A5741] hover:bg-[#384232] text-white text-xs font-semibold rounded-xl shadow-sm transition w-fit"
+              onClick={openAddAppointmentTypeModal}
+              className="px-3.5 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl shadow-xs transition w-fit flex items-center gap-1"
             >
-              + Add Custom Appointment Type
+              ➕ Add Custom Appointment Type
             </button>
           </div>
 
@@ -196,7 +263,7 @@ export const AvailabilityManager: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => removeAppointmentType(index)}
-                    className="text-xs text-red-600 hover:text-red-800 font-semibold px-2 py-1 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 transition mt-4"
+                    className="text-xs text-red-600 hover:text-red-800 font-semibold px-2.5 py-1.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 transition mt-4"
                     title="Remove appointment type"
                   >
                     🗑️ Remove
@@ -282,6 +349,17 @@ export const AvailabilityManager: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="pt-4 border-t border-[#EAE1D2] flex justify-end">
+            <button
+              type="button"
+              disabled={savingSection === 'types'}
+              onClick={() => handleSaveSection('types')}
+              className="py-2.5 px-6 bg-[#4A5741] hover:bg-[#384232] text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {savingSection === 'types' ? 'Saving Appointment Types...' : '✓ Save Appointment Types'}
+            </button>
           </div>
         </div>
 
@@ -398,18 +476,149 @@ export const AvailabilityManager: React.FC = () => {
               className="w-5 h-5 text-[#BF5B33] rounded cursor-pointer accent-[#BF5B33]"
             />
           </div>
-        </div>
 
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={saving}
-            className="py-3.5 px-8 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-sm font-semibold rounded-xl shadow-sm transition disabled:opacity-50"
-          >
-            {saving ? 'Saving Rules...' : 'Save Availability Settings'}
-          </button>
+          <div className="pt-4 border-t border-[#EAE1D2] flex justify-end">
+            <button
+              type="button"
+              disabled={savingSection === 'parameters'}
+              onClick={() => handleSaveSection('parameters')}
+              className="py-2.5 px-6 bg-[#4A5741] hover:bg-[#384232] text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {savingSection === 'parameters' ? 'Saving Practice Parameters...' : '✓ Save Booking Settings'}
+            </button>
+          </div>
         </div>
-      </form>
+      </div>
+
+      {/* Add Custom Appointment Type Overlay Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans animate-fade-in">
+          <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-[#EAE1D2] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">➕</span>
+                <h3 className="text-lg font-serif font-medium text-[#2C2A2A]">Add Custom Appointment Type</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="text-gray-400 hover:text-gray-600 font-bold text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmAddAppointmentType} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-[#4A5741] mb-1">Session Type Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Extended Couples Counseling Session"
+                  value={newTypeName}
+                  onChange={(e) => setNewTypeName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#EAE1D2] bg-white font-serif text-sm font-semibold text-[#2C2A2A] focus:ring-2 focus:ring-[#BF5B33] outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-[#4A5741] mb-1">Session Fee ($ USD)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-xs font-bold text-gray-500">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      required
+                      value={newTypeFeeUsd}
+                      onChange={(e) => setNewTypeFeeUsd(e.target.value)}
+                      className="w-full pl-7 pr-3 py-2 rounded-xl border border-[#EAE1D2] bg-white font-bold text-sm text-[#BF5B33] focus:ring-2 focus:ring-[#BF5B33] outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-[#4A5741] mb-1">Duration (Minutes)</label>
+                  <select
+                    value={newTypeDuration}
+                    onChange={(e) => setNewTypeDuration(parseInt(e.target.value) || 50)}
+                    className="w-full px-3 py-2 rounded-xl border border-[#EAE1D2] bg-white font-semibold text-xs text-[#2C2A2A] focus:ring-2 focus:ring-[#BF5B33] outline-none"
+                  >
+                    <option value={15}>15 Minutes</option>
+                    <option value={30}>30 Minutes</option>
+                    <option value={45}>45 Minutes</option>
+                    <option value={50}>50 Minutes (Standard)</option>
+                    <option value={60}>60 Minutes (1 Hour)</option>
+                    <option value={75}>75 Minutes</option>
+                    <option value={90}>90 Minutes (Intake / Extended)</option>
+                    <option value={120}>120 Minutes (2 Hours)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-[#4A5741] mb-1">Buffer Before</label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min="0"
+                      value={newTypeBufferBefore}
+                      onChange={(e) => setNewTypeBufferBefore(parseInt(e.target.value) || 0)}
+                      className="w-full px-2 py-1.5 rounded-lg border border-[#EAE1D2] bg-white text-xs text-center font-semibold"
+                    />
+                    <span className="text-[10px] text-gray-600">min</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-[#4A5741] mb-1">Buffer After</label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min="0"
+                      value={newTypeBufferAfter}
+                      onChange={(e) => setNewTypeBufferAfter(parseInt(e.target.value) || 0)}
+                      className="w-full px-2 py-1.5 rounded-lg border border-[#EAE1D2] bg-white text-xs text-center font-semibold"
+                    />
+                    <span className="text-[10px] text-gray-600">min</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-[#4A5741] mb-1">Service Format</label>
+                  <select
+                    value={newTypeFormat}
+                    onChange={(e) => setNewTypeFormat(e.target.value as any)}
+                    className="w-full px-2 py-1.5 rounded-lg border border-[#EAE1D2] bg-white text-[11px] font-semibold"
+                  >
+                    <option value="either">Either (Choice)</option>
+                    <option value="telehealth">Telehealth Only</option>
+                    <option value="in_person">In Person Only</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-[#EAE1D2]">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 bg-[#EAE1D2] hover:bg-[#e0d4c1] text-[#2C2A2A] font-semibold text-xs rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white font-semibold text-xs rounded-xl transition shadow-xs flex items-center gap-1"
+                >
+                  Save Appointment Type
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
