@@ -27,29 +27,53 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
 
   const loadDash = async () => {
     try {
-      const [appts, intakeClients, allClients, notifDocs] = await Promise.all([
-        getAppointments({ therapistId: 'default_therapist' }),
+      const [allAppts, intakeClients, allClients, notifDocs] = await Promise.all([
+        getAppointments({}),
         getClientsDirectory({ intakeStatus: 'submitted' }),
         getClientsDirectory(),
         getPracticeNotifications()
       ]);
 
-      setTodayAppointments(appts);
+      setTodayAppointments(allAppts);
       setPendingIntakes(intakeClients);
 
-      // Build unified activity notifications from practiceNotifications + client profile records
       const combinedNotifs: PracticeNotification[] = [...notifDocs];
 
+      // Merge appointment booking/change events into activity feed
+      allAppts.forEach((appt) => {
+        const clientName = appt.clientName || appt.clientEmail || 'Client';
+        const dateStr = appt.startISO ? new Date(appt.startISO).toLocaleString() : 'N/A';
+        const apptNoticeMsg = `${clientName} booked session (${appt.appointmentTypeName || 'Therapy Session'}) for ${dateStr}.`;
+
+        const exists = combinedNotifs.some(
+          (n) => n.clientId === appt.clientId && n.message === apptNoticeMsg
+        );
+
+        if (!exists && appt.status !== 'canceled' && appt.status !== 'canceled_by_client') {
+          combinedNotifs.push({
+            id: `appt_act_${appt.id}`,
+            type: 'appointment_created',
+            title: '📅 New Appointment Booked',
+            message: apptNoticeMsg,
+            clientId: appt.clientId,
+            clientName,
+            details: `Status: ${appt.status} | Format: ${appt.format}`,
+            createdAt: appt.createdAt || appt.startISO
+          });
+        }
+      });
+
+      // Merge profile activity updates
       allClients.forEach((c: any) => {
         if (c.updatedAt || c.lastActivityAt) {
           const clientName = (c.legalFirstName ? `${c.legalFirstName} ${c.legalLastName || ''}` : c.email || 'Client').trim();
           const noticeMsg = c.lastActivityNotice || `${clientName} updated profile information.`;
 
-          const alreadyExists = combinedNotifs.some(
+          const exists = combinedNotifs.some(
             (n) => n.clientId === c.uid && (n.message === noticeMsg || n.title.includes('Profile'))
           );
 
-          if (!alreadyExists) {
+          if (!exists) {
             combinedNotifs.push({
               id: `client_act_${c.uid}`,
               type: 'profile_updated',

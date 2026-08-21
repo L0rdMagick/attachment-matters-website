@@ -386,7 +386,7 @@ export async function bookAppointmentWithLock(
   });
 
   // Record practice notification for appointment creation
-  createPracticeNotification({
+  await createPracticeNotification({
     type: 'appointment_created',
     title: '📅 New Appointment Booked',
     message: `${appointment.clientName || 'Client'} booked ${appointment.appointmentTypeName || 'Therapy Session'} for ${new Date(appointment.startISO).toLocaleString()}.`,

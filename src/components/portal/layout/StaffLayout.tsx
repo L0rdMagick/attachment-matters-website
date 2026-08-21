@@ -28,54 +28,42 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children, activeTab, o
   useEffect(() => {
     if (!user) return;
 
-    // Listen to practiceNotifications collection
+    // Clean real-time listener for practice notifications & client activity popups
     const colNotifs = collection(db, 'practiceNotifications');
-    const unsubNotifs = onSnapshot(colNotifs, (snapshot) => {
-      const unreadNotifs = snapshot.docs
-        .map((d) => ({ id: d.id, ...d.data() } as any))
-        .filter((n) => n.read === false);
+    const unsubNotifs = onSnapshot(
+      colNotifs,
+      (snapshot) => {
+        const unreadNotifs = snapshot.docs
+          .map((d) => ({ id: d.id, ...d.data() } as any))
+          .filter((n) => n.read === false);
 
-      if (unreadNotifs.length > 0) {
-        const first = unreadNotifs[0];
-        setActiveAlert({
-          id: first.id,
-          type: first.type,
-          title: first.title || 'Client Portal Notice',
-          message: first.message || '',
-          clientName: first.clientName || 'Client',
-          details: first.details || first.reason || '',
-          createdAt: first.createdAt,
-          sourceCollection: 'practiceNotifications'
-        });
-      } else {
-        // Fallback check on cancellationAlerts
-        const colCancels = collection(db, 'cancellationAlerts');
-        const unsubCancels = onSnapshot(colCancels, (snap2) => {
-          const unreadCancels = snap2.docs
-            .map((d) => ({ id: d.id, ...d.data() } as any))
-            .filter((c) => c.read === false);
+        if (unreadNotifs.length > 0) {
+          // Sort newest first so the latest client change pops up immediately
+          unreadNotifs.sort((a, b) => {
+            const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt ? new Date(a.createdAt).getTime() : Date.now());
+            const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt ? new Date(b.createdAt).getTime() : Date.now());
+            return timeB - timeA;
+          });
 
-          if (unreadCancels.length > 0) {
-            const firstCancel = unreadCancels[0];
-            setActiveAlert({
-              id: firstCancel.id,
-              type: 'appointment_canceled',
-              title: '🛑 Appointment Canceled by Client',
-              message: `${firstCancel.clientName || 'Client'} canceled appointment (${firstCancel.appointmentTypeName || 'Therapy Session'}).`,
-              clientName: firstCancel.clientName || 'Client',
-              details: firstCancel.reason || '',
-              createdAt: firstCancel.canceledAt,
-              sourceCollection: 'cancellationAlerts'
-            });
-          } else {
-            setActiveAlert(null);
-          }
-        }, () => {});
-        return () => unsubCancels();
+          const latest = unreadNotifs[0];
+          setActiveAlert({
+            id: latest.id,
+            type: latest.type,
+            title: latest.title || 'Client Portal Notice',
+            message: latest.message || '',
+            clientName: latest.clientName || 'Client',
+            details: latest.details || latest.reason || '',
+            createdAt: latest.createdAt,
+            sourceCollection: 'practiceNotifications'
+          });
+        } else {
+          setActiveAlert(null);
+        }
+      },
+      (err) => {
+        console.warn("Practice notification listener error:", err);
       }
-    }, (err) => {
-      console.warn("Practice notification listener notice:", err);
-    });
+    );
 
     return () => unsubNotifs();
   }, [user]);
