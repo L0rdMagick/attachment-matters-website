@@ -157,6 +157,11 @@ export const ConsentSigner: React.FC = () => {
     ];
   };
 
+  const isAlreadySigned = (templateId?: string | null) => {
+    if (!templateId) return false;
+    return signedDocs.some((d) => d.templateId === templateId);
+  };
+
   const getSignedDocForTemplate = (templateId?: string | null) => {
     if (!templateId) return undefined;
     return signedDocs.find((d) => d.templateId === templateId);
