@@ -119,14 +119,16 @@ export const ConsentSigner: React.FC = () => {
     setMessage(null);
   };
 
-  const isQuestionnaireTemplate = (tmpl: ConsentTemplateData): boolean => {
+  const isQuestionnaireTemplate = (tmpl?: ConsentTemplateData | null): boolean => {
+    if (!tmpl) return false;
     if (tmpl.formType === 'questionnaire') return true;
     const cat = (tmpl.category || '').toLowerCase();
     const title = (tmpl.title || '').toLowerCase();
     return cat.includes('intake') || cat.includes('questionnaire') || title.includes('questionnaire') || title.includes('intake');
   };
 
-  const getEffectiveSections = (tmpl: ConsentTemplateData): FormSection[] => {
+  const getEffectiveSections = (tmpl?: ConsentTemplateData | null): FormSection[] => {
+    if (!tmpl) return [];
     if (tmpl.sections && tmpl.sections.length > 0) {
       return tmpl.sections;
     }
@@ -153,6 +155,11 @@ export const ConsentSigner: React.FC = () => {
         fieldType: 'long_text'
       }
     ];
+  };
+
+  const getSignedDocForTemplate = (templateId?: string | null) => {
+    if (!templateId) return undefined;
+    return signedDocs.find((d) => d.templateId === templateId);
   };
 
   const handleSignDocument = async (e: React.FormEvent) => {
