@@ -99,7 +99,7 @@ export const TemplateManagerView: React.FC = () => {
     setSections((prev) => [...prev, newSec]);
   };
 
-  const handleUpdateSection = (id: string, field: 'title' | 'content', val: string) => {
+  const handleUpdateSection = (id: string, field: keyof FormSection, val: any) => {
     setSections((prev) =>
       prev.map((s) => (s.id === id ? { ...s, [field]: val } : s))
     );

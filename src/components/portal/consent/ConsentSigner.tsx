@@ -119,22 +119,51 @@ export const ConsentSigner: React.FC = () => {
     setMessage(null);
   };
 
-  const isAlreadySigned = (templateId: string) => {
-    return signedDocs.some((d) => d.templateId === templateId);
+  const isQuestionnaireTemplate = (tmpl: ConsentTemplateData): boolean => {
+    if (tmpl.formType === 'questionnaire') return true;
+    const cat = (tmpl.category || '').toLowerCase();
+    const title = (tmpl.title || '').toLowerCase();
+    return cat.includes('intake') || cat.includes('questionnaire') || title.includes('questionnaire') || title.includes('intake');
   };
 
-  const getSignedDocForTemplate = (templateId: string) => {
-    return signedDocs.find((d) => d.templateId === templateId);
+  const getEffectiveSections = (tmpl: ConsentTemplateData): FormSection[] => {
+    if (tmpl.sections && tmpl.sections.length > 0) {
+      return tmpl.sections;
+    }
+    const text = (tmpl.textContent || '').trim();
+    if (text) {
+      const blocks = text.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+      if (blocks.length > 0) {
+        return blocks.map((block, i) => {
+          const lines = block.split('\n');
+          return {
+            id: `sec-auto-${i + 1}`,
+            title: lines[0] || `Question ${i + 1}`,
+            content: lines.slice(1).join('\n'),
+            fieldType: 'long_text'
+          };
+        });
+      }
+    }
+    return [
+      {
+        id: 'sec-auto-1',
+        title: tmpl.title || 'Client Clinical Response',
+        content: tmpl.description || '',
+        fieldType: 'long_text'
+      }
+    ];
   };
 
   const handleSignDocument = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !selectedTemplate) return;
 
-    const isQuestionnaire = selectedTemplate.formType === 'questionnaire' || selectedTemplate.category.toLowerCase() === 'intake';
+    const isQuestionnaire = isQuestionnaireTemplate(selectedTemplate);
+    const effectiveSections = getEffectiveSections(selectedTemplate);
 
-    if (isQuestionnaire && selectedTemplate.sections && selectedTemplate.sections.length > 0) {
-      const unanswered = selectedTemplate.sections.filter(
+    if (isQuestionnaire && effectiveSections.length > 0) {
+      const unanswered = effectiveSections.filter(
         (sec) => !answers[sec.id] || !answers[sec.id].trim()
       );
       if (unanswered.length > 0) {
@@ -176,9 +205,9 @@ export const ConsentSigner: React.FC = () => {
 
       // Format snapshot text if questionnaire
       let formattedTextSnapshot = selectedTemplate.textContent;
-      if (isQuestionnaire && selectedTemplate.sections && selectedTemplate.sections.length > 0) {
+      if (isQuestionnaire && effectiveSections.length > 0) {
         formattedTextSnapshot = `${selectedTemplate.title.toUpperCase()}\n\n` +
-          selectedTemplate.sections
+          effectiveSections
             .map((sec) => `${sec.title}\nClient Response: ${answers[sec.id] || 'N/A'}`)
             .join('\n\n');
       }
@@ -304,78 +333,72 @@ export const ConsentSigner: React.FC = () => {
                 </div>
 
                 {/* Questionnaire Form vs Consent Read & Sign Form */}
-                {selectedTemplate.formType === 'questionnaire' || selectedTemplate.category.toLowerCase() === 'intake' ? (
+                {isQuestionnaireTemplate(selectedTemplate) ? (
                   <div className="space-y-4">
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 flex items-center justify-between gap-2">
                       <span>📋 <strong>Required Questionnaire:</strong> Please answer all questions below. You may click the <strong>N/A</strong> button to quickly mark any question.</span>
                     </div>
 
                     <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
-                      {selectedTemplate.sections && selectedTemplate.sections.length > 0 ? (
-                        selectedTemplate.sections.map((sec, idx) => {
-                          const currentVal = answers[sec.id] || '';
-                          const isAnswered = currentVal.trim().length > 0;
-                          const isNA = currentVal === 'N/A';
+                      {getEffectiveSections(selectedTemplate).map((sec, idx) => {
+                        const currentVal = answers[sec.id] || '';
+                        const isAnswered = currentVal.trim().length > 0;
+                        const isNA = currentVal === 'N/A';
 
-                          const placeholderText = sec.content || '';
-                          const isShortText = sec.fieldType === 'short_text';
+                        const placeholderText = sec.content || '';
+                        const isShortText = sec.fieldType === 'short_text';
 
-                          return (
-                            <div key={sec.id || idx} className="bg-[#F7F2E9]/60 p-4 sm:p-5 rounded-2xl border border-[#EAE1D2] space-y-3 shadow-xs">
-                              <div className="flex items-start justify-between gap-2">
-                                <h4 className="font-serif font-bold text-sm text-[#2C2A2A]">
-                                  {sec.title} <span className="text-[#BF5B33]">*</span>
-                                </h4>
-                                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border whitespace-nowrap ${
-                                  isAnswered
-                                    ? (isNA ? 'bg-gray-100 text-gray-700 border-gray-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300')
-                                    : 'bg-amber-100 text-amber-900 border-amber-300'
-                                }`}>
-                                  {isAnswered ? (isNA ? '🏷️ N/A' : '✓ Answered') : '⚠️ Required'}
-                                </span>
-                              </div>
-
-                              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                                {isShortText ? (
-                                  <input
-                                    type="text"
-                                    required
-                                    value={currentVal}
-                                    onChange={(e) => handleAnswerChange(sec.id, e.target.value)}
-                                    placeholder={placeholderText}
-                                    className="flex-1 p-3 rounded-xl border border-[#EAE1D2] bg-white text-xs font-sans text-[#2C2A2A] outline-none focus:ring-2 focus:ring-[#BF5B33]/30 leading-relaxed placeholder:text-gray-400/80 placeholder:italic"
-                                  />
-                                ) : (
-                                  <textarea
-                                    rows={4}
-                                    required
-                                    value={currentVal}
-                                    onChange={(e) => handleAnswerChange(sec.id, e.target.value)}
-                                    placeholder={placeholderText}
-                                    className="flex-1 p-3 rounded-xl border border-[#EAE1D2] bg-white text-xs font-sans text-[#2C2A2A] outline-none focus:ring-2 focus:ring-[#BF5B33]/30 leading-relaxed placeholder:text-gray-400/80 placeholder:italic"
-                                  />
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleNA(sec.id)}
-                                  className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1 shrink-0 ${
-                                    isNA
-                                      ? 'bg-[#4A5741] text-white border-[#4A5741]'
-                                      : 'bg-white text-[#2C2A2A] border-[#EAE1D2] hover:bg-[#EAE1D2]/60'
-                                  }`}
-                                  title="Fill N/A for this question"
-                                >
-                                  🚫 N/A
-                                </button>
-                              </div>
+                        return (
+                          <div key={sec.id || idx} className="bg-[#F7F2E9]/60 p-4 sm:p-5 rounded-2xl border border-[#EAE1D2] space-y-3 shadow-xs">
+                            <div className="flex items-start justify-between gap-2">
+                              <h4 className="font-serif font-bold text-sm text-[#2C2A2A]">
+                                {sec.title} <span className="text-[#BF5B33]">*</span>
+                              </h4>
+                              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border whitespace-nowrap ${
+                                isAnswered
+                                  ? (isNA ? 'bg-gray-100 text-gray-700 border-gray-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300')
+                                  : 'bg-amber-100 text-amber-900 border-amber-300'
+                              }`}>
+                                {isAnswered ? (isNA ? '🏷️ N/A' : '✓ Answered') : '⚠️ Required'}
+                              </span>
                             </div>
-                          );
-                        })
-                      ) : (
-                        <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-xl p-5 text-xs text-[#2C2A2A] leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap font-mono">
-                          {selectedTemplate.textContent}
-                        </div>
-                      )}
+
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                              {isShortText ? (
+                                <input
+                                  type="text"
+                                  required
+                                  value={currentVal}
+                                  onChange={(e) => handleAnswerChange(sec.id, e.target.value)}
+                                  placeholder={placeholderText}
+                                  className="flex-1 p-3 rounded-xl border border-[#EAE1D2] bg-white text-xs font-sans text-[#2C2A2A] outline-none focus:ring-2 focus:ring-[#BF5B33]/30 leading-relaxed placeholder:text-gray-400/80 placeholder:italic"
+                                />
+                              ) : (
+                                <textarea
+                                  rows={4}
+                                  required
+                                  value={currentVal}
+                                  onChange={(e) => handleAnswerChange(sec.id, e.target.value)}
+                                  placeholder={placeholderText}
+                                  className="flex-1 p-3 rounded-xl border border-[#EAE1D2] bg-white text-xs font-sans text-[#2C2A2A] outline-none focus:ring-2 focus:ring-[#BF5B33]/30 leading-relaxed placeholder:text-gray-400/80 placeholder:italic"
+                                />
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleNA(sec.id)}
+                                className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1 shrink-0 ${
+                                  isNA
+                                    ? 'bg-[#4A5741] text-white border-[#4A5741]'
+                                    : 'bg-white text-[#2C2A2A] border-[#EAE1D2] hover:bg-[#EAE1D2]/60'
+                                }`}
+                                title="Fill N/A for this question"
+                              >
+                                🚫 N/A
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (
