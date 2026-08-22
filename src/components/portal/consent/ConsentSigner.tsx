@@ -245,8 +245,20 @@ export const ConsentSigner: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="p-8 text-center bg-white border border-[#EAE1D2] rounded-2xl">Loading consent documents...</div>;
+    return <div className="p-8 text-center bg-white border border-[#EAE1D2] rounded-2xl text-xs text-[#2C2A2A]">Loading consent documents...</div>;
   }
+
+  if (templates.length === 0) {
+    return (
+      <div className="p-12 text-center bg-white border border-[#EAE1D2] rounded-2xl space-y-3">
+        <span className="text-3xl">📄</span>
+        <h3 className="font-serif text-lg font-medium text-[#2C2A2A]">No Practice Documents Required</h3>
+        <p className="text-xs text-[#2C2A2A]/70">There are currently no active practice forms or consent documents required for your account.</p>
+      </div>
+    );
+  }
+
+  const activeTemplate = selectedTemplate || templates[0];
 
   return (
     <div className="space-y-8 font-sans">
@@ -271,7 +283,7 @@ export const ConsentSigner: React.FC = () => {
           <h3 className="text-xs font-semibold uppercase tracking-wider text-[#4A5741] px-2 mb-3">Required Documents</h3>
           {templates.map((t) => {
             const signed = isAlreadySigned(t.id);
-            const isSelected = selectedTemplate?.id === t.id;
+            const isSelected = activeTemplate?.id === t.id;
             return (
               <button
                 key={t.id}
@@ -292,10 +304,10 @@ export const ConsentSigner: React.FC = () => {
 
         {/* Selected Document Text & Signing Form / Printable View */}
         <div className="md:col-span-2 space-y-6">
-          {selectedTemplate ? (
+          {activeTemplate ? (
             (() => {
-              const currentSignedDoc = getSignedDocForTemplate(selectedTemplate.id);
-              const showSignedView = isAlreadySigned(selectedTemplate.id) && !isEditingSigned && currentSignedDoc;
+              const currentSignedDoc = getSignedDocForTemplate(activeTemplate.id);
+              const showSignedView = isAlreadySigned(activeTemplate.id) && !isEditingSigned && currentSignedDoc;
 
               if (showSignedView && currentSignedDoc) {
                 return (
@@ -327,20 +339,20 @@ export const ConsentSigner: React.FC = () => {
                 <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
                 <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-4">
                   <div>
-                    <h3 className="text-2xl font-serif text-[#2C2A2A] font-medium">{selectedTemplate.title}</h3>
-                    <span className="text-xs text-[#4A5741] font-semibold">{selectedTemplate.category} • Version {selectedTemplate.version}</span>
+                    <h3 className="text-2xl font-serif text-[#2C2A2A] font-medium">{activeTemplate.title}</h3>
+                    <span className="text-xs text-[#4A5741] font-semibold">{activeTemplate.category} • Version {activeTemplate.version}</span>
                   </div>
                 </div>
 
                 {/* Questionnaire Form vs Consent Read & Sign Form */}
-                {isQuestionnaireTemplate(selectedTemplate) ? (
+                {isQuestionnaireTemplate(activeTemplate) ? (
                   <div className="space-y-4">
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 flex items-center justify-between gap-2">
                       <span>📋 <strong>Required Questionnaire:</strong> Please answer all questions below. You may click the <strong>N/A</strong> button to quickly mark any question.</span>
                     </div>
 
                     <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
-                      {getEffectiveSections(selectedTemplate).map((sec, idx) => {
+                      {getEffectiveSections(activeTemplate).map((sec, idx) => {
                         const currentVal = answers[sec.id] || '';
                         const isAnswered = currentVal.trim().length > 0;
                         const isNA = currentVal === 'N/A';
@@ -403,9 +415,9 @@ export const ConsentSigner: React.FC = () => {
                   </div>
                 ) : (
                   /* Standard Read & Sign Consent Document Text */
-                  selectedTemplate.sections && selectedTemplate.sections.length > 0 ? (
+                  activeTemplate.sections && activeTemplate.sections.length > 0 ? (
                     <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-xl p-4 sm:p-5 text-xs text-[#2C2A2A] leading-relaxed max-h-[400px] overflow-y-auto space-y-4 font-sans">
-                      {selectedTemplate.sections.map((sec, idx) => (
+                      {activeTemplate.sections.map((sec, idx) => (
                         <div key={sec.id || idx} className="bg-white p-4 rounded-xl border border-[#EAE1D2] space-y-1.5 shadow-xs">
                           <h4 className="font-serif font-bold text-sm text-[#2C2A2A] border-b border-[#EAE1D2] pb-1">
                             {sec.title}
@@ -418,7 +430,7 @@ export const ConsentSigner: React.FC = () => {
                     </div>
                   ) : (
                     <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-xl p-5 text-xs text-[#2C2A2A] leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap font-mono">
-                      {selectedTemplate.textContent}
+                      {activeTemplate.textContent}
                     </div>
                   )
                 )}
