@@ -418,26 +418,69 @@ export const TemplateManagerView: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-bold uppercase text-gray-600 mb-1">Section Title</label>
+                        <label className="block text-[11px] font-bold uppercase text-gray-600 mb-1">
+                          {formData.formType === 'questionnaire' ? 'Question / Prompt Title' : 'Section Title'}
+                        </label>
                         <input
                           type="text"
                           required
                           value={sec.title}
                           onChange={(e) => handleUpdateSection(sec.id, 'title', e.target.value)}
                           className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs font-bold text-[#2C2A2A] outline-none focus:ring-1 focus:ring-[#BF5B33]"
-                          placeholder="e.g., 1. Confidentiality & HIPAA Exceptions"
+                          placeholder={formData.formType === 'questionnaire' ? 'e.g., 1.1 Primary Reason for Therapy Presentation' : 'e.g., 1. Confidentiality & HIPAA Exceptions'}
                         />
                       </div>
 
+                      {formData.formType === 'questionnaire' && (
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase text-gray-600 mb-1">Answer Field Format</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateSection(sec.id, 'fieldType', 'short_text')}
+                              className={`p-2 rounded-lg border text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
+                                (sec.fieldType || 'long_text') === 'short_text'
+                                  ? 'bg-[#4A5741] text-white border-[#4A5741]'
+                                  : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                              }`}
+                            >
+                              <span>📝 Single-Line Field</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateSection(sec.id, 'fieldType', 'long_text')}
+                              className={`p-2 rounded-lg border text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
+                                (sec.fieldType || 'long_text') === 'long_text'
+                                  ? 'bg-[#BF5B33] text-white border-[#BF5B33]'
+                                  : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                              }`}
+                            >
+                              <span>📄 Large Box (Multi-Line)</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       <div>
-                        <label className="block text-[11px] font-bold uppercase text-gray-600 mb-1">Section Text Content</label>
+                        <label className="block text-[11px] font-bold uppercase text-gray-600 mb-1">
+                          {formData.formType === 'questionnaire' ? 'User Instructions' : 'Section Text Content'}
+                        </label>
                         <textarea
-                          rows={4}
+                          rows={formData.formType === 'questionnaire' ? 2 : 4}
                           value={sec.content}
                           onChange={(e) => handleUpdateSection(sec.id, 'content', e.target.value)}
                           className="w-full p-2.5 rounded-lg border border-[#EAE1D2] text-xs text-[#2C2A2A] leading-relaxed outline-none focus:ring-1 focus:ring-[#BF5B33]"
-                          placeholder="Write section text here..."
+                          placeholder={
+                            formData.formType === 'questionnaire'
+                              ? 'Write user instructions here... (Will appear as an opaque placeholder in the client input box until they begin typing. Leave empty for a blank input box).'
+                              : 'Write section text here...'
+                          }
                         />
+                        {formData.formType === 'questionnaire' && (
+                          <p className="text-[10px] text-gray-500 mt-1 italic">
+                            💡 If left empty, the client input box will be blank. If instructions are written, they will display inside the box as an opaque placeholder and disappear when the client types.
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}

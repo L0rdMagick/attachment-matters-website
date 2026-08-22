@@ -317,18 +317,16 @@ export const ConsentSigner: React.FC = () => {
                           const isAnswered = currentVal.trim().length > 0;
                           const isNA = currentVal === 'N/A';
 
+                          const placeholderText = sec.content || '';
+                          const isShortText = sec.fieldType === 'short_text';
+
                           return (
                             <div key={sec.id || idx} className="bg-[#F7F2E9]/60 p-4 sm:p-5 rounded-2xl border border-[#EAE1D2] space-y-3 shadow-xs">
                               <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <h4 className="font-serif font-bold text-sm text-[#2C2A2A]">
-                                    {sec.title} <span className="text-[#BF5B33]">*</span>
-                                  </h4>
-                                  {sec.content && (
-                                    <p className="text-xs text-[#2C2A2A]/70 mt-1 leading-relaxed">{sec.content}</p>
-                                  )}
-                                </div>
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${
+                                <h4 className="font-serif font-bold text-sm text-[#2C2A2A]">
+                                  {sec.title} <span className="text-[#BF5B33]">*</span>
+                                </h4>
+                                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border whitespace-nowrap ${
                                   isAnswered
                                     ? (isNA ? 'bg-gray-100 text-gray-700 border-gray-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300')
                                     : 'bg-amber-100 text-amber-900 border-amber-300'
@@ -338,14 +336,25 @@ export const ConsentSigner: React.FC = () => {
                               </div>
 
                               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                                <textarea
-                                  rows={2}
-                                  required
-                                  value={currentVal}
-                                  onChange={(e) => handleAnswerChange(sec.id, e.target.value)}
-                                  className="flex-1 p-3 rounded-xl border border-[#EAE1D2] bg-white text-xs font-sans text-[#2C2A2A] outline-none focus:ring-2 focus:ring-[#BF5B33]/30 leading-relaxed"
-                                  placeholder="Type your response here or click N/A..."
-                                />
+                                {isShortText ? (
+                                  <input
+                                    type="text"
+                                    required
+                                    value={currentVal}
+                                    onChange={(e) => handleAnswerChange(sec.id, e.target.value)}
+                                    placeholder={placeholderText}
+                                    className="flex-1 p-3 rounded-xl border border-[#EAE1D2] bg-white text-xs font-sans text-[#2C2A2A] outline-none focus:ring-2 focus:ring-[#BF5B33]/30 leading-relaxed placeholder:text-gray-400/80 placeholder:italic"
+                                  />
+                                ) : (
+                                  <textarea
+                                    rows={4}
+                                    required
+                                    value={currentVal}
+                                    onChange={(e) => handleAnswerChange(sec.id, e.target.value)}
+                                    placeholder={placeholderText}
+                                    className="flex-1 p-3 rounded-xl border border-[#EAE1D2] bg-white text-xs font-sans text-[#2C2A2A] outline-none focus:ring-2 focus:ring-[#BF5B33]/30 leading-relaxed placeholder:text-gray-400/80 placeholder:italic"
+                                  />
+                                )}
                                 <button
                                   type="button"
                                   onClick={() => handleNA(sec.id)}

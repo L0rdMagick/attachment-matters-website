@@ -1,7 +1,8 @@
 export interface FormSection {
   id: string;
   title: string;
-  content: string;
+  content: string; // Used as User Instructions for questionnaires or section body for consents
+  fieldType?: 'short_text' | 'long_text'; // 'short_text' = single-line input, 'long_text' = multi-line box
   placeholder?: string;
 }
 
