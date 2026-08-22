@@ -122,9 +122,17 @@ export const ConsentSigner: React.FC = () => {
   const isQuestionnaireTemplate = (tmpl?: ConsentTemplateData | null): boolean => {
     if (!tmpl) return false;
     if (tmpl.formType === 'questionnaire') return true;
+    if (tmpl.formType === 'consent') return false;
     const cat = (tmpl.category || '').toLowerCase();
     const title = (tmpl.title || '').toLowerCase();
-    return cat.includes('intake') || cat.includes('questionnaire') || title.includes('questionnaire') || title.includes('intake');
+    if (cat.includes('intake') || cat.includes('questionnaire') || title.includes('questionnaire') || title.includes('intake')) {
+      return true;
+    }
+    // Default to questionnaire if form has defined sections
+    if (tmpl.sections && tmpl.sections.length > 0) {
+      return true;
+    }
+    return false;
   };
 
   const getEffectiveSections = (tmpl?: ConsentTemplateData | null): FormSection[] => {

@@ -162,6 +162,7 @@ export const TemplateManagerView: React.FC = () => {
       id: formData.id || `tmpl-${Date.now()}`,
       title: formData.title.trim(),
       category: formData.category || 'Clinical Treatment',
+      formType: formData.formType || 'consent',
       version: formData.version || 'v1.0 (2026)',
       isActive: true,
       requiredForIntake: formData.requiredForIntake ?? true,
