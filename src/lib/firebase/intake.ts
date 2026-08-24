@@ -110,16 +110,17 @@ export async function saveIntakeSubmission(
       details: keyDetails.join('\n')
     });
 
-    if (cData.email) {
-      sendPortalEmail({
-        to: cData.email,
-        subject: 'Intake Form Received - Attachment Matters',
-        headline: 'Intake Questionnaire Received',
-        bodyHtml: `<p>Dear ${clientName},</p><p>Thank you for submitting your intake paperwork. Your clinician has been notified and will review your information prior to your session.</p>`,
-        actionUrl: '/portal',
-        actionText: 'View Portal'
-      });
-    }
+    const recipients: string[] = ['info@familytrusttherapy.com'];
+    if (cData.email) recipients.push(cData.email);
+
+    sendPortalEmail({
+      to: recipients,
+      subject: `Clinical Intake Submitted: ${clientName}`,
+      headline: 'Intake Questionnaire Received',
+      bodyHtml: `<p>Clinical intake questionnaire has been submitted for <strong>${clientName}</strong>.</p><p>${keyDetails.join('<br/>')}</p>`,
+      actionUrl: 'https://familytrusttherapy.com/portal',
+      actionText: 'Review Intake Submission'
+    });
   }
 }
 

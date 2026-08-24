@@ -473,16 +473,17 @@ export async function signConsentDocument(
       details: detailsStr
     });
 
-    if (clientEmail) {
-      sendPortalEmail({
-        to: clientEmail,
-        subject: `Signed Document Confirmation - ${template.title}`,
-        headline: 'Document Signed & Recorded',
-        bodyHtml: `<p>Dear ${clientDisplayName},</p><p>This email confirms that you have successfully signed <strong>${template.title}</strong> (${template.version}).</p><p>Audit Record Hash: <code>${documentHash}</code></p>`,
-        actionUrl: '/portal',
-        actionText: 'View Documents'
-      });
-    }
+    const recipients: string[] = ['info@familytrusttherapy.com'];
+    if (clientEmail) recipients.push(clientEmail);
+
+    sendPortalEmail({
+      to: recipients,
+      subject: `Signed Document Executed: ${clientDisplayName} - ${template.title}`,
+      headline: 'Consent Document Signed & Recorded',
+      bodyHtml: `<p><strong>${clientDisplayName}</strong> has signed <strong>${template.title}</strong> (${template.version}).</p><p>Audit Record Hash: <code>${documentHash}</code></p>`,
+      actionUrl: 'https://familytrusttherapy.com/portal',
+      actionText: 'View Document Audit Trail'
+    });
   } catch (notifErr) {
     console.warn("Failed to dispatch practice notification for document sign:", notifErr);
   }
