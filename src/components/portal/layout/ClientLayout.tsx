@@ -39,11 +39,11 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard' },
-    { id: 'appointments', label: 'Appointments & Booking' },
-    { id: 'documents', label: 'Forms & Documents' },
-    { id: 'notes', label: 'Shared Session Notes' },
-    { id: 'billing', label: 'Billing & Invoices' },
-    { id: 'profile', label: 'My Profile' }
+    { id: 'appointments', label: 'Schedule' },
+    { id: 'documents', label: 'Forms' },
+    { id: 'notes', label: 'Shared Summaries' },
+    { id: 'billing', label: 'Billing' },
+    { id: 'profile', label: 'Profile' }
   ];
 
   return (
@@ -101,7 +101,7 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({
                 href="/"
                 className="px-4 py-2.5 text-xs font-semibold rounded-lg text-[#4A5741] hover:bg-[#4A5741]/10 transition whitespace-nowrap flex items-center gap-1"
               >
-                🌐 Home Website
+                🌐 Home
               </a>
               {navItems.map((item) => {
                 const isActive = activeTab === item.id;
@@ -133,9 +133,9 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({
                   onChange={(e) => onRoleOverrideChange(e.target.value as any)}
                   className="px-2.5 py-1.5 rounded-lg border border-[#4A5741]/40 bg-white text-xs font-semibold text-[#2C2A2A] outline-none focus:ring-2 focus:ring-[#4A5741]/20 cursor-pointer shadow-xs"
                 >
-                  <option value="admin">Practice Admin</option>
+                  <option value="admin">Admin</option>
                   <option value="therapist">Therapist</option>
-                  <option value="client">Client Portal View</option>
+                  <option value="client">Client</option>
                 </select>
               </div>
             )}
@@ -177,9 +177,9 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({
                     }}
                     className="w-full p-2.5 rounded-xl border border-[#4A5741]/40 bg-[#F7F2E9] text-xs font-semibold text-[#2C2A2A] outline-none cursor-pointer"
                   >
-                    <option value="admin">Practice Admin</option>
+                    <option value="admin">Admin</option>
                     <option value="therapist">Therapist</option>
-                    <option value="client">Client Portal View</option>
+                    <option value="client">Client</option>
                   </select>
                 </div>
               )}
@@ -190,7 +190,7 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({
                   href="/"
                   className="w-full text-left px-4 py-3 text-xs font-semibold rounded-xl bg-white text-[#4A5741] hover:bg-[#4A5741]/10 border border-[#EAE1D2]/60 flex items-center justify-between min-h-[44px]"
                 >
-                  <span>🌐 Home Website</span>
+                  <span>🌐 Home</span>
                   <span>↗</span>
                 </a>
                 {navItems.map((item) => {

@@ -504,7 +504,7 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
       <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-[#EAE1D2] pb-6">
           <div>
-            <h2 className="text-3xl font-serif text-[#2C2A2A] font-medium">Billing Ledger & Financial Account</h2>
+            <h2 className="text-3xl font-serif text-[#2C2A2A] font-medium">Billing Ledger</h2>
             <p className="text-xs text-[#2C2A2A]/70 mt-1">
               Track upcoming session charges, official invoiced balances, payment receipts, and transaction audit trails.
             </p>

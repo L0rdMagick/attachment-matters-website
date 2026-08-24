@@ -154,7 +154,7 @@ export const AvailabilityManager: React.FC = () => {
   return (
     <div className="space-y-8 font-sans">
       <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm">
-        <h2 className="text-3xl font-serif text-[#2C2A2A] font-medium">Therapist Schedule & Working Hours</h2>
+        <h2 className="text-3xl font-serif text-[#2C2A2A] font-medium">Therapist Settings and Hours</h2>
         <p className="text-xs text-[#2C2A2A]/70 mt-1">
           Configure working hours, session durations, pricing, buffer times, and client self-booking policies.
         </p>

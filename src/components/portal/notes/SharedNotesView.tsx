@@ -137,7 +137,7 @@ export const SharedNotesView: React.FC<{ targetClientId?: string }> = ({ targetC
     <div className="space-y-6 font-sans">
       <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-serif text-[#2C2A2A] font-medium">Shared Session Summaries & Resources</h2>
+          <h2 className="text-xl sm:text-2xl font-serif text-[#2C2A2A] font-medium">Shared Session Summaries</h2>
           <p className="text-xs text-[#2C2A2A]/70 mt-1">
             Session recaps, homework exercises, goals, and therapist-provided practice tools.
           </p>
