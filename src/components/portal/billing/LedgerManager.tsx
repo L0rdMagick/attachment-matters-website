@@ -1253,64 +1253,121 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
         {upcomingAppointments.length === 0 ? (
           <p className="text-xs text-[#2C2A2A]/60 py-4 text-center">No upcoming scheduled appointments with pending charges.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#F7F2E9] uppercase tracking-wider font-semibold border-b border-[#EAE1D2]">
-                <tr>
-                  <th className="py-3 px-4">Scheduled Session Date</th>
-                  {isStaff && <th className="py-3 px-4">Client</th>}
-                  <th className="py-3 px-4">Service Type</th>
-                  <th className="py-3 px-4">Format</th>
-                  <th className="py-3 px-4 text-right">Estimated Fee</th>
-                  <th className="py-3 px-4 text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#EAE1D2]">
-                {upcomingAppointments.map((appt) => (
-                  <tr key={appt.id} className="hover:bg-[#F7F2E9]/40 transition">
-                    <td className="py-3.5 px-4 font-semibold text-[#BF5B33] cursor-pointer hover:underline" onClick={() => setSelectedApptDetail(appt)}>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#F7F2E9] uppercase tracking-wider font-semibold border-b border-[#EAE1D2]">
+                  <tr>
+                    <th className="py-3 px-4">Scheduled Session Date</th>
+                    {isStaff && <th className="py-3 px-4">Client</th>}
+                    <th className="py-3 px-4">Service Type</th>
+                    <th className="py-3 px-4">Format</th>
+                    <th className="py-3 px-4 text-right">Estimated Fee</th>
+                    <th className="py-3 px-4 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EAE1D2]">
+                  {upcomingAppointments.map((appt) => (
+                    <tr key={appt.id} className="hover:bg-[#F7F2E9]/40 transition">
+                      <td className="py-3.5 px-4 font-semibold text-[#BF5B33] cursor-pointer hover:underline" onClick={() => setSelectedApptDetail(appt)}>
+                        📅 {new Date(appt.startISO).toLocaleString('en-US', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })} ↗
+                      </td>
+                      {isStaff && (
+                        <td className="py-3.5 px-4 font-medium text-[#2C2A2A]">
+                          {onSelectClient && appt.clientId ? (
+                            <button
+                              type="button"
+                              onClick={() => onSelectClient(appt.clientId)}
+                              className="text-[#BF5B33] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                              title="View Client Chart / Profile"
+                            >
+                              {appt.clientName || getClientName(appt.clientId)} ↗
+                            </button>
+                          ) : (
+                            appt.clientName || getClientName(appt.clientId)
+                          )}
+                        </td>
+                      )}
+                      <td className="py-3.5 px-4 font-medium">{appt.appointmentTypeName}</td>
+                      <td className="py-3.5 px-4 capitalize">{appt.format}</td>
+                      <td className="py-3.5 px-4 text-right font-mono font-bold text-amber-700">
+                        ${((appt.priceInCents || 15000) / 100).toFixed(2)}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          appt.status === 'confirmed' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {appt.status} (Unbilled)
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="block md:hidden space-y-3">
+              {upcomingAppointments.map((appt) => (
+                <div key={appt.id} className="p-4 bg-[#F7F2E9]/50 border border-[#EAE1D2] rounded-xl space-y-3 shadow-2xs">
+                  <div className="flex items-start justify-between border-b border-[#EAE1D2] pb-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedApptDetail(appt)}
+                      className="font-bold text-xs text-[#BF5B33] hover:underline text-left"
+                    >
                       📅 {new Date(appt.startISO).toLocaleString('en-US', {
                         weekday: 'short',
                         month: 'short',
                         day: 'numeric',
-                        year: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit'
                       })} ↗
-                    </td>
+                    </button>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase shrink-0 ${
+                      appt.status === 'confirmed' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {appt.status}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 text-xs">
+                    <div className="font-bold text-[#2C2A2A] text-sm">{appt.appointmentTypeName}</div>
                     {isStaff && (
-                      <td className="py-3.5 px-4 font-medium text-[#2C2A2A]">
+                      <div className="text-gray-600 font-medium">
+                        Client:{' '}
                         {onSelectClient && appt.clientId ? (
                           <button
                             type="button"
                             onClick={() => onSelectClient(appt.clientId)}
-                            className="text-[#BF5B33] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
-                            title="View Client Chart / Profile"
+                            className="text-[#BF5B33] font-semibold hover:underline"
                           >
                             {appt.clientName || getClientName(appt.clientId)} ↗
                           </button>
                         ) : (
-                          appt.clientName || getClientName(appt.clientId)
+                          <span className="text-[#2C2A2A] font-semibold">{appt.clientName || getClientName(appt.clientId)}</span>
                         )}
-                      </td>
+                      </div>
                     )}
-                    <td className="py-3.5 px-4 font-medium">{appt.appointmentTypeName}</td>
-                    <td className="py-3.5 px-4 capitalize">{appt.format}</td>
-                    <td className="py-3.5 px-4 text-right font-mono font-bold text-amber-700">
-                      ${((appt.priceInCents || 15000) / 100).toFixed(2)}
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                        appt.status === 'confirmed' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {appt.status} (Unbilled)
+                    <div className="flex justify-between items-center pt-1 text-xs">
+                      <span className="capitalize text-gray-600">Format: <strong>{appt.format}</strong></span>
+                      <span className="font-mono font-bold text-amber-800 text-sm">
+                        Est: ${((appt.priceInCents || 15000) / 100).toFixed(2)}
                       </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
@@ -1320,97 +1377,192 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
         {invoices.length === 0 ? (
           <p className="text-xs text-[#2C2A2A]/60 py-4 text-center">No invoices found.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#F7F2E9] uppercase tracking-wider font-semibold border-b border-[#EAE1D2]">
-                <tr>
-                  <th className="py-3 px-4">Invoice #</th>
-                  {isStaff && <th className="py-3 px-4">Assigned Client</th>}
-                  <th className="py-3 px-4">Description</th>
-                  <th className="py-3 px-4">Due Date</th>
-                  <th className="py-3 px-4">Total</th>
-                  <th className="py-3 px-4">Balance</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#EAE1D2]">
-                {invoices.map((inv) => {
-                  const effectiveBalance = Math.min(inv.totalCents, inv.balanceCents);
-                  return (
-                    <tr key={inv.id} className="hover:bg-[#F7F2E9]/40 transition">
-                      <td className="py-3.5 px-4 font-mono font-semibold text-[#BF5B33] cursor-pointer hover:underline" onClick={() => setViewSingleInvoice(inv)}>
-                        {inv.invoiceNumber}
-                      </td>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#F7F2E9] uppercase tracking-wider font-semibold border-b border-[#EAE1D2]">
+                  <tr>
+                    <th className="py-3 px-4">Invoice #</th>
+                    {isStaff && <th className="py-3 px-4">Assigned Client</th>}
+                    <th className="py-3 px-4">Description</th>
+                    <th className="py-3 px-4">Due Date</th>
+                    <th className="py-3 px-4">Total</th>
+                    <th className="py-3 px-4">Balance</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EAE1D2]">
+                  {invoices.map((inv) => {
+                    const effectiveBalance = Math.min(inv.totalCents, inv.balanceCents);
+                    return (
+                      <tr key={inv.id} className="hover:bg-[#F7F2E9]/40 transition">
+                        <td className="py-3.5 px-4 font-mono font-semibold text-[#BF5B33] cursor-pointer hover:underline" onClick={() => setViewSingleInvoice(inv)}>
+                          {inv.invoiceNumber}
+                        </td>
+                        {isStaff && (
+                          <td className="py-3.5 px-4 font-medium text-[#2C2A2A]">
+                            {onSelectClient && inv.clientId ? (
+                              <button
+                                type="button"
+                                onClick={() => onSelectClient(inv.clientId)}
+                                className="text-[#BF5B33] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                                title="View Client Chart / Profile"
+                              >
+                                {getClientName(inv.clientId)} ↗
+                              </button>
+                            ) : (
+                              getClientName(inv.clientId)
+                            )}
+                          </td>
+                        )}
+                        <td className="py-3.5 px-4">{inv.description}</td>
+                        <td className="py-3.5 px-4">{inv.dueDate}</td>
+                        <td className="py-3.5 px-4 font-semibold">${(inv.totalCents / 100).toFixed(2)}</td>
+                        <td className="py-3.5 px-4 font-bold text-[#BF5B33]">${(effectiveBalance / 100).toFixed(2)}</td>
+                        <td className="py-3.5 px-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                            inv.status === 'paid' || effectiveBalance <= 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            {effectiveBalance <= 0 ? 'paid' : inv.status.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {isStaff && inv.status !== 'paid' && (
+                              <button
+                                onClick={() => setSelectedInvForPay(inv)}
+                                className="px-2.5 py-1 bg-[#4A5741] hover:bg-[#3b4634] text-white font-semibold rounded-lg text-xs transition"
+                              >
+                                Record Payment
+                              </button>
+                            )}
+                            {isStaff && (
+                              <>
+                                <button
+                                  onClick={() => openEditInvoiceModal(inv)}
+                                  className="px-2.5 py-1 bg-[#BF5B33]/10 text-[#BF5B33] hover:bg-[#BF5B33]/20 font-semibold rounded-lg text-xs transition"
+                                  title="Edit Invoice"
+                                >
+                                  ✏️ Edit
+                                </button>
+                                <button
+                                  onClick={() => setDeletingInvId(inv.id!)}
+                                  className="px-2.5 py-1 bg-red-50 text-red-600 hover:bg-red-100 font-semibold rounded-lg text-xs transition"
+                                  title="Delete Invoice"
+                                >
+                                  🗑️
+                                </button>
+                              </>
+                            )}
+                            <button
+                              onClick={() => setViewSingleInvoice(inv)}
+                              className="px-2.5 py-1 border border-[#EAE1D2] text-[#2C2A2A] font-semibold rounded-lg text-xs hover:bg-[#F7F2E9] transition"
+                            >
+                              🖨️ PDF
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="block md:hidden space-y-3">
+              {invoices.map((inv) => {
+                const effectiveBalance = Math.min(inv.totalCents, inv.balanceCents);
+                const isPaid = inv.status === 'paid' || effectiveBalance <= 0;
+                return (
+                  <div key={inv.id} className="p-4 bg-[#F7F2E9]/40 border border-[#EAE1D2] rounded-xl space-y-3 shadow-2xs">
+                    <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-2">
+                      <button
+                        type="button"
+                        onClick={() => setViewSingleInvoice(inv)}
+                        className="font-mono font-bold text-sm text-[#BF5B33] hover:underline"
+                      >
+                        {inv.invoiceNumber} ↗
+                      </button>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        isPaid ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {effectiveBalance <= 0 ? 'paid' : inv.status.replace('_', ' ')}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5 text-xs">
                       {isStaff && (
-                        <td className="py-3.5 px-4 font-medium text-[#2C2A2A]">
+                        <div className="text-gray-600 font-medium">
+                          Billed To:{' '}
                           {onSelectClient && inv.clientId ? (
                             <button
                               type="button"
                               onClick={() => onSelectClient(inv.clientId)}
-                              className="text-[#BF5B33] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
-                              title="View Client Chart / Profile"
+                              className="text-[#BF5B33] font-semibold hover:underline"
                             >
                               {getClientName(inv.clientId)} ↗
                             </button>
                           ) : (
-                            getClientName(inv.clientId)
+                            <span className="text-[#2C2A2A] font-semibold">{getClientName(inv.clientId)}</span>
                           )}
-                        </td>
-                      )}
-                      <td className="py-3.5 px-4">{inv.description}</td>
-                      <td className="py-3.5 px-4">{inv.dueDate}</td>
-                      <td className="py-3.5 px-4 font-semibold">${(inv.totalCents / 100).toFixed(2)}</td>
-                      <td className="py-3.5 px-4 font-bold text-[#BF5B33]">${(effectiveBalance / 100).toFixed(2)}</td>
-                      <td className="py-3.5 px-4">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                          inv.status === 'paid' || effectiveBalance <= 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                        }`}>
-                          {effectiveBalance <= 0 ? 'paid' : inv.status.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {isStaff && inv.status !== 'paid' && (
-                            <button
-                              onClick={() => setSelectedInvForPay(inv)}
-                              className="px-2.5 py-1 bg-[#4A5741] hover:bg-[#3b4634] text-white font-semibold rounded-lg text-xs transition"
-                            >
-                              Record Payment
-                            </button>
-                          )}
-                          {isStaff && (
-                            <>
-                              <button
-                                onClick={() => openEditInvoiceModal(inv)}
-                                className="px-2.5 py-1 bg-[#BF5B33]/10 text-[#BF5B33] hover:bg-[#BF5B33]/20 font-semibold rounded-lg text-xs transition"
-                                title="Edit Invoice"
-                              >
-                                ✏️ Edit
-                              </button>
-                              <button
-                                onClick={() => setDeletingInvId(inv.id!)}
-                                className="px-2.5 py-1 bg-red-50 text-red-600 hover:bg-red-100 font-semibold rounded-lg text-xs transition"
-                                title="Delete Invoice"
-                              >
-                                🗑️
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={() => setViewSingleInvoice(inv)}
-                            className="px-2.5 py-1 border border-[#EAE1D2] text-[#2C2A2A] font-semibold rounded-lg text-xs hover:bg-[#F7F2E9] transition"
-                          >
-                            🖨️ PDF
-                          </button>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      )}
+                      <p className="text-gray-700 font-medium leading-relaxed">{inv.description}</p>
+                      <p className="text-gray-500 text-[11px]">Due Date: <span className="font-mono text-gray-700">{inv.dueDate}</span></p>
+
+                      <div className="grid grid-cols-2 gap-2 bg-white p-2.5 rounded-lg border border-[#EAE1D2] mt-2">
+                        <div>
+                          <span className="block text-[10px] font-bold uppercase text-gray-500">Total Amount</span>
+                          <span className="font-mono font-bold text-gray-900 text-xs">${(inv.totalCents / 100).toFixed(2)}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="block text-[10px] font-bold uppercase text-gray-500">Balance Due</span>
+                          <span className="font-mono font-bold text-[#BF5B33] text-sm">${(effectiveBalance / 100).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Touch Action Bar */}
+                    <div className="flex flex-wrap items-center justify-end gap-1.5 pt-2 border-t border-[#EAE1D2]/80">
+                      {isStaff && inv.status !== 'paid' && (
+                        <button
+                          onClick={() => setSelectedInvForPay(inv)}
+                          className="px-3 py-1.5 bg-[#4A5741] hover:bg-[#3b4634] text-white font-semibold rounded-lg text-xs transition"
+                        >
+                          💳 Record Payment
+                        </button>
+                      )}
+                      {isStaff && (
+                        <>
+                          <button
+                            onClick={() => openEditInvoiceModal(inv)}
+                            className="px-3 py-1.5 bg-[#BF5B33]/10 text-[#BF5B33] hover:bg-[#BF5B33]/20 font-semibold rounded-lg text-xs transition"
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            onClick={() => setDeletingInvId(inv.id!)}
+                            className="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 font-semibold rounded-lg text-xs transition"
+                          >
+                            🗑️ Delete
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => setViewSingleInvoice(inv)}
+                        className="px-3 py-1.5 border border-[#EAE1D2] text-[#2C2A2A] font-semibold rounded-lg text-xs hover:bg-[#F7F2E9] transition"
+                      >
+                        🖨️ PDF / Print
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 
