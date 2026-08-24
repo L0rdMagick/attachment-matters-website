@@ -5,6 +5,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   serverTimestamp,
@@ -43,6 +44,26 @@ export async function createInvoice(invoice: Omit<InvoiceData, 'id'>): Promise<s
   });
   return docRef.id;
 }
+
+/**
+ * Update an existing invoice
+ */
+export async function updateInvoice(invoiceId: string, updates: Partial<InvoiceData>): Promise<void> {
+  const invRef = doc(db, 'invoices', invoiceId);
+  await updateDoc(invRef, {
+    ...updates,
+    updatedAt: serverTimestamp()
+  });
+}
+
+/**
+ * Delete an existing invoice
+ */
+export async function deleteInvoice(invoiceId: string): Promise<void> {
+  const invRef = doc(db, 'invoices', invoiceId);
+  await deleteDoc(invRef);
+}
+
 
 /**
  * APPEND-ONLY LEDGER TRANSACTION RECORDING

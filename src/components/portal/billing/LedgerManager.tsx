@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { getInvoicesForClient, getLedgerForClient, createInvoice, recordLedgerTransaction } from '../../../lib/firebase/billing';
+import { getInvoicesForClient, getLedgerForClient, createInvoice, updateInvoice, deleteInvoice, recordLedgerTransaction } from '../../../lib/firebase/billing';
 import { getClientsDirectory } from '../../../lib/firebase/clients';
 import { getAppointments } from '../../../lib/firebase/scheduling';
 import type { InvoiceData, LedgerEntryData, LedgerEntryType } from '../../../types/billing';
@@ -47,6 +47,19 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
   const [submittingInv, setSubmittingInv] = useState(false);
   const [invMessage, setInvMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Edit Invoice Modal State
+  const [editingInvoice, setEditingInvoice] = useState<InvoiceData | null>(null);
+  const [editLineItems, setEditLineItems] = useState<any[]>([]);
+  const [editDueDate, setEditDueDate] = useState('');
+  const [editTargetClientId, setEditTargetClientId] = useState('');
+  const [submittingEditInv, setSubmittingEditInv] = useState(false);
+
+  // Delete Invoice State
+  const [deletingInvId, setDeletingInvId] = useState<string | null>(null);
+
+  // Selected Appointment Detail Modal State
+  const [selectedApptDetail, setSelectedApptDetail] = useState<AppointmentData | null>(null);
+
   const addLineItem = () => {
     setLineItems((prev) => [...prev, createDefaultLineItem()]);
   };
@@ -66,6 +79,31 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
 
   const calculateTotalCents = () => {
     return lineItems.reduce((sum, item) => {
+      const amt = parseFloat(item.amount) || 0;
+      return sum + Math.round(amt * 100);
+    }, 0);
+  };
+
+  // Edit Modal Line Item Helpers
+  const addEditLineItem = () => {
+    setEditLineItems((prev) => [...prev, createDefaultLineItem()]);
+  };
+
+  const removeEditLineItem = (index: number) => {
+    if (editLineItems.length <= 1) return;
+    setEditLineItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateEditLineItem = (index: number, field: string, value: any) => {
+    setEditLineItems((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+  };
+
+  const calculateEditTotalCents = () => {
+    return editLineItems.reduce((sum, item) => {
       const amt = parseFloat(item.amount) || 0;
       return sum + Math.round(amt * 100);
     }, 0);
@@ -108,7 +146,6 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
           getAppointments(targetId ? { clientId: targetId } : { therapistId: 'default_therapist' })
         ]);
 
-        // Fallback for clients: if 0 invoices found by uid, match by email in clientList
         if (invs.length === 0 && !isStaff && user?.email && clientList.length > 0 && targetId) {
           const matched = clientList.find((c) => c.email?.toLowerCase() === user.email?.toLowerCase());
           if (matched && matched.uid !== targetId) {
@@ -182,7 +219,6 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
         dueDate: invDueDate || defaultDueDate
       });
 
-      // Also record initial charge entry in ledger
       await recordLedgerTransaction({
         clientId: targetId,
         invoiceId: invId,
@@ -192,10 +228,10 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
         createdById: user!.uid
       });
 
-      // Refresh
+      const targetIdKey = isStaff ? (targetClientId || selectedClientId) : (targetClientId || user?.uid || '');
       const [invs, ledger] = await Promise.all([
-        getInvoicesForClient(targetId),
-        getLedgerForClient(targetId)
+        getInvoicesForClient(targetIdKey),
+        getLedgerForClient(targetIdKey)
       ]);
       setInvoices(invs);
       setLedgerEntries(ledger);
@@ -207,6 +243,114 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
       setInvMessage({ type: 'error', text: err.message || "Failed to create invoice. Please check network/permissions." });
     } finally {
       setSubmittingInv(false);
+    }
+  };
+
+  const openEditInvoiceModal = (inv: InvoiceData) => {
+    setEditingInvoice(inv);
+    setEditTargetClientId(inv.clientId);
+    setEditDueDate(inv.dueDate || defaultDueDate);
+
+    if (inv.items && inv.items.length > 0) {
+      setEditLineItems(
+        inv.items.map((item) => ({
+          id: item.id || Math.random().toString(36).substring(2, 9),
+          serviceDate: item.serviceDate || defaultServiceDate,
+          hours: (item.hours ?? 1).toString(),
+          title: item.title,
+          description: item.description || '',
+          dueDate: item.dueDate || inv.dueDate || defaultDueDate,
+          amount: ((item.amountCents || 0) / 100).toFixed(2)
+        }))
+      );
+    } else {
+      setEditLineItems([
+        {
+          id: Math.random().toString(36).substring(2, 9),
+          serviceDate: defaultServiceDate,
+          hours: '1.0',
+          title: inv.description || 'Psychotherapy Session',
+          description: '',
+          dueDate: inv.dueDate || defaultDueDate,
+          amount: ((inv.totalCents || 0) / 100).toFixed(2)
+        }
+      ]);
+    }
+  };
+
+  const handleUpdateInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingInvoice || !editingInvoice.id) return;
+
+    const validItems = editLineItems.filter((i) => i.title.trim() && parseFloat(i.amount) >= 0);
+    if (validItems.length === 0) {
+      setInvMessage({ type: 'error', text: 'Please provide at least one valid line item.' });
+      return;
+    }
+
+    const formattedItems = validItems.map((item) => ({
+      id: item.id,
+      serviceDate: item.serviceDate,
+      hours: parseFloat(item.hours) || 1,
+      title: item.title,
+      description: item.description,
+      dueDate: item.dueDate || editDueDate,
+      amountCents: Math.round((parseFloat(item.amount) || 0) * 100)
+    }));
+
+    const totalCents = formattedItems.reduce((sum, item) => sum + item.amountCents, 0);
+    const primaryDesc = formattedItems.length === 1
+      ? (formattedItems[0].description ? `${formattedItems[0].title} - ${formattedItems[0].description}` : formattedItems[0].title)
+      : `${formattedItems.length} Itemized Clinical Services (${formattedItems.map(i => i.title).join(', ')})`;
+
+    const currentPaid = Math.max(0, editingInvoice.totalCents - editingInvoice.balanceCents);
+    const newBalanceCents = Math.max(0, totalCents - currentPaid);
+    const newStatus = newBalanceCents <= 0 ? 'paid' : (newBalanceCents < totalCents ? 'partially_paid' : 'unpaid');
+
+    setSubmittingEditInv(true);
+    try {
+      await updateInvoice(editingInvoice.id, {
+        clientId: editTargetClientId || editingInvoice.clientId,
+        description: primaryDesc,
+        items: formattedItems,
+        totalCents,
+        balanceCents: newBalanceCents,
+        status: newStatus,
+        dueDate: editDueDate
+      });
+
+      const targetIdKey = isStaff ? (targetClientId || selectedClientId) : (targetClientId || user?.uid || '');
+      const [invs, ledger] = await Promise.all([
+        getInvoicesForClient(targetIdKey),
+        getLedgerForClient(targetIdKey)
+      ]);
+      setInvoices(invs);
+      setLedgerEntries(ledger);
+      setEditingInvoice(null);
+      setInvMessage({ type: 'success', text: `Invoice ${editingInvoice.invoiceNumber} updated successfully!` });
+    } catch (err: any) {
+      console.error("Failed to update invoice", err);
+      setInvMessage({ type: 'error', text: err.message || "Failed to update invoice." });
+    } finally {
+      setSubmittingEditInv(false);
+    }
+  };
+
+  const handleDeleteInvoice = async (invId: string) => {
+    try {
+      await deleteInvoice(invId);
+      const targetIdKey = isStaff ? (targetClientId || selectedClientId) : (targetClientId || user?.uid || '');
+      const [invs, ledger] = await Promise.all([
+        getInvoicesForClient(targetIdKey),
+        getLedgerForClient(targetIdKey)
+      ]);
+      setInvoices(invs);
+      setLedgerEntries(ledger);
+      setDeletingInvId(null);
+      setInvMessage({ type: 'success', text: 'Invoice deleted successfully.' });
+    } catch (err: any) {
+      console.error("Failed to delete invoice", err);
+      setInvMessage({ type: 'error', text: err.message || 'Failed to delete invoice.' });
     }
   };
 
@@ -227,10 +371,10 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
         createdById: user.uid
       });
 
-      // Refresh
+      const targetIdKey = isStaff ? (targetClientId || selectedClientId) : (targetClientId || user?.uid || '');
       const [invs, ledger] = await Promise.all([
-        getInvoicesForClient(activeClientId),
-        getLedgerForClient(activeClientId)
+        getInvoicesForClient(targetIdKey),
+        getLedgerForClient(targetIdKey)
       ]);
       setInvoices(invs);
       setLedgerEntries(ledger);
@@ -251,6 +395,15 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
 
   return (
     <div className="space-y-8 font-sans">
+      {invMessage && (
+        <div className={`p-4 rounded-xl text-xs font-semibold flex justify-between items-center ${
+          invMessage.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'
+        }`}>
+          <span>{invMessage.text}</span>
+          <button onClick={() => setInvMessage(null)} className="text-gray-400 hover:text-gray-600 font-bold ml-2">✕</button>
+        </div>
+      )}
+
       {/* Header & Balance Summary Cards */}
       <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-[#EAE1D2] pb-6">
@@ -289,18 +442,10 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
         </div>
       </div>
 
-      {invMessage && (
-        <div className={`p-4 rounded-xl text-xs font-semibold border ${
-          invMessage.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'
-        }`}>
-          {invMessage.text}
-        </div>
-      )}
-
       {isStaff && !targetClientId && (
-        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <span className="text-xs font-semibold uppercase text-[#2C2A2A]">
-            Active Client Financial Ledger:
+        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-5 shadow-sm space-y-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#4A5741]">
+            Filter Ledger & Invoices By Client
           </span>
           <PortalClientSelector
             clients={clientList}
@@ -509,6 +654,332 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
         </div>
       )}
 
+      {/* Edit Invoice Overlay Modal */}
+      {isStaff && editingInvoice && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans animate-fade-in overflow-y-auto">
+          <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto my-auto">
+            <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">✏️</span>
+                <div>
+                  <h3 className="text-lg font-serif text-[#2C2A2A] font-semibold">
+                    Edit Client Invoice ({editingInvoice.invoiceNumber})
+                  </h3>
+                  <p className="text-xs text-gray-500">Update itemized line items, clinical service titles, descriptions, and amounts</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setEditingInvoice(null)} className="text-gray-400 hover:text-gray-600 font-bold text-sm">✕</button>
+            </div>
+
+            <form onSubmit={handleUpdateInvoice} className="space-y-5 bg-white p-6 rounded-xl border border-[#EAE1D2]">
+              {!targetClientId && (
+                <PortalClientSelector
+                  clients={clientList}
+                  selectedClientId={editTargetClientId}
+                  onSelectClient={(id) => setEditTargetClientId(id)}
+                  label="Assign Invoice To Client *"
+                  className="w-full"
+                />
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-[#F7F2E9]/60 p-4 rounded-xl border border-[#EAE1D2]">
+                <div className="w-full sm:w-auto flex-1">
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Invoice Payment Due Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={editDueDate}
+                    onChange={(e) => setEditDueDate(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none bg-white focus:ring-2 focus:ring-[#BF5B33]/20"
+                  />
+                </div>
+                <div className="w-full sm:w-auto text-right bg-white px-4 py-2 rounded-xl border border-[#EAE1D2]">
+                  <span className="block text-[10px] font-bold uppercase text-gray-500">Updated Total Amount</span>
+                  <span className="text-xl font-mono font-bold text-[#BF5B33]">
+                    ${(calculateEditTotalCents() / 100).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Line Items Builder Section */}
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#4A5741]">
+                    Invoice Line Items & Clinical Services ({editLineItems.length})
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={addEditLineItem}
+                    className="px-3 py-1.5 bg-[#4A5741] hover:bg-[#3b4634] text-white text-xs font-semibold rounded-lg transition flex items-center gap-1"
+                  >
+                    + Add Line Item
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {editLineItems.map((item, index) => (
+                    <div key={item.id} className="p-4 bg-[#F7F2E9]/40 border border-[#EAE1D2] rounded-xl space-y-3 relative group">
+                      <div className="flex items-center justify-between pb-1 border-b border-[#EAE1D2]/60">
+                        <span className="text-xs font-bold text-[#BF5B33]">Line Item #{index + 1}</span>
+                        {editLineItems.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeEditLineItem(index)}
+                            className="text-xs text-red-500 hover:text-red-700 font-semibold px-2 py-0.5 rounded hover:bg-red-50 transition"
+                          >
+                            Remove Item
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">Service Date *</label>
+                          <input
+                            type="date"
+                            required
+                            value={item.serviceDate}
+                            onChange={(e) => updateEditLineItem(index, 'serviceDate', e.target.value)}
+                            className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">Hours / Units *</label>
+                          <input
+                            type="number"
+                            step="any"
+                            min="0"
+                            required
+                            value={item.hours}
+                            onChange={(e) => updateEditLineItem(index, 'hours', e.target.value)}
+                            className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white"
+                            placeholder="1.0"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">Amount Due ($ USD) *</label>
+                          <input
+                            type="number"
+                            step="any"
+                            min="0"
+                            required
+                            value={item.amount}
+                            onChange={(e) => updateEditLineItem(index, 'amount', e.target.value)}
+                            className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white font-mono font-semibold"
+                            placeholder="150.00"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">Item Due Date</label>
+                          <input
+                            type="date"
+                            value={item.dueDate}
+                            onChange={(e) => updateEditLineItem(index, 'dueDate', e.target.value)}
+                            className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">Clinical Service Title *</label>
+                          <input
+                            type="text"
+                            required
+                            value={item.title}
+                            onChange={(e) => updateEditLineItem(index, 'title', e.target.value)}
+                            className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white"
+                            placeholder="e.g. 50-Min Individual Psychotherapy Session (CPT 90837)"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                            Description / Clinical Service Notes <span className="text-gray-400 font-normal">(Expandable for detailed notes)</span>
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={item.description}
+                            onChange={(e) => updateEditLineItem(index, 'description', e.target.value)}
+                            className="w-full p-2.5 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white focus:ring-2 focus:ring-[#BF5B33]/20 resize-y"
+                            placeholder="Detailed session breakdown, treatment notes, CPT codes, diagnosis details, or custom notes..."
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t border-[#EAE1D2]">
+                <button
+                  type="button"
+                  onClick={addEditLineItem}
+                  className="px-3 py-2 border border-[#4A5741] text-[#4A5741] hover:bg-[#4A5741]/10 text-xs font-semibold rounded-xl transition"
+                >
+                  + Add Itemized Service
+                </button>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setEditingInvoice(null)}
+                    className="px-4 py-2 bg-[#EAE1D2] hover:bg-[#e0d4c1] text-[#2C2A2A] font-semibold text-xs rounded-xl transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingEditInv}
+                    className="px-5 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl disabled:opacity-50 transition shadow-sm"
+                  >
+                    {submittingEditInv ? 'Saving Changes...' : 'Save Invoice Changes'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Invoice Confirmation Modal */}
+      {deletingInvId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans animate-fade-in">
+          <div className="bg-white border border-[#EAE1D2] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-red-600">
+              <span className="text-2xl">⚠️</span>
+              <h3 className="text-base font-bold text-[#2C2A2A]">Confirm Delete Invoice</h3>
+            </div>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              Are you sure you want to delete this client invoice? This action will permanently remove the invoice from billing records.
+            </p>
+            <div className="flex justify-end gap-3 pt-3 border-t border-[#EAE1D2]">
+              <button
+                type="button"
+                onClick={() => setDeletingInvId(null)}
+                className="px-4 py-2 bg-[#EAE1D2] hover:bg-[#e0d4c1] text-[#2C2A2A] font-semibold text-xs rounded-xl transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteInvoice(deletingInvId)}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold text-xs rounded-xl transition shadow-xs"
+              >
+                Delete Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Appointment Detail Modal View */}
+      {selectedApptDetail && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans animate-fade-in overflow-y-auto">
+          <div className="bg-white border border-[#EAE1D2] rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 my-auto relative">
+            <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📅</span>
+                <div>
+                  <h3 className="text-base font-serif text-[#2C2A2A] font-bold">
+                    Scheduled Session Details
+                  </h3>
+                  <p className="text-xs text-gray-500">Unbilled upcoming appointment record</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setSelectedApptDetail(null)} className="text-gray-400 hover:text-gray-600 font-bold text-sm">✕</button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div className="bg-[#F7F2E9] p-4 rounded-xl border border-[#EAE1D2] space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-[#BF5B33] uppercase">Service Type</span>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                    selectedApptDetail.status === 'confirmed' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    {selectedApptDetail.status}
+                  </span>
+                </div>
+                <p className="font-bold text-sm text-[#2C2A2A]">{selectedApptDetail.appointmentTypeName}</p>
+                <div className="flex justify-between text-gray-600 pt-1 border-t border-[#EAE1D2]/60">
+                  <span>Format: <strong className="capitalize text-[#2C2A2A]">{selectedApptDetail.format}</strong></span>
+                  <span>Estimated Fee: <strong className="font-mono text-amber-800">${((selectedApptDetail.priceInCents || 15000) / 100).toFixed(2)}</strong></span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
+                  <span className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Start Date & Time</span>
+                  <p className="font-semibold text-gray-900">
+                    {new Date(selectedApptDetail.startISO).toLocaleString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
+                  <span className="block text-[10px] font-bold uppercase text-gray-500 mb-1">End Date & Time</span>
+                  <p className="font-semibold text-gray-900">
+                    {new Date(selectedApptDetail.endISO).toLocaleString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-1">
+                <span className="block text-[10px] font-bold uppercase text-gray-500">Assigned Client</span>
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-sm text-[#2C2A2A]">
+                    {selectedApptDetail.clientName || getClientName(selectedApptDetail.clientId)}
+                  </span>
+                  {onSelectClient && selectedApptDetail.clientId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cid = selectedApptDetail.clientId;
+                        setSelectedApptDetail(null);
+                        onSelectClient(cid);
+                      }}
+                      className="px-2.5 py-1 bg-[#BF5B33] text-white text-[11px] font-semibold rounded-lg hover:bg-[#a64e2b] transition"
+                    >
+                      View Chart Profile ↗
+                    </button>
+                  )}
+                </div>
+                {getClientEmail(selectedApptDetail.clientId) && (
+                  <p className="text-gray-500">{getClientEmail(selectedApptDetail.clientId)}</p>
+                )}
+              </div>
+
+              {selectedApptDetail.notes && (
+                <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-200 space-y-1">
+                  <span className="block text-[10px] font-bold uppercase text-amber-900">Session Notes & Remarks</span>
+                  <p className="text-gray-700 whitespace-pre-wrap">{selectedApptDetail.notes}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-[#EAE1D2]">
+              <button
+                type="button"
+                onClick={() => setSelectedApptDetail(null)}
+                className="px-4 py-2 bg-[#EAE1D2] hover:bg-[#e0d4c1] text-[#2C2A2A] font-semibold text-xs rounded-xl transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Record Payment Form */}
       {isStaff && selectedInvForPay && (
         <form onSubmit={handleRecordPayment} className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-4">
@@ -578,7 +1049,7 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
               Upcoming Scheduled Sessions & Pending Charges
             </h3>
             <p className="text-xs text-[#2C2A2A]/70 mt-0.5">
-              Unbilled estimated fees for reserved future appointments. Charges automatically convert into official invoices upon session completion.
+              Unbilled estimated fees for reserved future appointments. Click any date to view appointment details.
             </p>
           </div>
           <span className="px-3 py-1 bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold rounded-full w-fit">
@@ -604,15 +1075,15 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
               <tbody className="divide-y divide-[#EAE1D2]">
                 {upcomingAppointments.map((appt) => (
                   <tr key={appt.id} className="hover:bg-[#F7F2E9]/40 transition">
-                    <td className="py-3.5 px-4 font-semibold text-[#2C2A2A]">
-                      {new Date(appt.startISO).toLocaleString('en-US', {
+                    <td className="py-3.5 px-4 font-semibold text-[#BF5B33] cursor-pointer hover:underline" onClick={() => setSelectedApptDetail(appt)}>
+                      📅 {new Date(appt.startISO).toLocaleString('en-US', {
                         weekday: 'short',
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit'
-                      })}
+                      })} ↗
                     </td>
                     {isStaff && (
                       <td className="py-3.5 px-4 font-medium text-[#2C2A2A]">
@@ -706,20 +1177,40 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-right">
-                        {isStaff && inv.status !== 'paid' && (
+                        <div className="flex items-center justify-end gap-1.5">
+                          {isStaff && inv.status !== 'paid' && (
+                            <button
+                              onClick={() => setSelectedInvForPay(inv)}
+                              className="px-2.5 py-1 bg-[#4A5741] hover:bg-[#3b4634] text-white font-semibold rounded-lg text-xs transition"
+                            >
+                              Record Payment
+                            </button>
+                          )}
+                          {isStaff && (
+                            <>
+                              <button
+                                onClick={() => openEditInvoiceModal(inv)}
+                                className="px-2.5 py-1 bg-[#BF5B33]/10 text-[#BF5B33] hover:bg-[#BF5B33]/20 font-semibold rounded-lg text-xs transition"
+                                title="Edit Invoice"
+                              >
+                                ✏️ Edit
+                              </button>
+                              <button
+                                onClick={() => setDeletingInvId(inv.id!)}
+                                className="px-2.5 py-1 bg-red-50 text-red-600 hover:bg-red-100 font-semibold rounded-lg text-xs transition"
+                                title="Delete Invoice"
+                              >
+                                🗑️
+                              </button>
+                            </>
+                          )}
                           <button
-                            onClick={() => setSelectedInvForPay(inv)}
-                            className="px-3 py-1 bg-[#4A5741] text-white font-semibold rounded-lg text-xs"
+                            onClick={() => setViewSingleInvoice(inv)}
+                            className="px-2.5 py-1 border border-[#EAE1D2] text-[#2C2A2A] font-semibold rounded-lg text-xs hover:bg-[#F7F2E9] transition"
                           >
-                            Record Payment
+                            🖨️ PDF
                           </button>
-                        )}
-                        <button
-                          onClick={() => setViewSingleInvoice(inv)}
-                          className="ml-2 px-2.5 py-1 border border-[#EAE1D2] text-[#2C2A2A] font-semibold rounded-lg text-xs hover:bg-[#F7F2E9]"
-                        >
-                          🖨️ PDF
-                        </button>
+                        </div>
                       </td>
                     </tr>
                   );
