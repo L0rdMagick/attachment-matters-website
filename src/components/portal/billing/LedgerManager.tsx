@@ -903,6 +903,9 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+
               {/* Recorded Payments & Credits Section */}
               <div className="space-y-4 pt-4 border-t border-[#EAE1D2]">
                 <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-2">
