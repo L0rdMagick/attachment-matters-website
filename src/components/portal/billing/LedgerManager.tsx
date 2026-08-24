@@ -356,12 +356,13 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
 
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeClientId || !selectedInvForPay || !payAmount || !user) return;
+    if (!selectedInvForPay || !selectedInvForPay.id || !payAmount || !user) return;
+    const targetClientIdForPay = selectedInvForPay.clientId;
     const amountCents = Math.round(parseFloat(payAmount) * 100);
 
     try {
       await recordLedgerTransaction({
-        clientId: activeClientId,
+        clientId: targetClientIdForPay,
         invoiceId: selectedInvForPay.id,
         type: 'payment',
         amountCents,
@@ -380,8 +381,11 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
       setLedgerEntries(ledger);
       setSelectedInvForPay(null);
       setPayAmount('');
-    } catch (err) {
+      setPayRef('');
+      setInvMessage({ type: 'success', text: `Payment of $${(amountCents / 100).toFixed(2)} recorded successfully for invoice ${selectedInvForPay.invoiceNumber}!` });
+    } catch (err: any) {
       console.error("Failed to record payment", err);
+      setInvMessage({ type: 'error', text: err.message || "Failed to record payment." });
     }
   };
 
@@ -980,65 +984,83 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
         </div>
       )}
 
-      {/* Record Payment Form */}
+      {/* Record Payment Overlay Modal */}
       {isStaff && selectedInvForPay && (
-        <form onSubmit={handleRecordPayment} className="bg-white border border-[#EAE1D2] rounded-2xl p-6 shadow-sm space-y-4">
-          <h3 className="text-lg font-serif text-[#2C2A2A] font-medium border-b border-[#EAE1D2] pb-2">
-            Record Payment for {selectedInvForPay.invoiceNumber}
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Payment Amount ($ USD)</label>
-              <input
-                type="number"
-                step="0.01"
-                required
-                value={payAmount}
-                onChange={(e) => setPayAmount(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-                placeholder={(selectedInvForPay.balanceCents / 100).toFixed(2)}
-              />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans animate-fade-in overflow-y-auto">
+          <div className="bg-white border border-[#EAE1D2] rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 my-auto relative">
+            <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">💳</span>
+                <div>
+                  <h3 className="text-base font-serif text-[#2C2A2A] font-bold">
+                    Record Payment for {selectedInvForPay.invoiceNumber}
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Assigned Client: {getClientName(selectedInvForPay.clientId)} • Balance: ${(selectedInvForPay.balanceCents / 100).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setSelectedInvForPay(null)} className="text-gray-400 hover:text-gray-600 font-bold text-sm">✕</button>
             </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Payment Method</label>
-              <select
-                value={payMethod}
-                onChange={(e) => setPayMethod(e.target.value as any)}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white"
-              >
-                <option value="credit_card_token">Credit Card / HSA (Tokenized)</option>
-                <option value="check">Check</option>
-                <option value="cash">Cash</option>
-                <option value="hsa_fsa">HSA / FSA Card</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Reference #</label>
-              <input
-                type="text"
-                value={payRef}
-                onChange={(e) => setPayRef(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-                placeholder="Transaction or Check #"
-              />
-            </div>
+
+            <form onSubmit={handleRecordPayment} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Payment Amount ($ USD) *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  value={payAmount}
+                  onChange={(e) => setPayAmount(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none focus:ring-2 focus:ring-[#BF5B33]/20 font-mono font-semibold"
+                  placeholder={(selectedInvForPay.balanceCents / 100).toFixed(2)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Payment Method *</label>
+                <select
+                  value={payMethod}
+                  onChange={(e) => setPayMethod(e.target.value as any)}
+                  className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white focus:ring-2 focus:ring-[#BF5B33]/20"
+                >
+                  <option value="credit_card_token">Credit Card / HSA (Tokenized)</option>
+                  <option value="check">Check</option>
+                  <option value="cash">Cash</option>
+                  <option value="hsa_fsa">HSA / FSA Card</option>
+                  <option value="other">Other / Direct Transfer</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Reference # / Check #</label>
+                <input
+                  type="text"
+                  value={payRef}
+                  onChange={(e) => setPayRef(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none focus:ring-2 focus:ring-[#BF5B33]/20"
+                  placeholder="e.g. Transaction Ref or Check #"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-[#EAE1D2]">
+                <button
+                  type="button"
+                  onClick={() => setSelectedInvForPay(null)}
+                  className="px-4 py-2 bg-[#EAE1D2] hover:bg-[#e0d4c1] text-[#2C2A2A] font-semibold text-xs rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#4A5741] hover:bg-[#3b4634] text-white text-xs font-semibold rounded-xl transition shadow-xs"
+                >
+                  Record Payment Entry
+                </button>
+              </div>
+            </form>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={() => setSelectedInvForPay(null)}
-              className="px-4 py-2 bg-gray-100 text-xs font-semibold rounded-xl"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-[#4A5741] text-white text-xs font-semibold rounded-xl"
-            >
-              Record Payment Entry
-            </button>
-          </div>
-        </form>
+        </div>
       )}
 
       {/* Upcoming Scheduled Sessions & Pending Charges */}
@@ -1276,6 +1298,10 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
               amountCents: viewSingleInvoice.totalCents
             }];
 
+        const invoicePayments = ledgerEntries.filter(
+          (e) => e.invoiceId === viewSingleInvoice.id && ['payment', 'partial_payment', 'credit'].includes(e.type)
+        );
+
         return (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto font-sans">
             <div className="bg-white rounded-2xl max-w-3xl w-full p-8 shadow-2xl space-y-6 relative border border-[#EAE1D2] my-auto">
@@ -1396,6 +1422,41 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
                     </tbody>
                   </table>
                 </div>
+
+                {/* Payments & Credits Received Section */}
+                {invoicePayments.length > 0 && (
+                  <div className="space-y-2 pt-1">
+                    <span className="font-bold uppercase tracking-wider text-[#4A5741] text-[11px] block">
+                      Payments & Credits Received ({invoicePayments.length})
+                    </span>
+                    <div className="border border-[#EAE1D2] rounded-xl overflow-hidden text-xs">
+                      <table className="w-full text-left border-collapse">
+                        <thead className="bg-[#F7F2E9] border-b border-[#EAE1D2] font-bold text-[#4A5741]">
+                          <tr>
+                            <th className="py-2.5 px-4">Payment Date</th>
+                            <th className="py-2.5 px-4">Payment Method</th>
+                            <th className="py-2.5 px-4">Reference / Check #</th>
+                            <th className="py-2.5 px-4 text-right">Amount Paid</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#EAE1D2]">
+                          {invoicePayments.map((pay, pIdx) => (
+                            <tr key={pIdx} className="hover:bg-[#F7F2E9]/20">
+                              <td className="py-2.5 px-4 font-mono text-gray-700">
+                                {pay.createdAt ? new Date(pay.createdAt.seconds ? pay.createdAt.seconds * 1000 : Date.now()).toLocaleDateString() : '—'}
+                              </td>
+                              <td className="py-2.5 px-4 capitalize text-gray-800">{pay.paymentMethod?.replace(/_/g, ' ') || 'Payment'}</td>
+                              <td className="py-2.5 px-4 font-mono text-gray-600">{pay.transactionRef || '—'}</td>
+                              <td className="py-2.5 px-4 text-right font-mono font-bold text-emerald-700">
+                                -${(pay.amountCents / 100).toFixed(2)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
 
                 {/* Financial Summary Totals */}
                 <div className="flex justify-end pt-2 text-xs">
