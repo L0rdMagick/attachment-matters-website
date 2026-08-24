@@ -364,6 +364,7 @@ export async function getSignedDocuments(clientId: string): Promise<SignedDocume
 }
 
 import { createPracticeNotification } from './notifications';
+import { sendPortalEmail } from '../email';
 
 /**
  * Sign & Freeze Consent Document (Firestore + LocalStorage Sync)
@@ -433,6 +434,7 @@ export async function signConsentDocument(
 
   try {
     let clientDisplayName = clientTypedName;
+    let clientEmail: string | undefined = undefined;
     try {
       const clientRef = doc(db, 'clients', clientId);
       const cSnap = await getDoc(clientRef);
@@ -441,6 +443,7 @@ export async function signConsentDocument(
         if (cData.legalFirstName) {
           clientDisplayName = `${cData.legalFirstName} ${cData.legalLastName || ''}`.trim();
         }
+        clientEmail = cData.email;
       }
     } catch (nameErr) {
       console.warn("Could not fetch client profile name:", nameErr);
@@ -469,6 +472,17 @@ export async function signConsentDocument(
       clientName: clientDisplayName,
       details: detailsStr
     });
+
+    if (clientEmail) {
+      sendPortalEmail({
+        to: clientEmail,
+        subject: `Signed Document Confirmation - ${template.title}`,
+        headline: 'Document Signed & Recorded',
+        bodyHtml: `<p>Dear ${clientDisplayName},</p><p>This email confirms that you have successfully signed <strong>${template.title}</strong> (${template.version}).</p><p>Audit Record Hash: <code>${documentHash}</code></p>`,
+        actionUrl: '/portal',
+        actionText: 'View Documents'
+      });
+    }
   } catch (notifErr) {
     console.warn("Failed to dispatch practice notification for document sign:", notifErr);
   }

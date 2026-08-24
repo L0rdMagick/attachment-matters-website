@@ -16,6 +16,7 @@ import { db } from './config';
 import type { AvailabilityRules, AppointmentData, AppointmentStatus } from '../../types/scheduling';
 
 import { createPracticeNotification } from './notifications';
+import { sendPortalEmail } from '../email';
 
 export const DEFAULT_AVAILABILITY_RULES: AvailabilityRules = {
   therapistId: 'default',
@@ -395,6 +396,17 @@ export async function bookAppointmentWithLock(
     details: `Format: ${appointment.format}`
   });
 
+  if (appointment.clientEmail) {
+    sendPortalEmail({
+      to: appointment.clientEmail,
+      subject: 'Appointment Confirmation - Attachment Matters',
+      headline: 'Your Appointment is Booked',
+      bodyHtml: `<p>Dear ${appointment.clientName || 'Client'},</p><p>Your appointment for <strong>${appointment.appointmentTypeName || 'Therapy Session'}</strong> has been scheduled for <strong>${new Date(appointment.startISO).toLocaleString()}</strong> (${appointment.format || 'In-Person/Telehealth'}).</p><p>If you need to make changes, please log into your client portal.</p>`,
+      actionUrl: '/portal',
+      actionText: 'View Portal'
+    });
+  }
+
   return newApptRef.id;
 }
 
@@ -467,7 +479,7 @@ export async function updateAppointmentStatus(
     updatedAt: serverTimestamp()
   });
 
-  // If appointment was canceled by client, record practice notification
+  // If appointment was canceled by client, record practice notification & email
   if (status === 'canceled_by_client' && apptSnap.exists()) {
     try {
       const appt = apptSnap.data() as AppointmentData;
@@ -481,6 +493,17 @@ export async function updateAppointmentStatus(
         clientName: appt.clientName || appt.clientEmail || 'Client',
         details: cancelReason
       });
+
+      if (appt.clientEmail) {
+        sendPortalEmail({
+          to: appt.clientEmail,
+          subject: 'Appointment Cancellation Notice - Attachment Matters',
+          headline: 'Appointment Canceled',
+          bodyHtml: `<p>Dear ${appt.clientName || 'Client'},</p><p>Your appointment scheduled for <strong>${new Date(appt.startISO).toLocaleString()}</strong> has been canceled.</p>`,
+          actionUrl: '/portal',
+          actionText: 'Open Portal'
+        });
+      }
 
       // Also create document in cancellationAlerts for fallback compatibility
       await addDoc(collection(db, 'cancellationAlerts'), {
@@ -556,5 +579,16 @@ export async function rescheduleAppointment(
       clientName: apptData.clientName || 'Client',
       details: `New date/time: ${new Date(newStartISO).toLocaleString()}`
     });
+
+    if (apptData.clientEmail) {
+      sendPortalEmail({
+        to: apptData.clientEmail,
+        subject: 'Appointment Rescheduled - Attachment Matters',
+        headline: 'Appointment Rescheduled',
+        bodyHtml: `<p>Dear ${apptData.clientName || 'Client'},</p><p>Your appointment has been rescheduled to <strong>${new Date(newStartISO).toLocaleString()}</strong>.</p>`,
+        actionUrl: '/portal',
+        actionText: 'View Schedule'
+      });
+    }
   }
 }

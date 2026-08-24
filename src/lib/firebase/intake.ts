@@ -15,6 +15,7 @@ export async function getIntakeSubmission(clientId: string): Promise<IntakeSubmi
 }
 
 import { createPracticeNotification } from './notifications';
+import { sendPortalEmail } from '../email';
 
 /**
  * Save draft or final submission of Intake Form
@@ -108,6 +109,17 @@ export async function saveIntakeSubmission(
       clientName,
       details: keyDetails.join('\n')
     });
+
+    if (cData.email) {
+      sendPortalEmail({
+        to: cData.email,
+        subject: 'Intake Form Received - Attachment Matters',
+        headline: 'Intake Questionnaire Received',
+        bodyHtml: `<p>Dear ${clientName},</p><p>Thank you for submitting your intake paperwork. Your clinician has been notified and will review your information prior to your session.</p>`,
+        actionUrl: '/portal',
+        actionText: 'View Portal'
+      });
+    }
   }
 }
 
