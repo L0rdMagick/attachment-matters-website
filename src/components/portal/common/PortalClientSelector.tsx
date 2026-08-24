@@ -8,6 +8,8 @@ interface PortalClientSelectorProps {
   label?: string;
   placeholder?: string;
   className?: string;
+  includeAllOption?: boolean;
+  allOptionLabel?: string;
 }
 
 export const PortalClientSelector: React.FC<PortalClientSelectorProps> = ({
@@ -16,14 +18,18 @@ export const PortalClientSelector: React.FC<PortalClientSelectorProps> = ({
   onSelectClient,
   label,
   placeholder = "Select a Client...",
-  className = ""
+  className = "",
+  includeAllOption = false,
+  allOptionLabel = "🌐 All Client Accounts (Practice-Wide)"
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const selectedClient = clients.find((c) => c.uid === selectedClientId);
 
-  const selectedClientName = selectedClient
+  const selectedClientName = !selectedClientId && includeAllOption
+    ? allOptionLabel
+    : selectedClient
     ? (selectedClient.legalFirstName
         ? `${selectedClient.legalFirstName} ${selectedClient.legalLastName || ''}`.trim()
         : selectedClient.email || 'Client')
@@ -103,6 +109,41 @@ export const PortalClientSelector: React.FC<PortalClientSelectorProps> = ({
 
             {/* Client List */}
             <div className="overflow-y-auto space-y-2 pr-1 flex-1 touch-scroll">
+              {includeAllOption && !searchQuery.trim() && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelectClient('');
+                    setIsOpen(false);
+                    setSearchQuery('');
+                  }}
+                  className={`w-full p-3 rounded-xl border text-left transition flex items-center justify-between gap-3 ${
+                    selectedClientId === ''
+                      ? 'bg-[#BF5B33] text-white border-[#BF5B33] shadow-xs'
+                      : 'bg-white text-[#2C2A2A] border-[#EAE1D2] hover:bg-[#F7F2E9] hover:border-[#BF5B33]/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 truncate">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                      selectedClientId === '' ? 'bg-white/20 text-white' : 'bg-[#F7F2E9] text-[#BF5B33]'
+                    }`}>
+                      🌐
+                    </div>
+                    <div className="truncate">
+                      <p className="text-xs font-bold truncate">{allOptionLabel}</p>
+                      <p className={`text-[10px] truncate ${selectedClientId === '' ? 'text-white/80' : 'text-[#4A5741]'}`}>
+                        Show practice-wide combined ledgers & totals
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedClientId === '' && (
+                    <span className="text-xs font-bold px-2.5 py-1 bg-white/20 rounded-full shrink-0">
+                      ✓ Active Practice View
+                    </span>
+                  )}
+                </button>
+              )}
               {filteredClients.length === 0 ? (
                 <div className="p-6 text-center text-xs text-gray-500 bg-white rounded-xl border border-[#EAE1D2]">
                   No matching clients found in directory.

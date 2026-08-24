@@ -15,22 +15,20 @@ import { db } from './config';
 import type { InvoiceData, LedgerEntryData, InvoiceStatus } from '../../types/billing';
 
 /**
- * Fetch client invoices
+ * Fetch client invoices (or all invoices if clientId is empty/omitted)
  */
-export async function getInvoicesForClient(clientId: string): Promise<InvoiceData[]> {
+export async function getInvoicesForClient(clientId?: string): Promise<InvoiceData[]> {
   const colRef = collection(db, 'invoices');
-  const q = query(colRef, where('clientId', '==', clientId));
-  const snap = await getDocs(q);
+  const snap = clientId ? await getDocs(query(colRef, where('clientId', '==', clientId))) : await getDocs(colRef);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as InvoiceData));
 }
 
 /**
- * Fetch client ledger history
+ * Fetch client ledger history (or all ledger entries if clientId is empty/omitted)
  */
-export async function getLedgerForClient(clientId: string): Promise<LedgerEntryData[]> {
+export async function getLedgerForClient(clientId?: string): Promise<LedgerEntryData[]> {
   const colRef = collection(db, 'ledgerEntries');
-  const q = query(colRef, where('clientId', '==', clientId));
-  const snap = await getDocs(q);
+  const snap = clientId ? await getDocs(query(colRef, where('clientId', '==', clientId))) : await getDocs(colRef);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as LedgerEntryData));
 }
 

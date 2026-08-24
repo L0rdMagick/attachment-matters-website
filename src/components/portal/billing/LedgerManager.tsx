@@ -93,19 +93,11 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
   useEffect(() => {
     getClientsDirectory().then((list) => {
       setClientList(list);
-      if (isStaff && !selectedClientId && list.length > 0) {
-        setSelectedClientId(targetClientId || list[0].uid);
-      }
     }).catch(err => console.error("Failed to fetch clients for billing", err));
-  }, [isStaff, targetClientId]);
+  }, []);
 
   useEffect(() => {
-    if (!activeClientId && !user?.uid) {
-      setLoading(false);
-      return;
-    }
-    const targetId = activeClientId || user?.uid;
-    if (!targetId) return;
+    const targetId = isStaff ? (targetClientId || selectedClientId) : (targetClientId || user?.uid || '');
 
     async function loadBilling() {
       setLoading(true);
@@ -113,11 +105,11 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
         let [invs, ledger, appts] = await Promise.all([
           getInvoicesForClient(targetId),
           getLedgerForClient(targetId),
-          getAppointments({ clientId: targetId })
+          getAppointments(targetId ? { clientId: targetId } : { therapistId: 'default_therapist' })
         ]);
 
         // Fallback for clients: if 0 invoices found by uid, match by email in clientList
-        if (invs.length === 0 && !isStaff && user?.email && clientList.length > 0) {
+        if (invs.length === 0 && !isStaff && user?.email && clientList.length > 0 && targetId) {
           const matched = clientList.find((c) => c.email?.toLowerCase() === user.email?.toLowerCase());
           if (matched && matched.uid !== targetId) {
             const [altInvs, altLedger, altAppts] = await Promise.all([
@@ -143,7 +135,7 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
       }
     }
     loadBilling();
-  }, [activeClientId, user?.uid, user?.email, clientList, isStaff]);
+  }, [isStaff, targetClientId, selectedClientId, user?.uid, user?.email, clientList]);
 
   const handleCreateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -314,6 +306,8 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
             clients={clientList}
             selectedClientId={selectedClientId}
             onSelectClient={(id) => setSelectedClientId(id)}
+            includeAllOption={true}
+            allOptionLabel="🌐 All Client Accounts (Practice-Wide)"
           />
         </div>
       )}
@@ -745,12 +739,28 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
         ) : (
           <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
             {ledgerEntries.map((e, idx) => (
-              <div key={idx} className="p-3 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2] flex justify-between text-xs text-[#2C2A2A]">
-                <div>
-                  <span className="font-semibold uppercase tracking-wider font-mono text-[#4A5741]">{e.type}</span>
-                  <span className="ml-2 text-[#2C2A2A]/80">{e.notes}</span>
+              <div key={idx} className="p-3 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#2C2A2A]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold uppercase tracking-wider font-mono text-[#4A5741] px-2 py-0.5 bg-[#4A5741]/10 rounded-md">
+                    {e.type.replace(/_/g, ' ')}
+                  </span>
+                  {isStaff && e.clientId && (
+                    onSelectClient ? (
+                      <button
+                        type="button"
+                        onClick={() => onSelectClient(e.clientId)}
+                        className="text-[#BF5B33] hover:underline font-semibold flex items-center gap-0.5 cursor-pointer text-xs"
+                        title="View Client Chart / Profile"
+                      >
+                        👤 {getClientName(e.clientId)} ↗
+                      </button>
+                    ) : (
+                      <span className="font-semibold text-xs text-[#4A5741]">👤 {getClientName(e.clientId)}</span>
+                    )
+                  )}
+                  <span className="text-[#2C2A2A]/80 italic">{e.notes}</span>
                 </div>
-                <div className="font-bold">
+                <div className="font-mono font-bold text-[#2C2A2A]">
                   {['payment', 'credit'].includes(e.type) ? '-' : '+'}${(e.amountCents / 100).toFixed(2)}
                 </div>
               </div>
