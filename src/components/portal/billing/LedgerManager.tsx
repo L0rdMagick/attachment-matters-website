@@ -416,8 +416,8 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
                           <label className="block text-[11px] font-semibold text-gray-700 mb-1">Hours / Units *</label>
                           <input
                             type="number"
-                            step="0.25"
-                            min="0.1"
+                            step="any"
+                            min="0"
                             required
                             value={item.hours}
                             onChange={(e) => updateLineItem(index, 'hours', e.target.value)}
@@ -429,7 +429,8 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
                           <label className="block text-[11px] font-semibold text-gray-700 mb-1">Amount Due ($ USD) *</label>
                           <input
                             type="number"
-                            step="0.01"
+                            step="any"
+                            min="0"
                             required
                             value={item.amount}
                             onChange={(e) => updateLineItem(index, 'amount', e.target.value)}
