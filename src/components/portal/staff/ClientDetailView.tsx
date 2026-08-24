@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../../lib/firebase/config';
 import { getClientProfile, updateClientProfile } from '../../../lib/firebase/clients';
 import { getSignedDocuments } from '../../../lib/firebase/consent';
 import { getIntakeSubmission, reviewIntakeSubmission } from '../../../lib/firebase/intake';
@@ -232,7 +234,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
 
   const handleStatusChangeInChart = async (apptId: string, newStatus: AppointmentStatus) => {
     try {
-      await updateAppointmentStatus(apptId, newStatus, user?.uid || '', role || '');
+      await updateAppointmentStatus(apptId, newStatus);
       const updatedAppts = await getAppointments({ clientId });
       setClientAppointments(updatedAppts);
     } catch (err) {
@@ -247,17 +249,19 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
     setReschedSubmitting(true);
     try {
       const newStartISO = `${reschedDate}T${reschedTime}:00`;
-      const durationMs = (reschedulingAppt.durationMinutes || 50) * 60 * 1000;
+      const currentStart = new Date(reschedulingAppt.startISO).getTime();
+      const currentEnd = new Date(reschedulingAppt.endISO).getTime();
+      const durationMs = currentEnd > currentStart ? currentEnd - currentStart : 50 * 60 * 1000;
       const newEndISO = new Date(new Date(newStartISO).getTime() + durationMs).toISOString();
 
-      await bookAppointmentWithLock({
-        ...reschedulingAppt,
-        id: reschedulingAppt.id,
+      const docRef = doc(db, 'appointments', reschedulingAppt.id);
+      await updateDoc(docRef, {
         startISO: newStartISO,
         endISO: newEndISO,
         status: 'rescheduled',
-        notes: reschedNotes ? `${reschedulingAppt.notes ? reschedulingAppt.notes + '\n' : ''}Rescheduled: ${reschedNotes}` : reschedulingAppt.notes
-      }, true);
+        notes: reschedNotes ? `${reschedulingAppt.notes ? reschedulingAppt.notes + '\n' : ''}Rescheduled: ${reschedNotes}` : reschedulingAppt.notes,
+        updatedAt: serverTimestamp()
+      });
 
       const updatedAppts = await getAppointments({ clientId });
       setClientAppointments(updatedAppts);
