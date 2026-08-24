@@ -27,8 +27,7 @@ type ChartTab =
   | 'shared-notes'
   | 'private-clinical-notes'
   | 'billing'
-  | 'files'
-  | 'audit';
+  | 'files';
 
 export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, onBack }) => {
   const { user, role } = useAuth();
@@ -248,16 +247,15 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
   }
 
   const tabs: { id: ChartTab; label: string; badge?: string }[] = [
-    { id: 'overview', label: 'Overview & Profile' },
+    { id: 'overview', label: 'Overview' },
     { id: 'contact', label: 'Contact Info' },
     { id: 'appointments', label: 'Appointments' },
-    { id: 'intake', label: 'Intake Packet', badge: intakeData?.status || client.intakeStatus },
-    { id: 'documents', label: 'Signed Docs', badge: signedDocs.length > 0 ? `${signedDocs.length} Signed` : client.consentStatus },
+    { id: 'intake', label: 'Intake Packet' },
+    { id: 'documents', label: 'Signed Docs' },
     { id: 'shared-notes', label: 'Shared Summaries' },
-    { id: 'private-clinical-notes', label: '🔒 Private Notes (DAP/SOAP)' },
-    { id: 'billing', label: 'Billing & Ledger' },
-    { id: 'files', label: 'Insurance Cards & Files' },
-    { id: 'audit', label: 'Audit History' }
+    { id: 'private-clinical-notes', label: 'Clinical Notes' },
+    { id: 'billing', label: 'Billing' },
+    { id: 'files', label: 'Insurance Docs' }
   ];
 
   const handleScheduleAppointment = async (e: React.FormEvent) => {
