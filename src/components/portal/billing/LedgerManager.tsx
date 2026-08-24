@@ -24,11 +24,47 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
 
   // New Invoice Form State
   const [showNewInv, setShowNewInv] = useState(false);
-  const [invDesc, setInvDesc] = useState('');
-  const [invAmount, setInvAmount] = useState('');
-  const [invDueDate, setInvDueDate] = useState(new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]);
+  const defaultDueDate = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
+  const defaultServiceDate = new Date().toISOString().split('T')[0];
+
+  const createDefaultLineItem = () => ({
+    id: Math.random().toString(36).substring(2, 9),
+    serviceDate: defaultServiceDate,
+    hours: '1.0',
+    title: 'Individual Psychotherapy Session',
+    description: '',
+    dueDate: defaultDueDate,
+    amount: '150.00'
+  });
+
+  const [lineItems, setLineItems] = useState([createDefaultLineItem()]);
+  const [invDueDate, setInvDueDate] = useState(defaultDueDate);
   const [submittingInv, setSubmittingInv] = useState(false);
   const [invMessage, setInvMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const addLineItem = () => {
+    setLineItems((prev) => [...prev, createDefaultLineItem()]);
+  };
+
+  const removeLineItem = (index: number) => {
+    if (lineItems.length <= 1) return;
+    setLineItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateLineItem = (index: number, field: string, value: any) => {
+    setLineItems((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+  };
+
+  const calculateTotalCents = () => {
+    return lineItems.reduce((sum, item) => {
+      const amt = parseFloat(item.amount) || 0;
+      return sum + Math.round(amt * 100);
+    }, 0);
+  };
 
   // Payment Form State
   const [selectedInvForPay, setSelectedInvForPay] = useState<InvoiceData | null>(null);
@@ -107,12 +143,33 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
   const handleCreateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
     const targetId = targetClientId || selectedClientId || activeClientId;
-    if (!targetId || !invAmount) {
-      setInvMessage({ type: 'error', text: 'Please select a client and enter a valid dollar amount.' });
+    if (!targetId) {
+      setInvMessage({ type: 'error', text: 'Please select a client.' });
       return;
     }
-    const amountCents = Math.round(parseFloat(invAmount) * 100);
+
+    const validItems = lineItems.filter((i) => i.title.trim() && parseFloat(i.amount) >= 0);
+    if (validItems.length === 0) {
+      setInvMessage({ type: 'error', text: 'Please provide at least one valid line item with a title and amount.' });
+      return;
+    }
+
+    const formattedItems = validItems.map((item) => ({
+      id: item.id,
+      serviceDate: item.serviceDate,
+      hours: parseFloat(item.hours) || 1,
+      title: item.title,
+      description: item.description,
+      dueDate: item.dueDate || invDueDate,
+      amountCents: Math.round((parseFloat(item.amount) || 0) * 100)
+    }));
+
+    const totalCents = formattedItems.reduce((sum, item) => sum + item.amountCents, 0);
     const invoiceNum = `INV-${Date.now().toString().slice(-6)}`;
+    const primaryDesc = formattedItems.length === 1
+      ? (formattedItems[0].description ? `${formattedItems[0].title} - ${formattedItems[0].description}` : formattedItems[0].title)
+      : `${formattedItems.length} Itemized Clinical Services (${formattedItems.map(i => i.title).join(', ')})`;
+
     setSubmittingInv(true);
     setInvMessage(null);
 
@@ -120,11 +177,12 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
       const invId = await createInvoice({
         clientId: targetId,
         invoiceNumber: invoiceNum,
-        description: invDesc || 'Therapy Services Session',
-        totalCents: amountCents,
-        balanceCents: amountCents,
+        description: primaryDesc,
+        items: formattedItems,
+        totalCents,
+        balanceCents: totalCents,
         status: 'unpaid',
-        dueDate: invDueDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
+        dueDate: invDueDate || defaultDueDate
       });
 
       // Also record initial charge entry in ledger
@@ -132,8 +190,8 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
         clientId: targetId,
         invoiceId: invId,
         type: 'charge',
-        amountCents,
-        notes: `Initial charge for invoice ${invoiceNum}`,
+        amountCents: totalCents,
+        notes: `Initial charge for invoice ${invoiceNum} (${formattedItems.length} line items)`,
         createdById: user!.uid
       });
 
@@ -145,8 +203,7 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
       setInvoices(invs);
       setLedgerEntries(ledger);
       setShowNewInv(false);
-      setInvDesc('');
-      setInvAmount('');
+      setLineItems([createDefaultLineItem()]);
       setInvMessage({ type: 'success', text: `Invoice ${invoiceNum} created and assigned successfully to ${getClientName(targetId)}!` });
     } catch (err: any) {
       console.error("Failed to create invoice", err);
@@ -260,7 +317,7 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
         <div className="flex justify-end">
           <button
             onClick={() => setShowNewInv(true)}
-            className="w-full sm:w-auto px-4 py-3 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl transition shadow-sm min-h-[44px] flex items-center justify-center"
+            className="w-full sm:w-auto px-4 py-3 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl transition shadow-sm min-h-[44px] flex items-center justify-center gap-1.5"
           >
             + Create New Invoice
           </button>
@@ -269,19 +326,22 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
 
       {/* New Invoice Overlay Modal */}
       {isStaff && showNewInv && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans animate-fade-in">
-          <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans animate-fade-in overflow-y-auto">
+          <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-3">
               <div className="flex items-center gap-2">
                 <span className="text-xl">💳</span>
-                <h3 className="text-lg font-serif text-[#2C2A2A] font-medium">
-                  Create Client Invoice
-                </h3>
+                <div>
+                  <h3 className="text-lg font-serif text-[#2C2A2A] font-semibold">
+                    Create Client Invoice
+                  </h3>
+                  <p className="text-xs text-gray-500">Generate an official itemized invoice for professional services</p>
+                </div>
               </div>
               <button type="button" onClick={() => setShowNewInv(false)} className="text-gray-400 hover:text-gray-600 font-bold text-sm">✕</button>
             </div>
 
-            <form onSubmit={handleCreateInvoice} className="space-y-4 bg-white p-5 rounded-xl border border-[#EAE1D2]">
+            <form onSubmit={handleCreateInvoice} className="space-y-5 bg-white p-6 rounded-xl border border-[#EAE1D2]">
               {!targetClientId && (
                 <PortalClientSelector
                   clients={clientList}
@@ -292,57 +352,157 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
                 />
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-3">
-                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Description / Clinical Service Title *</label>
-                  <input
-                    type="text"
-                    required
-                    value={invDesc}
-                    onChange={(e) => setInvDesc(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none focus:ring-2 focus:ring-[#BF5B33]/20"
-                    placeholder="e.g. 50-Min Individual Therapy Session"
-                  />
-                </div>
-                <div className="sm:col-span-1">
-                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Amount ($ USD) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={invAmount}
-                    onChange={(e) => setInvAmount(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
-                    placeholder="150.00"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Payment Due Date *</label>
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-[#F7F2E9]/60 p-4 rounded-xl border border-[#EAE1D2]">
+                <div className="w-full sm:w-auto flex-1">
+                  <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Invoice Payment Due Date *</label>
                   <input
                     type="date"
                     required
                     value={invDueDate}
                     onChange={(e) => setInvDueDate(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none"
+                    className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none bg-white focus:ring-2 focus:ring-[#BF5B33]/20"
                   />
+                </div>
+                <div className="w-full sm:w-auto text-right bg-white px-4 py-2 rounded-xl border border-[#EAE1D2]">
+                  <span className="block text-[10px] font-bold uppercase text-gray-500">Total Invoice Amount</span>
+                  <span className="text-xl font-mono font-bold text-[#BF5B33]">
+                    ${(calculateTotalCents() / 100).toFixed(2)}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-[#EAE1D2]">
+              {/* Line Items Builder Section */}
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#4A5741]">
+                    Invoice Line Items & Clinical Services ({lineItems.length})
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={addLineItem}
+                    className="px-3 py-1.5 bg-[#4A5741] hover:bg-[#3b4634] text-white text-xs font-semibold rounded-lg transition flex items-center gap-1"
+                  >
+                    + Add Line Item
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {lineItems.map((item, index) => (
+                    <div key={item.id} className="p-4 bg-[#F7F2E9]/40 border border-[#EAE1D2] rounded-xl space-y-3 relative group">
+                      <div className="flex items-center justify-between pb-1 border-b border-[#EAE1D2]/60">
+                        <span className="text-xs font-bold text-[#BF5B33]">Line Item #{index + 1}</span>
+                        {lineItems.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeLineItem(index)}
+                            className="text-xs text-red-500 hover:text-red-700 font-semibold px-2 py-0.5 rounded hover:bg-red-50 transition"
+                          >
+                            Remove Item
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">Service Date *</label>
+                          <input
+                            type="date"
+                            required
+                            value={item.serviceDate}
+                            onChange={(e) => updateLineItem(index, 'serviceDate', e.target.value)}
+                            className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">Hours / Units *</label>
+                          <input
+                            type="number"
+                            step="0.25"
+                            min="0.1"
+                            required
+                            value={item.hours}
+                            onChange={(e) => updateLineItem(index, 'hours', e.target.value)}
+                            className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white"
+                            placeholder="1.0"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">Amount Due ($ USD) *</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            required
+                            value={item.amount}
+                            onChange={(e) => updateLineItem(index, 'amount', e.target.value)}
+                            className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white font-mono font-semibold"
+                            placeholder="150.00"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">Item Due Date</label>
+                          <input
+                            type="date"
+                            value={item.dueDate}
+                            onChange={(e) => updateLineItem(index, 'dueDate', e.target.value)}
+                            className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">Clinical Service Title *</label>
+                          <input
+                            type="text"
+                            required
+                            value={item.title}
+                            onChange={(e) => updateLineItem(index, 'title', e.target.value)}
+                            className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white"
+                            placeholder="e.g. 50-Min Individual Psychotherapy Session (CPT 90837)"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                            Description / Clinical Service Notes <span className="text-gray-400 font-normal">(Expandable for detailed notes)</span>
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={item.description}
+                            onChange={(e) => updateLineItem(index, 'description', e.target.value)}
+                            className="w-full p-2.5 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white focus:ring-2 focus:ring-[#BF5B33]/20 resize-y"
+                            placeholder="Detailed session breakdown, treatment notes, CPT codes, diagnosis details, or custom notes..."
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t border-[#EAE1D2]">
                 <button
                   type="button"
-                  onClick={() => setShowNewInv(false)}
-                  className="px-4 py-2 bg-[#EAE1D2] hover:bg-[#e0d4c1] text-[#2C2A2A] font-semibold text-xs rounded-xl transition"
+                  onClick={addLineItem}
+                  className="px-3 py-2 border border-[#4A5741] text-[#4A5741] hover:bg-[#4A5741]/10 text-xs font-semibold rounded-xl transition"
                 >
-                  Cancel
+                  + Add Itemized Service
                 </button>
-                <button
-                  type="submit"
-                  disabled={submittingInv}
-                  className="px-5 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl disabled:opacity-50 transition shadow-xs"
-                >
-                  {submittingInv ? 'Issuing Invoice...' : 'Generate & Issue Invoice'}
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowNewInv(false)}
+                    className="px-4 py-2 bg-[#EAE1D2] hover:bg-[#e0d4c1] text-[#2C2A2A] font-semibold text-xs rounded-xl transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingInv}
+                    className="px-5 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl disabled:opacity-50 transition shadow-sm"
+                  >
+                    {submittingInv ? 'Issuing Invoice...' : 'Generate & Issue Invoice'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -576,100 +736,144 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
       {viewSingleInvoice && (() => {
         const effectiveBalance = Math.min(viewSingleInvoice.totalCents, viewSingleInvoice.balanceCents);
         const effectivePaid = Math.max(0, viewSingleInvoice.totalCents - effectiveBalance);
+        const itemsList = viewSingleInvoice.items && viewSingleInvoice.items.length > 0
+          ? viewSingleInvoice.items
+          : [{
+              id: '1',
+              title: viewSingleInvoice.description,
+              serviceDate: viewSingleInvoice.createdAt ? new Date(viewSingleInvoice.createdAt.seconds ? viewSingleInvoice.createdAt.seconds * 1000 : Date.now()).toISOString().split('T')[0] : '',
+              hours: 1,
+              dueDate: viewSingleInvoice.dueDate,
+              amountCents: viewSingleInvoice.totalCents
+            }];
+
         return (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-white rounded-2xl max-w-2xl w-full p-8 shadow-2xl space-y-6 relative border border-[#EAE1D2]">
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto font-sans">
+            <div className="bg-white rounded-2xl max-w-3xl w-full p-8 shadow-2xl space-y-6 relative border border-[#EAE1D2] my-auto">
               {/* Modal Actions */}
               <div className="flex justify-between items-center border-b border-[#EAE1D2] pb-4 no-print">
-                <span className="text-xs font-semibold uppercase text-gray-500">Official Invoice Receipt</span>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#BF5B33]">Official Clinical Statement & Invoice</span>
+                  <p className="text-[11px] text-gray-500">Ready for print, email, or official financial record keeping</p>
+                </div>
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => window.print()}
-                    className="px-4 py-2 bg-[#BF5B33] text-white text-xs font-semibold rounded-xl hover:bg-[#a64e2b] transition flex items-center gap-1.5"
+                    className="px-4 py-2 bg-[#BF5B33] text-white text-xs font-semibold rounded-xl hover:bg-[#a64e2b] transition flex items-center gap-1.5 shadow-sm"
                   >
-                    🖨️ Print Single Invoice PDF
+                    🖨️ Print / Save as PDF
                   </button>
                   <button
                     onClick={() => setViewSingleInvoice(null)}
-                    className="px-4 py-2 border border-[#EAE1D2] text-xs font-semibold rounded-xl hover:bg-gray-50"
+                    className="px-4 py-2 border border-[#EAE1D2] text-xs font-semibold rounded-xl hover:bg-gray-50 text-gray-700"
                   >
                     Close
                   </button>
                 </div>
               </div>
 
-              {/* Invoice Printable Document Body */}
-              <div className="space-y-6 text-[#2C2A2A]">
+              {/* Printable Document Sheet Container */}
+              <div className="space-y-6 text-[#2C2A2A] bg-white p-2">
                 {/* Header */}
-                <div className="flex justify-between items-start border-b border-[#EAE1D2] pb-4">
+                <div className="flex justify-between items-start border-b-2 border-[#BF5B33] pb-5">
                   <div>
                     <h1 className="text-2xl font-serif font-bold text-[#2C2A2A]">Family Trust Therapy</h1>
-                    <p className="text-xs text-gray-600 mt-0.5">Attachment Matters, LLC • Durango, CO 81301</p>
-                    <p className="text-xs text-gray-600">Tel: (505) 920-6351 • Email: info@familytrusttherapy.com</p>
+                    <p className="text-xs font-semibold text-[#4A5741] mt-0.5">Attachment Matters, LLC</p>
+                    <p className="text-xs text-gray-600 mt-1">Durango, CO 81301 • Tel: (505) 920-6351</p>
+                    <p className="text-xs text-gray-600">Email: info@familytrusttherapy.com</p>
                   </div>
                   <div className="text-right">
-                    <span className="text-xl font-mono font-bold text-[#BF5B33]">{viewSingleInvoice.invoiceNumber}</span>
-                    <p className="text-xs text-gray-500 mt-1">Due Date: {viewSingleInvoice.dueDate}</p>
+                    <span className="text-xs font-bold uppercase tracking-widest text-[#4A5741]">Official Client Invoice</span>
+                    <h2 className="text-2xl font-mono font-bold text-[#BF5B33] mt-1">{viewSingleInvoice.invoiceNumber}</h2>
+                    <div className="text-xs text-gray-600 mt-2 space-y-0.5">
+                      <p><span className="font-semibold">Invoice Due Date:</span> {viewSingleInvoice.dueDate}</p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Client Info */}
-                <div className="bg-[#F7F2E9] p-4 rounded-xl border border-[#EAE1D2] flex justify-between text-xs">
+                {/* Client & Billing Info */}
+                <div className="bg-[#F7F2E9] p-5 rounded-xl border border-[#EAE1D2] flex flex-col sm:flex-row justify-between text-xs gap-4">
                   <div>
-                    <span className="font-bold uppercase text-[#4A5741] block mb-1">Billed To:</span>
-                    <p className="font-semibold text-sm text-[#2C2A2A]">{getClientName(viewSingleInvoice.clientId)}</p>
+                    <span className="font-bold uppercase tracking-wider text-[#4A5741] block mb-1.5">Billed To (Client):</span>
+                    <p className="font-bold text-base text-[#2C2A2A]">{getClientName(viewSingleInvoice.clientId)}</p>
                     {getClientEmail(viewSingleInvoice.clientId) && (
-                      <p className="text-gray-600">{getClientEmail(viewSingleInvoice.clientId)}</p>
+                      <p className="text-gray-600 font-medium mt-0.5">{getClientEmail(viewSingleInvoice.clientId)}</p>
                     )}
                   </div>
-                  <div className="text-right">
-                    <span className="font-bold uppercase text-[#4A5741] block mb-1">Payment Status:</span>
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                      effectiveBalance <= 0 || viewSingleInvoice.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                  <div className="sm:text-right border-t sm:border-t-0 border-[#EAE1D2] pt-3 sm:pt-0">
+                    <span className="font-bold uppercase tracking-wider text-[#4A5741] block mb-1.5">Invoice Payment Status:</span>
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                      effectiveBalance <= 0 || viewSingleInvoice.status === 'paid'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-amber-100 text-amber-800 border border-amber-300'
                     }`}>
-                      {effectiveBalance <= 0 ? 'paid' : viewSingleInvoice.status.replace('_', ' ')}
+                      {effectiveBalance <= 0 ? 'paid in full' : viewSingleInvoice.status.replace('_', ' ')}
                     </span>
                   </div>
                 </div>
 
-                {/* Itemized Line Items */}
+                {/* Itemized Line Items Table */}
                 <div className="border border-[#EAE1D2] rounded-xl overflow-hidden text-xs">
-                  <table className="w-full text-left">
-                    <thead className="bg-[#F7F2E9] border-b border-[#EAE1D2] uppercase font-semibold">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-[#F7F2E9] border-b border-[#EAE1D2] uppercase font-bold text-[#4A5741] tracking-wider">
                       <tr>
-                        <th className="py-2.5 px-4">Item Description</th>
-                        <th className="py-2.5 px-4 text-right">Amount</th>
+                        <th className="py-3 px-4">Date</th>
+                        <th className="py-3 px-4">Service Description & Clinical Notes</th>
+                        <th className="py-3 px-4 text-center">Hours</th>
+                        <th className="py-3 px-4 text-center">Due Date</th>
+                        <th className="py-3 px-4 text-right">Amount</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      <tr>
-                        <td className="py-3 px-4 font-medium">{viewSingleInvoice.description}</td>
-                        <td className="py-3 px-4 text-right font-mono font-semibold">${(viewSingleInvoice.totalCents / 100).toFixed(2)}</td>
-                      </tr>
+                    <tbody className="divide-y divide-[#EAE1D2]">
+                      {itemsList.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-[#F7F2E9]/20">
+                          <td className="py-3.5 px-4 font-mono font-medium text-gray-700 whitespace-nowrap align-top">
+                            {item.serviceDate || '—'}
+                          </td>
+                          <td className="py-3.5 px-4 align-top">
+                            <div className="font-bold text-[#2C2A2A] text-xs">{item.title}</div>
+                            {item.description && (
+                              <div className="text-gray-600 mt-1 whitespace-pre-wrap text-[11px] leading-relaxed">
+                                {item.description}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-center font-mono align-top">
+                            {item.hours ?? 1}
+                          </td>
+                          <td className="py-3.5 px-4 text-center font-mono text-gray-600 align-top whitespace-nowrap">
+                            {item.dueDate || viewSingleInvoice.dueDate}
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono font-bold text-[#2C2A2A] align-top whitespace-nowrap">
+                            ${(item.amountCents / 100).toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
 
-                {/* Financial Totals */}
+                {/* Financial Summary Totals */}
                 <div className="flex justify-end pt-2 text-xs">
-                  <div className="w-64 space-y-2 bg-[#F7F2E9] p-4 rounded-xl border border-[#EAE1D2]">
+                  <div className="w-72 space-y-2 bg-[#F7F2E9] p-4 rounded-xl border border-[#EAE1D2]">
                     <div className="flex justify-between text-gray-700">
-                      <span>Invoice Total:</span>
-                      <span className="font-semibold">${(viewSingleInvoice.totalCents / 100).toFixed(2)}</span>
+                      <span className="font-medium">Total Itemized Amount:</span>
+                      <span className="font-mono font-bold text-gray-900">${(viewSingleInvoice.totalCents / 100).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-gray-700">
-                      <span>Amount Paid:</span>
-                      <span className="font-semibold">${(effectivePaid / 100).toFixed(2)}</span>
+                      <span className="font-medium">Payments / Credits Received:</span>
+                      <span className="font-mono font-bold text-emerald-700">-${(effectivePaid / 100).toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between border-t border-[#EAE1D2] pt-2 font-bold text-sm text-[#BF5B33]">
-                      <span>Balance Due:</span>
-                      <span>${(effectiveBalance / 100).toFixed(2)}</span>
+                    <div className="flex justify-between border-t-2 border-[#EAE1D2] pt-2.5 font-bold text-sm text-[#BF5B33]">
+                      <span>Total Balance Due:</span>
+                      <span className="font-mono text-base">${(effectiveBalance / 100).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="text-center text-[11px] text-gray-500 border-t border-[#EAE1D2] pt-4">
-                  Thank you for trusting Family Trust Therapy with your care.
+                <div className="text-center text-[11px] text-gray-500 border-t border-[#EAE1D2] pt-4 space-y-1">
+                  <p className="font-medium text-[#4A5741]">Thank you for trusting Family Trust Therapy with your care.</p>
+                  <p className="text-[10px]">Official Financial & Clinical Statement • Attachment Matters, LLC • Confidential</p>
                 </div>
               </div>
             </div>

@@ -24,12 +24,23 @@ export interface LedgerEntryData {
 
 export type InvoiceStatus = 'draft' | 'unpaid' | 'partially_paid' | 'paid' | 'overdue' | 'void';
 
+export interface InvoiceLineItem {
+  id?: string;
+  serviceDate?: string;
+  hours?: number;
+  title: string;
+  description?: string;
+  dueDate?: string;
+  amountCents: number;
+}
+
 export interface InvoiceData {
   id?: string;
   clientId: string;
   appointmentId?: string;
   invoiceNumber: string;
   description: string;
+  items?: InvoiceLineItem[];
   totalCents: number;
   balanceCents: number;
   status: InvoiceStatus;
@@ -37,3 +48,4 @@ export interface InvoiceData {
   createdAt?: any;
   updatedAt?: any;
 }
+
