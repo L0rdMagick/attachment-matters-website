@@ -354,6 +354,9 @@ export const TherapistCalendar: React.FC = () => {
                       <span className="bg-[#BF5B33]/15 text-[#BF5B33] px-2.5 py-0.5 rounded-md font-bold text-xs">
                         👤 Client: {displayName} {displayEmail ? `(${displayEmail})` : ''}
                       </span>
+                      <span className="px-2 py-0.5 rounded-md bg-[#4A5741]/10 text-[#4A5741] font-mono font-bold text-xs">
+                        ${(a.priceInCents / 100).toFixed(2)}
+                      </span>
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                         a.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' :
                         a.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
@@ -365,7 +368,7 @@ export const TherapistCalendar: React.FC = () => {
                       </span>
                     </div>
                     <p className="mt-1">
-                      <strong>Time:</strong> {new Date(a.startISO).toLocaleString()} | <strong>Format:</strong> <span className="capitalize">{a.format}</span>
+                      <strong>Time:</strong> {new Date(a.startISO).toLocaleString()} | <strong>Format:</strong> <span className="capitalize">{a.format}</span> | <strong>Fee:</strong> <span className="font-semibold">${(a.priceInCents / 100).toFixed(2)}</span>
                     </p>
                     {a.notes && (
                       <div className="mt-1 space-y-1 pt-1 border-t border-[#EAE1D2]/80">
