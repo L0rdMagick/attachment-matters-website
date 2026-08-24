@@ -71,8 +71,50 @@ class PortalErrorBoundary extends React.Component<{ children: React.ReactNode },
 const MainPortalContent: React.FC = () => {
   const { user, profile, role: initialRole, loading, isSuspended, logout } = useAuth();
   const [authScreen, setAuthScreen] = useState<AuthScreen>('login');
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  // Read initial tab and selected client from URL search parameters
+  const getInitialUrlState = () => {
+    if (typeof window === 'undefined') return { tab: 'dashboard', client: null };
+    const params = new URLSearchParams(window.location.search);
+    return {
+      tab: params.get('tab') || 'dashboard',
+      client: params.get('client') || null
+    };
+  };
+
+  const initialUrl = getInitialUrlState();
+  const [activeTab, setActiveTabState] = useState(initialUrl.tab);
+  const [selectedClientId, setSelectedClientIdState] = useState<string | null>(initialUrl.client);
+
+  const navigateToTab = (tab: string, clientId: string | null = null) => {
+    setActiveTabState(tab);
+    setSelectedClientIdState(clientId);
+
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', tab);
+      if (clientId) {
+        url.searchParams.set('client', clientId);
+      } else {
+        url.searchParams.delete('client');
+        url.searchParams.delete('chartTab');
+      }
+      window.history.pushState({ tab, client: clientId }, '', url.toString());
+    }
+  };
+
+  // Sync state when user clicks browser Back / Forward buttons (popstate event)
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tabFromUrl = params.get('tab') || 'dashboard';
+      const clientFromUrl = params.get('client') || null;
+      setActiveTabState(tabFromUrl);
+      setSelectedClientIdState(clientFromUrl);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Allow switching roles during testing/management
   const [activeRoleOverride, setActiveRoleOverride] = useState<'client' | 'admin' | 'therapist' | null>(null);
@@ -162,7 +204,7 @@ const MainPortalContent: React.FC = () => {
 
   const handleRoleOverrideChange = (newRole: 'admin' | 'therapist' | 'client') => {
     setActiveRoleOverride(newRole);
-    setActiveTab('dashboard');
+    navigateToTab('dashboard');
   };
 
   // Client Portal Experience
@@ -171,12 +213,12 @@ const MainPortalContent: React.FC = () => {
       <PortalErrorBoundary>
         <ClientLayout
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={(tab) => navigateToTab(tab)}
           canSwitchRole={isOwner}
           effectiveRole={effectiveRole}
           onRoleOverrideChange={handleRoleOverrideChange}
         >
-          {activeTab === 'dashboard' && <ClientDashboard onNavigate={setActiveTab} />}
+          {activeTab === 'dashboard' && <ClientDashboard onNavigate={(tab) => navigateToTab(tab)} />}
           {activeTab === 'profile' && <ClientProfileView />}
           {activeTab === 'appointments' && <AppointmentBookingModal />}
           {activeTab === 'documents' && <ClientDocumentsView />}
@@ -188,8 +230,7 @@ const MainPortalContent: React.FC = () => {
   }
 
   const handleOpenClientProfile = (clientId: string) => {
-    setSelectedClientId(clientId);
-    setActiveTab('clients');
+    navigateToTab('clients', clientId);
   };
 
   // Therapist / Admin Staff Experience
@@ -198,21 +239,20 @@ const MainPortalContent: React.FC = () => {
       <StaffLayout
         activeTab={activeTab}
         onTabChange={(tab) => {
-          setActiveTab(tab);
-          setSelectedClientId(null);
+          navigateToTab(tab, null);
         }}
         canSwitchRole={isOwner}
         effectiveRole={effectiveRole}
         onRoleOverrideChange={handleRoleOverrideChange}
       >
-        {activeTab === 'dashboard' && <TherapistDashboard onNavigate={setActiveTab} onSelectClient={handleOpenClientProfile} />}
+        {activeTab === 'dashboard' && <TherapistDashboard onNavigate={(tab) => navigateToTab(tab)} onSelectClient={handleOpenClientProfile} />}
         {activeTab === 'calendar' && <TherapistCalendar onSelectClient={handleOpenClientProfile} />}
         {activeTab === 'settings' && <AvailabilityManager />}
         {activeTab === 'clients' && (
           selectedClientId ? (
-            <ClientDetailView clientId={selectedClientId} onBack={() => setSelectedClientId(null)} />
+            <ClientDetailView clientId={selectedClientId} onBack={() => navigateToTab('clients', null)} />
           ) : (
-            <ClientDirectory onSelectClient={(id) => setSelectedClientId(id)} />
+            <ClientDirectory onSelectClient={(id) => handleOpenClientProfile(id)} />
           )
         )}
         {activeTab === 'clinical-notes' && <PrivateClinicalNotesView />}

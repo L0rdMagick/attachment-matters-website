@@ -40,7 +40,41 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
   const [clientAppointments, setClientAppointments] = useState<AppointmentData[]>([]);
   const [rules, setRules] = useState<AvailabilityRules>(DEFAULT_AVAILABILITY_RULES);
   const [selectedDoc, setSelectedDoc] = useState<SignedDocumentData | null>(null);
-  const [activeTab, setActiveTab] = useState<ChartTab>('overview');
+  const getInitialChartTab = (): ChartTab => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabFromUrl = params.get('chartTab') as ChartTab;
+      if (tabFromUrl && ['overview', 'contact', 'appointments', 'intake', 'documents', 'shared-notes', 'private-clinical-notes', 'billing', 'files'].includes(tabFromUrl)) {
+        return tabFromUrl;
+      }
+    }
+    return 'overview';
+  };
+
+  const [activeTab, setActiveTabState] = useState<ChartTab>(getInitialChartTab);
+
+  const handleChartTabChange = (tab: ChartTab) => {
+    setActiveTabState(tab);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('chartTab', tab);
+      window.history.pushState({ chartTab: tab }, '', url.toString());
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tabFromUrl = params.get('chartTab') as ChartTab;
+      if (tabFromUrl && ['overview', 'contact', 'appointments', 'intake', 'documents', 'shared-notes', 'private-clinical-notes', 'billing', 'files'].includes(tabFromUrl)) {
+        setActiveTabState(tabFromUrl);
+      } else {
+        setActiveTabState('overview');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   const [loading, setLoading] = useState(true);
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [schedNote, setSchedNote] = useState('');
@@ -436,7 +470,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleChartTabChange(tab.id)}
               className={`px-3 py-2 text-xs font-semibold rounded-xl whitespace-nowrap transition flex items-center gap-1.5 min-h-[40px] ${
                 isActive
                   ? isPrivate
