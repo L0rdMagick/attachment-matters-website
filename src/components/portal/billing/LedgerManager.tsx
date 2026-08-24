@@ -8,7 +8,12 @@ import type { ClientProfileData } from '../../../types/client';
 import type { AppointmentData } from '../../../types/scheduling';
 import { PortalClientSelector } from '../common/PortalClientSelector';
 
-export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetClientId }) => {
+interface LedgerManagerProps {
+  targetClientId?: string;
+  onSelectClient?: (clientId: string) => void;
+}
+
+export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, onSelectClient }) => {
   const { user, role } = useAuth();
   const isStaff = role === 'therapist' || role === 'admin';
 
@@ -616,7 +621,18 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
                     </td>
                     {isStaff && (
                       <td className="py-3.5 px-4 font-medium text-[#2C2A2A]">
-                        {appt.clientName || getClientName(appt.clientId)}
+                        {onSelectClient && appt.clientId ? (
+                          <button
+                            type="button"
+                            onClick={() => onSelectClient(appt.clientId)}
+                            className="text-[#BF5B33] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                            title="View Client Chart / Profile"
+                          >
+                            {appt.clientName || getClientName(appt.clientId)} ↗
+                          </button>
+                        ) : (
+                          appt.clientName || getClientName(appt.clientId)
+                        )}
                       </td>
                     )}
                     <td className="py-3.5 px-4 font-medium">{appt.appointmentTypeName}</td>
@@ -669,7 +685,18 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
                       </td>
                       {isStaff && (
                         <td className="py-3.5 px-4 font-medium text-[#2C2A2A]">
-                          {getClientName(inv.clientId)}
+                          {onSelectClient && inv.clientId ? (
+                            <button
+                              type="button"
+                              onClick={() => onSelectClient(inv.clientId)}
+                              className="text-[#BF5B33] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                              title="View Client Chart / Profile"
+                            >
+                              {getClientName(inv.clientId)} ↗
+                            </button>
+                          ) : (
+                            getClientName(inv.clientId)
+                          )}
                         </td>
                       )}
                       <td className="py-3.5 px-4">{inv.description}</td>
@@ -795,7 +822,22 @@ export const LedgerManager: React.FC<{ targetClientId?: string }> = ({ targetCli
                 <div className="bg-[#F7F2E9] p-5 rounded-xl border border-[#EAE1D2] flex flex-col sm:flex-row justify-between text-xs gap-4">
                   <div>
                     <span className="font-bold uppercase tracking-wider text-[#4A5741] block mb-1.5">Billed To (Client):</span>
-                    <p className="font-bold text-base text-[#2C2A2A]">{getClientName(viewSingleInvoice.clientId)}</p>
+                    {onSelectClient && viewSingleInvoice.clientId ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cId = viewSingleInvoice.clientId;
+                          setViewSingleInvoice(null);
+                          onSelectClient(cId);
+                        }}
+                        className="font-bold text-base text-[#BF5B33] hover:underline flex items-center gap-1 cursor-pointer text-left"
+                        title="View Client Chart / Profile"
+                      >
+                        {getClientName(viewSingleInvoice.clientId)} ↗
+                      </button>
+                    ) : (
+                      <p className="font-bold text-base text-[#2C2A2A]">{getClientName(viewSingleInvoice.clientId)}</p>
+                    )}
                     {getClientEmail(viewSingleInvoice.clientId) && (
                       <p className="text-gray-600 font-medium mt-0.5">{getClientEmail(viewSingleInvoice.clientId)}</p>
                     )}

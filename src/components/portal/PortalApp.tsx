@@ -217,7 +217,7 @@ const MainPortalContent: React.FC = () => {
         )}
         {activeTab === 'clinical-notes' && <PrivateClinicalNotesView />}
         {activeTab === 'shared-notes' && <SharedNotesView />}
-        {activeTab === 'billing' && <LedgerManager />}
+        {activeTab === 'billing' && <LedgerManager onSelectClient={handleOpenClientProfile} />}
         {activeTab === 'intake-templates' && <TemplateManagerView />}
       </StaffLayout>
     </PortalErrorBoundary>
