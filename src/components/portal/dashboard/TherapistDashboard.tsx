@@ -17,6 +17,7 @@ import { db } from '../../../lib/firebase/config';
 
 interface TherapistDashboardProps {
   onNavigate: (tab: string) => void;
+  onSelectClient?: (clientId: string) => void;
 }
 
 export type ActivityCategory = 'all' | 'appointments' | 'profile' | 'intakes' | 'signed_forms';
@@ -26,6 +27,7 @@ export interface UnifiedActivityItem {
   category: 'appointments' | 'profile' | 'intakes' | 'signed_forms';
   badgeTitle: string;
   clientName: string;
+  clientId?: string;
   message: string;
   details?: string;
   timestampISO: string;
@@ -37,7 +39,7 @@ export interface UnifiedActivityItem {
   deleteId?: string;
 }
 
-export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNavigate }) => {
+export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNavigate, onSelectClient }) => {
   const { user } = useAuth();
   const { showConfirm } = usePortalModal();
   const [todayAppointments, setTodayAppointments] = useState<AppointmentData[]>([]);
@@ -85,6 +87,7 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
           category,
           badgeTitle: notif.title || 'Notification',
           clientName: notif.clientName || 'Client',
+          clientId: notif.clientId,
           message: notif.message,
           details: notif.details,
           timestampISO: isoTimestamp,
@@ -127,6 +130,7 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
             category: 'signed_forms',
             badgeTitle: '✍️ Signed Consent Form',
             clientName,
+            clientId: d.clientId,
             message: d.documentTitle || 'Practice Consent & Agreement',
             details: `Version: ${d.templateVersion || 'v1.0'} | Audit Hash: ${d.documentHash || 'N/A'}`,
             timestampISO: isoTimestamp,
@@ -159,6 +163,7 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
               category: 'intakes',
               badgeTitle: '📋 Intake Questionnaire',
               clientName,
+              clientId: c.uid,
               message: 'Initial Clinical Intake Questionnaire Submission',
               details: 'Completed full clinical intake questionnaire packet.',
               timestampISO: isoTimestamp,
@@ -194,6 +199,7 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
             category: 'appointments',
             badgeTitle: '📅 New Appointment Booked',
             clientName,
+            clientId: appt.clientId,
             message: apptNoticeMsg,
             details: `Status: ${appt.status} | Format: ${appt.format}`,
             timestampISO: isoTimestamp,
@@ -222,8 +228,9 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
             itemsMap.set(key, {
               id: key,
               category: 'profile',
-              badgeTitle: '👤 Client Profile Saved / Updated',
+              badgeTitle: '👤 Profile Activity',
               clientName,
+              clientId: c.uid,
               message: noticeMsg,
               details: `Email: ${c.email || 'N/A'}`,
               timestampISO: isoTimestamp,
@@ -433,7 +440,18 @@ export const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNaviga
                 >
                   <div className="space-y-1 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <strong className="text-sm font-semibold text-[#2C2A2A]">{item.clientName}</strong>
+                      {item.clientId && onSelectClient ? (
+                        <button
+                          type="button"
+                          onClick={() => onSelectClient(item.clientId!)}
+                          className="text-sm font-semibold text-[#BF5B33] hover:underline cursor-pointer flex items-center gap-1"
+                          title="View Client Chart / Profile"
+                        >
+                          {item.clientName} ↗
+                        </button>
+                      ) : (
+                        <strong className="text-sm font-semibold text-[#2C2A2A]">{item.clientName}</strong>
+                      )}
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
                         isAppointment ? 'bg-green-100 text-green-800 border-green-200' :
                         isProfile ? 'bg-gray-100 text-gray-800 border-gray-200' :

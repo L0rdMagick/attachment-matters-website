@@ -187,6 +187,11 @@ const MainPortalContent: React.FC = () => {
     );
   }
 
+  const handleOpenClientProfile = (clientId: string) => {
+    setSelectedClientId(clientId);
+    setActiveTab('clients');
+  };
+
   // Therapist / Admin Staff Experience
   return (
     <PortalErrorBoundary>
@@ -200,8 +205,8 @@ const MainPortalContent: React.FC = () => {
         effectiveRole={effectiveRole}
         onRoleOverrideChange={handleRoleOverrideChange}
       >
-        {activeTab === 'dashboard' && <TherapistDashboard onNavigate={setActiveTab} />}
-        {activeTab === 'calendar' && <TherapistCalendar />}
+        {activeTab === 'dashboard' && <TherapistDashboard onNavigate={setActiveTab} onSelectClient={handleOpenClientProfile} />}
+        {activeTab === 'calendar' && <TherapistCalendar onSelectClient={handleOpenClientProfile} />}
         {activeTab === 'settings' && <AvailabilityManager />}
         {activeTab === 'clients' && (
           selectedClientId ? (

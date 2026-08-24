@@ -16,7 +16,11 @@ import type { ClientProfileData } from '../../../types/client';
 import { usePortalModal } from '../common/PortalModalContext';
 import { PortalClientSelector } from '../common/PortalClientSelector';
 
-export const TherapistCalendar: React.FC = () => {
+interface TherapistCalendarProps {
+  onSelectClient?: (clientId: string) => void;
+}
+
+export const TherapistCalendar: React.FC<TherapistCalendarProps> = ({ onSelectClient }) => {
   const { user } = useAuth();
   const { showConfirm, showAlert } = usePortalModal();
   const [appointments, setAppointments] = useState<AppointmentData[]>([]);
@@ -351,9 +355,20 @@ export const TherapistCalendar: React.FC = () => {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-sm">{a.appointmentTypeName}</span>
-                      <span className="bg-[#BF5B33]/15 text-[#BF5B33] px-2.5 py-0.5 rounded-md font-bold text-xs">
-                        👤 Client: {displayName} {displayEmail ? `(${displayEmail})` : ''}
-                      </span>
+                      {onSelectClient && a.clientId ? (
+                        <button
+                          type="button"
+                          onClick={() => onSelectClient(a.clientId)}
+                          title="View Client Chart / Profile"
+                          className="bg-[#BF5B33]/15 hover:bg-[#BF5B33]/25 text-[#BF5B33] px-2.5 py-0.5 rounded-md font-bold text-xs transition underline flex items-center gap-1 cursor-pointer"
+                        >
+                          👤 Client: {displayName} {displayEmail ? `(${displayEmail})` : ''} ↗
+                        </button>
+                      ) : (
+                        <span className="bg-[#BF5B33]/15 text-[#BF5B33] px-2.5 py-0.5 rounded-md font-bold text-xs">
+                          👤 Client: {displayName} {displayEmail ? `(${displayEmail})` : ''}
+                        </span>
+                      )}
                       <span className="px-2 py-0.5 rounded-md bg-[#4A5741]/10 text-[#4A5741] font-mono font-bold text-xs">
                         ${(a.priceInCents / 100).toFixed(2)}
                       </span>
