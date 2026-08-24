@@ -64,6 +64,26 @@ export async function deleteInvoice(invoiceId: string): Promise<void> {
   await deleteDoc(invRef);
 }
 
+/**
+ * Update an existing ledger transaction entry
+ */
+export async function updateLedgerEntry(entryId: string, updates: Partial<LedgerEntryData>): Promise<void> {
+  const entryRef = doc(db, 'ledgerEntries', entryId);
+  await updateDoc(entryRef, {
+    ...updates,
+    updatedAt: serverTimestamp()
+  });
+}
+
+/**
+ * Delete an existing ledger transaction entry
+ */
+export async function deleteLedgerEntry(entryId: string): Promise<void> {
+  const entryRef = doc(db, 'ledgerEntries', entryId);
+  await deleteDoc(entryRef);
+}
+
+
 
 /**
  * APPEND-ONLY LEDGER TRANSACTION RECORDING

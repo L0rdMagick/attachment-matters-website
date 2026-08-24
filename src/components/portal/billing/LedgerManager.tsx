@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { getInvoicesForClient, getLedgerForClient, createInvoice, updateInvoice, deleteInvoice, recordLedgerTransaction } from '../../../lib/firebase/billing';
+import { getInvoicesForClient, getLedgerForClient, createInvoice, updateInvoice, deleteInvoice, updateLedgerEntry, deleteLedgerEntry, recordLedgerTransaction } from '../../../lib/firebase/billing';
 import { getClientsDirectory } from '../../../lib/firebase/clients';
 import { getAppointments } from '../../../lib/firebase/scheduling';
-import type { InvoiceData, LedgerEntryData, LedgerEntryType } from '../../../types/billing';
+import type { InvoiceData, LedgerEntryData, LedgerEntryType, InvoiceStatus } from '../../../types/billing';
 import type { ClientProfileData } from '../../../types/client';
 import type { AppointmentData } from '../../../types/scheduling';
 import { PortalClientSelector } from '../common/PortalClientSelector';
@@ -53,6 +53,10 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
   const [editDueDate, setEditDueDate] = useState('');
   const [editTargetClientId, setEditTargetClientId] = useState('');
   const [submittingEditInv, setSubmittingEditInv] = useState(false);
+
+  // Edit Invoice Payment Management State
+  const [editPaymentEntries, setEditPaymentEntries] = useState<any[]>([]);
+  const [deletedPaymentIds, setDeletedPaymentIds] = useState<string[]>([]);
 
   // Delete Invoice State
   const [deletingInvId, setDeletingInvId] = useState<string | null>(null);
@@ -104,6 +108,45 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
 
   const calculateEditTotalCents = () => {
     return editLineItems.reduce((sum, item) => {
+      const amt = parseFloat(item.amount) || 0;
+      return sum + Math.round(amt * 100);
+    }, 0);
+  };
+
+  // Edit Modal Payment Record Helpers
+  const addEditPaymentEntry = () => {
+    setEditPaymentEntries((prev) => [
+      ...prev,
+      {
+        id: '',
+        paymentMethod: 'credit_card_token',
+        transactionRef: '',
+        notes: '',
+        amount: '150.00'
+      }
+    ]);
+  };
+
+  const removeEditPaymentEntry = (index: number) => {
+    setEditPaymentEntries((prev) => {
+      const target = prev[index];
+      if (target && target.id) {
+        setDeletedPaymentIds((d) => [...d, target.id]);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const updateEditPaymentEntry = (index: number, field: string, value: any) => {
+    setEditPaymentEntries((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+  };
+
+  const calculateEditPaymentsTotalCents = () => {
+    return editPaymentEntries.reduce((sum, item) => {
       const amt = parseFloat(item.amount) || 0;
       return sum + Math.round(amt * 100);
     }, 0);
@@ -276,6 +319,21 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
         }
       ]);
     }
+
+    const existingPayments = ledgerEntries.filter(
+      (e) => e.invoiceId === inv.id && ['payment', 'partial_payment', 'credit'].includes(e.type)
+    );
+
+    setEditPaymentEntries(
+      existingPayments.map((p) => ({
+        id: p.id,
+        paymentMethod: p.paymentMethod || 'credit_card_token',
+        transactionRef: p.transactionRef || '',
+        notes: p.notes || '',
+        amount: ((p.amountCents || 0) / 100).toFixed(2)
+      }))
+    );
+    setDeletedPaymentIds([]);
   };
 
   const handleUpdateInvoice = async (e: React.FormEvent) => {
@@ -299,16 +357,50 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
     }));
 
     const totalCents = formattedItems.reduce((sum, item) => sum + item.amountCents, 0);
-    const primaryDesc = formattedItems.length === 1
-      ? (formattedItems[0].description ? `${formattedItems[0].title} - ${formattedItems[0].description}` : formattedItems[0].title)
-      : `${formattedItems.length} Itemized Clinical Services (${formattedItems.map(i => i.title).join(', ')})`;
-
-    const currentPaid = Math.max(0, editingInvoice.totalCents - editingInvoice.balanceCents);
-    const newBalanceCents = Math.max(0, totalCents - currentPaid);
-    const newStatus = newBalanceCents <= 0 ? 'paid' : (newBalanceCents < totalCents ? 'partially_paid' : 'unpaid');
 
     setSubmittingEditInv(true);
     try {
+      // 1. Delete removed payment ledger entries
+      for (const payId of deletedPaymentIds) {
+        await deleteLedgerEntry(payId);
+      }
+
+      // 2. Process existing or new payment entries
+      const validPayments = editPaymentEntries.filter((p) => parseFloat(p.amount) > 0);
+      let totalPaidCents = 0;
+
+      for (const pay of validPayments) {
+        const payCents = Math.round(parseFloat(pay.amount) * 100);
+        totalPaidCents += payCents;
+
+        if (pay.id) {
+          await updateLedgerEntry(pay.id, {
+            amountCents: payCents,
+            paymentMethod: pay.paymentMethod,
+            transactionRef: pay.transactionRef,
+            notes: pay.notes || `Payment received for ${editingInvoice.invoiceNumber}`
+          });
+        } else {
+          await recordLedgerTransaction({
+            clientId: editTargetClientId || editingInvoice.clientId,
+            invoiceId: editingInvoice.id,
+            type: 'payment',
+            amountCents: payCents,
+            paymentMethod: pay.paymentMethod || 'credit_card_token',
+            transactionRef: pay.transactionRef || `REF-${Date.now().toString().slice(-6)}`,
+            notes: pay.notes || `Payment received for ${editingInvoice.invoiceNumber}`,
+            createdById: user!.uid
+          });
+        }
+      }
+
+      const newBalanceCents = Math.max(0, totalCents - totalPaidCents);
+      const newStatus: InvoiceStatus = newBalanceCents <= 0 ? 'paid' : (newBalanceCents < totalCents ? 'partially_paid' : 'unpaid');
+
+      const primaryDesc = formattedItems.length === 1
+        ? (formattedItems[0].description ? `${formattedItems[0].title} - ${formattedItems[0].description}` : formattedItems[0].title)
+        : `${formattedItems.length} Itemized Clinical Services (${formattedItems.map(i => i.title).join(', ')})`;
+
       await updateInvoice(editingInvoice.id, {
         clientId: editTargetClientId || editingInvoice.clientId,
         description: primaryDesc,
@@ -327,7 +419,7 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
       setInvoices(invs);
       setLedgerEntries(ledger);
       setEditingInvoice(null);
-      setInvMessage({ type: 'success', text: `Invoice ${editingInvoice.invoiceNumber} updated successfully!` });
+      setInvMessage({ type: 'success', text: `Invoice ${editingInvoice.invoiceNumber} and payment records updated successfully!` });
     } catch (err: any) {
       console.error("Failed to update invoice", err);
       setInvMessage({ type: 'error', text: err.message || "Failed to update invoice." });
@@ -811,7 +903,83 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
                       </div>
                     </div>
                   ))}
+              {/* Recorded Payments & Credits Section */}
+              <div className="space-y-4 pt-4 border-t border-[#EAE1D2]">
+                <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-2">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#BF5B33]">
+                      Recorded Payments & Credits ({editPaymentEntries.length})
+                    </h4>
+                    <p className="text-[11px] text-gray-500">Edit existing recorded payments or add new payment records directly</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addEditPaymentEntry}
+                    className="px-3 py-1.5 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-lg transition flex items-center gap-1"
+                  >
+                    + Add Payment Record
+                  </button>
                 </div>
+
+                {editPaymentEntries.length === 0 ? (
+                  <p className="text-xs text-gray-500 py-2 italic">No recorded payments associated with this invoice.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {editPaymentEntries.map((pay, pIdx) => (
+                      <div key={pIdx} className="p-3 bg-[#F7F2E9]/60 border border-[#EAE1D2] rounded-xl space-y-2">
+                        <div className="flex items-center justify-between pb-1">
+                          <span className="text-[11px] font-bold text-[#4A5741]">Payment Record #{pIdx + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeEditPaymentEntry(pIdx)}
+                            className="text-xs text-red-500 hover:text-red-700 font-semibold px-2 py-0.5 rounded hover:bg-red-50 transition"
+                          >
+                            Remove Payment
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Payment Method</label>
+                            <select
+                              value={pay.paymentMethod}
+                              onChange={(e) => updateEditPaymentEntry(pIdx, 'paymentMethod', e.target.value)}
+                              className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs bg-white outline-none"
+                            >
+                              <option value="credit_card_token">Credit Card / HSA (Tokenized)</option>
+                              <option value="check">Check</option>
+                              <option value="cash">Cash</option>
+                              <option value="hsa_fsa">HSA / FSA Card</option>
+                              <option value="other">Other / Direct Transfer</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Reference / Check #</label>
+                            <input
+                              type="text"
+                              value={pay.transactionRef}
+                              onChange={(e) => updateEditPaymentEntry(pIdx, 'transactionRef', e.target.value)}
+                              className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white font-mono"
+                              placeholder="Transaction Ref or Check #"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Amount Paid ($ USD) *</label>
+                            <input
+                              type="number"
+                              step="any"
+                              min="0"
+                              required
+                              value={pay.amount}
+                              onChange={(e) => updateEditPaymentEntry(pIdx, 'amount', e.target.value)}
+                              className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white font-mono font-bold text-emerald-800"
+                              placeholder="150.00"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-between pt-4 border-t border-[#EAE1D2]">
