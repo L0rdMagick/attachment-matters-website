@@ -322,6 +322,13 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
     executeBooking(startISO, endISO, schedType, schedFormat);
   };
 
+  const upcomingAppts = clientAppointments.filter(
+    (a) => a.status === 'confirmed' || a.status === 'requested' || a.status === 'rescheduled'
+  );
+  const pastAppts = clientAppointments.filter(
+    (a) => a.status === 'completed' || a.status === 'canceled_by_client' || a.status === 'canceled_by_practice' || a.status === 'no_show'
+  );
+
   return (
     <div className="space-y-6 font-sans">
       {/* Top Banner & Client Summary */}
