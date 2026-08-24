@@ -10,6 +10,7 @@ import type { AppointmentData, AppointmentStatus, AvailabilityRules } from '../.
 import { PrivateClinicalNotesView } from '../notes/PrivateClinicalNotesView';
 import { PrintableIntakeDocument } from '../intake/PrintableIntakeDocument';
 import { PrintableSignedConsentDocument } from '../consent/PrintableSignedConsentDocument';
+import { LedgerManager } from '../billing/LedgerManager';
 import { useAuth } from '../../../context/AuthContext';
 import { PortalConfirmModal } from '../common/PortalConfirmModal';
 
@@ -43,6 +44,13 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
   const [schedNote, setSchedNote] = useState('');
   const [minimizedNotes, setMinimizedNotes] = useState<Record<string, boolean>>({});
   const toggleNote = (id: string) => setMinimizedNotes((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  // Reschedule Appointment Modal State
+  const [reschedulingAppt, setReschedulingAppt] = useState<AppointmentData | null>(null);
+  const [reschedDate, setReschedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reschedTime, setReschedTime] = useState('09:00');
+  const [reschedNotes, setReschedNotes] = useState('');
+  const [reschedSubmitting, setReschedSubmitting] = useState(false);
 
   // Review states
   const [reviewingIntake, setReviewingIntake] = useState(false);
@@ -219,6 +227,57 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
       alert("Failed to update intake review status.");
     } finally {
       setReviewingIntake(false);
+    }
+  };
+
+  const handleStatusChangeInChart = async (apptId: string, newStatus: AppointmentStatus) => {
+    try {
+      await updateAppointmentStatus(apptId, newStatus, user?.uid || '', role || '');
+      const updatedAppts = await getAppointments({ clientId });
+      setClientAppointments(updatedAppts);
+    } catch (err) {
+      console.error("Failed to update appointment status", err);
+      alert("Failed to update appointment status.");
+    }
+  };
+
+  const handleRescheduleAppt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reschedulingAppt || !reschedulingAppt.id) return;
+    setReschedSubmitting(true);
+    try {
+      const newStartISO = `${reschedDate}T${reschedTime}:00`;
+      const durationMs = (reschedulingAppt.durationMinutes || 50) * 60 * 1000;
+      const newEndISO = new Date(new Date(newStartISO).getTime() + durationMs).toISOString();
+
+      await bookAppointmentWithLock({
+        ...reschedulingAppt,
+        id: reschedulingAppt.id,
+        startISO: newStartISO,
+        endISO: newEndISO,
+        status: 'rescheduled',
+        notes: reschedNotes ? `${reschedulingAppt.notes ? reschedulingAppt.notes + '\n' : ''}Rescheduled: ${reschedNotes}` : reschedulingAppt.notes
+      }, true);
+
+      const updatedAppts = await getAppointments({ clientId });
+      setClientAppointments(updatedAppts);
+      setReschedulingAppt(null);
+      setReschedNotes('');
+      setConfirmModal({
+        isOpen: true,
+        title: '✓ Session Rescheduled',
+        message: `Appointment for ${client?.legalFirstName} ${client?.legalLastName} has been rescheduled to ${new Date(newStartISO).toLocaleString()}.`,
+        icon: '📅',
+        confirmText: 'OK',
+        variant: 'success',
+        isAlertOnly: true,
+        onConfirm: closeConfirmModal
+      });
+    } catch (err: any) {
+      console.error("Reschedule error:", err);
+      alert(err.message || "Failed to reschedule appointment.");
+    } finally {
+      setReschedSubmitting(false);
     }
   };
 
@@ -547,7 +606,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
         {activeTab === 'appointments' && (
           <div className="space-y-6 text-sm text-[#2C2A2A]">
             <div className="border-b border-[#EAE1D2] pb-3">
-              <h3 className="text-xl font-serif font-medium">Client Appointments & Clinical History</h3>
+              <h3 className="text-xl font-serif font-medium">Client Appointments & History</h3>
               <p className="text-xs text-[#2C2A2A]/70 mt-1">
                 View upcoming scheduled sessions and historical completed appointments.
               </p>
@@ -568,22 +627,29 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-sm">{appt.appointmentTypeName}</span>
+                          <span className="font-bold text-sm text-[#2C2A2A]">{appt.appointmentTypeName}</span>
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                            appt.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
+                            appt.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                            appt.status === 'completed' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                            'bg-amber-100 text-amber-800 border border-amber-200'
                           }`}>
                             {appt.status.replace(/_/g, ' ')}
                           </span>
                           <span className="px-2 py-0.5 rounded-md bg-[#4A5741]/10 text-[#4A5741] font-mono font-bold text-xs">
-                            ${(appt.priceInCents / 100).toFixed(2)}
+                            ${((appt.priceInCents || 15000) / 100).toFixed(2)}
                           </span>
                         </div>
-                        <p className="mt-1">
-                          <strong>Time:</strong> {new Date(appt.startISO).toLocaleString()} | <strong>Format:</strong> <span className="capitalize">{appt.format}</span>
+
+                        <p className="text-xs text-gray-700 mt-1">
+                          👤 <strong>Client:</strong> <span className="font-semibold text-[#BF5B33]">{client.legalFirstName} {client.legalLastName}</span> ({client.email}) ↗
+                        </p>
+
+                        <p className="text-xs text-gray-600 mt-0.5 font-mono">
+                          Time: <strong>{new Date(appt.startISO).toLocaleString()}</strong> | Format: <strong className="capitalize">{appt.format}</strong> | Fee: <strong className="text-amber-800">${((appt.priceInCents || 15000) / 100).toFixed(2)}</strong>
                         </p>
                       </div>
 
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-[#EAE1D2]">
+                      <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-[#EAE1D2]">
                         <button
                           onClick={() => {
                             setConfirmModal({
@@ -602,9 +668,20 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                               onCancel: closeConfirmModal
                             });
                           }}
-                          className="px-3.5 py-2 bg-[#4A5741] text-white font-semibold text-xs rounded-xl hover:bg-[#384232] transition min-h-[38px] flex items-center justify-center"
+                          className="px-3 py-1.5 bg-[#4A5741] text-white font-semibold text-xs rounded-xl hover:bg-[#384232] transition min-h-[38px] flex items-center justify-center shadow-2xs"
                         >
                           ✓ Mark Completed
+                        </button>
+                        <button
+                          onClick={() => {
+                            setReschedulingAppt(appt);
+                            setReschedDate(new Date(appt.startISO).toISOString().split('T')[0]);
+                            const timeStr = new Date(appt.startISO).toTimeString().slice(0, 5);
+                            setReschedTime(timeStr || '09:00');
+                          }}
+                          className="px-3 py-1.5 bg-[#BF5B33]/10 text-[#BF5B33] border border-[#BF5B33]/30 font-semibold text-xs rounded-xl hover:bg-[#BF5B33]/20 transition min-h-[38px] flex items-center justify-center"
+                        >
+                          📅 Reschedule
                         </button>
                         <button
                           onClick={() => {
@@ -623,9 +700,9 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                               onCancel: closeConfirmModal
                             });
                           }}
-                          className="px-3.5 py-2 border border-red-300 text-red-700 font-semibold text-xs rounded-xl hover:bg-red-50 transition min-h-[38px] flex items-center justify-center"
+                          className="px-3 py-1.5 border border-red-300 text-red-700 font-semibold text-xs rounded-xl hover:bg-red-50 transition min-h-[38px] flex items-center justify-center"
                         >
-                          Cancel
+                          🛑 Cancel Session
                         </button>
                       </div>
                     </div>
@@ -654,34 +731,32 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
               )}
             </div>
 
-            {/* Completed & Past Appointments History */}
+            {/* Historical Past Appointments */}
             <div className="space-y-3 pt-4 border-t border-[#EAE1D2]">
               <h4 className="text-xs font-semibold uppercase text-[#4A5741] tracking-wider">
-                Completed & Past Session History ({pastAppts.length})
+                Past Session History ({pastAppts.length})
               </h4>
               {pastAppts.length === 0 ? (
                 <div className="bg-[#F7F2E9] p-4 rounded-xl border border-[#EAE1D2] text-xs text-gray-600 text-center">
-                  No completed or past session history for this client.
+                  No historical completed or canceled appointments on record.
                 </div>
               ) : (
                 pastAppts.map((appt) => (
-                  <div key={appt.id} className="p-4 bg-white rounded-xl border border-[#EAE1D2] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs overflow-hidden break-words">
+                  <div key={appt.id} className="p-3.5 bg-gray-50 rounded-xl border border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
                     <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-sm">{appt.appointmentTypeName}</span>
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                          appt.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-gray-100 text-gray-700 border border-gray-200'
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-800">{appt.appointmentTypeName}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          appt.status === 'completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
                         }`}>
                           {appt.status.replace(/_/g, ' ')}
                         </span>
                       </div>
-                      <p className="mt-1">
-                        <strong>Date:</strong> {new Date(appt.startISO).toLocaleString()} | <strong>Format:</strong> <span className="capitalize">{appt.format}</span>
+                      <p className="text-[#2C2A2A]/70 text-[11px] mt-1 font-mono">
+                        Time: {new Date(appt.startISO).toLocaleString()} | Format: {appt.format} | Fee: ${((appt.priceInCents || 15000) / 100).toFixed(2)}
                       </p>
                     </div>
-                    <div className="font-mono font-semibold text-gray-700">
-                      ${(appt.priceInCents / 100).toFixed(2)}
-                    </div>
+                    <span className="font-mono font-bold text-gray-700">${((appt.priceInCents || 15000) / 100).toFixed(2)}</span>
                   </div>
                 ))
               )}
@@ -932,12 +1007,104 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
           </div>
         )}
 
-        {activeTab !== 'overview' && activeTab !== 'contact' && activeTab !== 'files' && activeTab !== 'documents' && activeTab !== 'intake' && activeTab !== 'private-clinical-notes' && activeTab !== 'appointments' && (
+        {activeTab === 'billing' && (
+          <div className="space-y-4">
+            <LedgerManager targetClientId={client.uid} />
+          </div>
+        )}
+
+        {activeTab !== 'overview' && activeTab !== 'contact' && activeTab !== 'files' && activeTab !== 'documents' && activeTab !== 'intake' && activeTab !== 'private-clinical-notes' && activeTab !== 'appointments' && activeTab !== 'billing' && (
           <div className="text-xs text-[#2C2A2A]/70">
             Active chart tab: <strong className="capitalize">{activeTab.replace('-', ' ')}</strong>. Functional module binder active.
           </div>
         )}
       </div>
+
+      {/* Admin Reschedule Appointment Popup Modal */}
+      {reschedulingAppt && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto font-sans">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-[#EAE1D2]">
+            <div className="flex justify-between items-center border-b border-[#EAE1D2] pb-3">
+              <div>
+                <h3 className="text-base font-serif font-bold text-[#2C2A2A]">
+                  📅 Reschedule Session
+                </h3>
+                <p className="text-xs text-[#4A5741] font-medium">
+                  {reschedulingAppt.appointmentTypeName} for {client.legalFirstName} {client.legalLastName}
+                </p>
+              </div>
+              <button
+                onClick={() => setReschedulingAppt(null)}
+                className="text-gray-400 hover:text-gray-600 font-bold text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleRescheduleAppt} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
+                  New Session Date
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={reschedDate}
+                  onChange={(e) => setReschedDate(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none bg-white font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
+                  New Start Time Slot
+                </label>
+                <select
+                  value={reschedTime}
+                  onChange={(e) => setReschedTime(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-[#EAE1D2] bg-white text-xs text-[#2C2A2A] font-medium"
+                >
+                  {['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00'].map((slot) => (
+                    <option key={slot} value={slot}>
+                      {slot}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
+                  Reason for Rescheduling (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={reschedNotes}
+                  onChange={(e) => setReschedNotes(e.target.value)}
+                  placeholder="Note reason or requested schedule adjustment..."
+                  className="w-full p-2.5 rounded-xl border border-[#EAE1D2] bg-white text-xs text-[#2C2A2A]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-[#EAE1D2]">
+                <button
+                  type="button"
+                  onClick={() => setReschedulingAppt(null)}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 text-xs font-semibold rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={reschedSubmitting}
+                  className="px-5 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl shadow-sm disabled:opacity-50 transition"
+                >
+                  {reschedSubmitting ? 'Rescheduling...' : 'Confirm Reschedule'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Admin Schedule Appointment Popup Modal */}
       {showScheduleModal && (
