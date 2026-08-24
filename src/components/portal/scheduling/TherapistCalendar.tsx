@@ -36,6 +36,8 @@ export const TherapistCalendar: React.FC = () => {
   const [schedNote, setSchedNote] = useState('');
   const [schedBooking, setSchedBooking] = useState(false);
   const [schedMessage, setSchedMessage] = useState<string | null>(null);
+  const [minimizedNotes, setMinimizedNotes] = useState<Record<string, boolean>>({});
+  const toggleNote = (id: string) => setMinimizedNotes((prev) => ({ ...prev, [id]: !prev[id] }));
 
   // Modals state for therapist
   const [noticeModal, setNoticeModal] = useState<{ title: string; message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -366,9 +368,23 @@ export const TherapistCalendar: React.FC = () => {
                       <strong>Time:</strong> {new Date(a.startISO).toLocaleString()} | <strong>Format:</strong> <span className="capitalize">{a.format}</span>
                     </p>
                     {a.notes && (
-                      <p className="text-[11px] bg-white/90 p-2 rounded-lg border border-[#EAE1D2] text-[#2C2A2A] italic mt-1 whitespace-pre-line">
-                        <strong>Note:</strong> {a.notes}
-                      </p>
+                      <div className="mt-1 space-y-1 pt-1 border-t border-[#EAE1D2]/80">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-[#4A5741]">Appointment Note:</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleNote(a.id!)}
+                            className="text-[11px] font-semibold text-[#BF5B33] hover:underline cursor-pointer"
+                          >
+                            {minimizedNotes[a.id!] ? '📝 Open Note' : '✕ Close Note'}
+                          </button>
+                        </div>
+                        {!minimizedNotes[a.id!] && (
+                          <div className="p-2 bg-white/90 rounded-lg border border-[#EAE1D2] text-[11px] italic text-[#2C2A2A] whitespace-pre-line">
+                            {a.notes}
+                          </div>
+                        )}
+                      </div>
                     )}
                     {a.cancellationReason && (
                       <p className="text-[11px] bg-red-50 p-2 rounded-lg border border-red-200 text-red-900 mt-1">
@@ -463,8 +479,11 @@ export const TherapistCalendar: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Appointment Note (Optional)</label>
-                <textarea rows={2} value={schedNote} onChange={(e) => setSchedNote(e.target.value)} placeholder="Add note for this appointment..." className="w-full p-2.5 rounded-xl border border-[#EAE1D2] bg-white text-xs text-[#2C2A2A]" />
+                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Appointment Note / Comments (Optional)</label>
+                <p className="text-[11px] text-[#4A5741] font-medium mb-1.5">
+                  ℹ️ Note: Comments added here will be viewable by both the therapist and the client.
+                </p>
+                <textarea rows={2} value={schedNote} onChange={(e) => setSchedNote(e.target.value)} placeholder="Add note viewable by both client & therapist..." className="w-full p-2.5 rounded-xl border border-[#EAE1D2] bg-white text-xs text-[#2C2A2A]" />
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t border-[#EAE1D2]">
                 <button type="button" onClick={() => setShowScheduleModal(false)} className="px-4 py-2 bg-gray-100 text-gray-700 text-xs font-semibold rounded-xl">Cancel</button>

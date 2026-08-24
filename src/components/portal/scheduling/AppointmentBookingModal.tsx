@@ -24,6 +24,8 @@ export const AppointmentBookingModal: React.FC = () => {
   const [format, setFormat] = useState<'telehealth' | 'in_person'>('telehealth');
   const [bookingNote, setBookingNote] = useState('');
   const [apptTab, setApptTab] = useState<'upcoming' | 'history'>('upcoming');
+  const [minimizedNotes, setMinimizedNotes] = useState<Record<string, boolean>>({});
+  const toggleNote = (id: string) => setMinimizedNotes((prev) => ({ ...prev, [id]: !prev[id] }));
   
   const [loading, setLoading] = useState(false);
   const [booking, setBooking] = useState(false);
@@ -407,12 +409,15 @@ export const AppointmentBookingModal: React.FC = () => {
                 <label htmlFor="bk-note" className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
                   Appointment Note / Reason (Optional)
                 </label>
+                <p className="text-[11px] text-[#4A5741] font-medium mb-1.5">
+                  ℹ️ Note: Comments added here will be viewable by both you and your therapist/practice.
+                </p>
                 <textarea
                   id="bk-note"
                   rows={2}
                   value={bookingNote}
                   onChange={(e) => setBookingNote(e.target.value)}
-                  placeholder="Add any notes or specific topics you would like to cover..."
+                  placeholder="Add any notes or specific topics viewable by both you and your therapist..."
                   className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white text-[#2C2A2A]"
                 />
               </div>
@@ -463,25 +468,44 @@ export const AppointmentBookingModal: React.FC = () => {
           ) : (
             <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
               {displayedClientAppts.map((appt) => (
-                <div key={appt.id} className="p-4 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2] space-y-1.5 text-xs text-[#2C2A2A]">
-                  <div className="flex justify-between items-center">
+                <div key={appt.id} className="p-4 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2] space-y-2 text-xs text-[#2C2A2A]">
+                  <div className="flex justify-between items-center flex-wrap gap-2">
                     <span className="font-semibold text-sm">{appt.appointmentTypeName}</span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                      appt.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' :
-                      appt.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
-                      appt.status === 'rescheduled' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' :
-                      appt.status === 'requested' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {appt.status.replace(/_/g, ' ')}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-md bg-[#4A5741]/10 text-[#4A5741] font-mono font-bold text-xs">
+                        ${(appt.priceInCents / 100).toFixed(2)}
+                      </span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        appt.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' :
+                        appt.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                        appt.status === 'rescheduled' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' :
+                        appt.status === 'requested' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {appt.status.replace(/_/g, ' ')}
+                      </span>
+                    </div>
                   </div>
                   <p><strong>Date & Time:</strong> {new Date(appt.startISO).toLocaleString()}</p>
                   <p><strong>Format:</strong> <span className="capitalize">{appt.format}</span></p>
 
                   {appt.notes && (
-                    <div className="mt-1 p-2 bg-white/80 rounded-lg border border-[#EAE1D2] text-[11px] italic text-[#2C2A2A]/90 whitespace-pre-line">
-                      <strong>Note:</strong> {appt.notes}
+                    <div className="mt-1 space-y-1 pt-1 border-t border-[#EAE1D2]/80">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-[#4A5741]">Appointment Note:</span>
+                        <button
+                          type="button"
+                          onClick={() => toggleNote(appt.id!)}
+                          className="text-[11px] font-semibold text-[#BF5B33] hover:underline cursor-pointer"
+                        >
+                          {minimizedNotes[appt.id!] ? '📝 Open Note' : '✕ Close Note'}
+                        </button>
+                      </div>
+                      {!minimizedNotes[appt.id!] && (
+                        <div className="p-2.5 bg-white/90 rounded-lg border border-[#EAE1D2] text-xs italic text-[#2C2A2A] whitespace-pre-line">
+                          {appt.notes}
+                        </div>
+                      )}
                     </div>
                   )}
 

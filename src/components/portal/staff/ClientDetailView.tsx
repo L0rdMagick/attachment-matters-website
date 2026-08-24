@@ -41,6 +41,9 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
   const [activeTab, setActiveTab] = useState<ChartTab>('overview');
   const [loading, setLoading] = useState(true);
   const [loadingDocs, setLoadingDocs] = useState(false);
+  const [schedNote, setSchedNote] = useState('');
+  const [minimizedNotes, setMinimizedNotes] = useState<Record<string, boolean>>({});
+  const toggleNote = (id: string) => setMinimizedNotes((prev) => ({ ...prev, [id]: !prev[id] }));
 
   // Review states
   const [reviewingIntake, setReviewingIntake] = useState(false);
@@ -93,6 +96,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
         format: schedFormat,
         locationOrLink: schedFormat === 'telehealth' ? 'https://familytrusttherapy.com/telehealth-room' : '123 Practice Way, Suite 100',
         status: 'confirmed',
+        notes: schedNote.trim() || undefined,
         priceInCents: schedType.priceInCents,
         syncStatus: 'pending'
       }, true);
@@ -100,6 +104,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
       const appts = await getAppointments({ clientId: client.uid });
       setClientAppointments(appts);
       setShowScheduleModal(false);
+      setSchedNote('');
 
       setConfirmModal({
         isOpen: true,
@@ -561,66 +566,91 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                 </div>
               ) : (
                 upcomingAppts.map((appt) => (
-                  <div key={appt.id} className="p-4 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs overflow-hidden break-words">
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-sm">{appt.appointmentTypeName}</span>
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                          appt.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
-                        }`}>
-                          {appt.status.replace(/_/g, ' ')}
-                        </span>
+                  <div key={appt.id} className="p-4 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2] flex flex-col gap-3 text-xs overflow-hidden break-words">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-sm">{appt.appointmentTypeName}</span>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                            appt.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
+                          }`}>
+                            {appt.status.replace(/_/g, ' ')}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-[#4A5741]/10 text-[#4A5741] font-mono font-bold text-xs">
+                            ${(appt.priceInCents / 100).toFixed(2)}
+                          </span>
+                        </div>
+                        <p className="mt-1">
+                          <strong>Time:</strong> {new Date(appt.startISO).toLocaleString()} | <strong>Format:</strong> <span className="capitalize">{appt.format}</span>
+                        </p>
                       </div>
-                      <p className="mt-1">
-                        <strong>Time:</strong> {new Date(appt.startISO).toLocaleString()} | <strong>Format:</strong> <span className="capitalize">{appt.format}</span>
-                      </p>
+
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-[#EAE1D2]">
+                        <button
+                          onClick={() => {
+                            setConfirmModal({
+                              isOpen: true,
+                              title: '✓ Mark Session Completed',
+                              message: `Confirm completion of the ${appt.appointmentTypeName} session for ${client.legalFirstName} ${client.legalLastName}?`,
+                              details: 'This will update the appointment status to completed and move it to past session history.',
+                              icon: '✓',
+                              confirmText: 'Yes, Mark Completed',
+                              cancelText: 'Cancel',
+                              variant: 'success',
+                              onConfirm: () => {
+                                closeConfirmModal();
+                                handleStatusChangeInChart(appt.id!, 'completed');
+                              },
+                              onCancel: closeConfirmModal
+                            });
+                          }}
+                          className="px-3.5 py-2 bg-[#4A5741] text-white font-semibold text-xs rounded-xl hover:bg-[#384232] transition min-h-[38px] flex items-center justify-center"
+                        >
+                          ✓ Mark Completed
+                        </button>
+                        <button
+                          onClick={() => {
+                            setConfirmModal({
+                              isOpen: true,
+                              title: '🛑 Cancel Appointment',
+                              message: `Are you sure you want to cancel the scheduled ${appt.appointmentTypeName} session for ${client.legalFirstName} ${client.legalLastName}?`,
+                              icon: '🛑',
+                              confirmText: 'Yes, Cancel Session',
+                              cancelText: 'Keep Appointment',
+                              variant: 'danger',
+                              onConfirm: () => {
+                                closeConfirmModal();
+                                handleStatusChangeInChart(appt.id!, 'canceled_by_practice');
+                              },
+                              onCancel: closeConfirmModal
+                            });
+                          }}
+                          className="px-3.5 py-2 border border-red-300 text-red-700 font-semibold text-xs rounded-xl hover:bg-red-50 transition min-h-[38px] flex items-center justify-center"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-[#EAE1D2]">
-                      <button
-                        onClick={() => {
-                          setConfirmModal({
-                            isOpen: true,
-                            title: '✓ Mark Session Completed',
-                            message: `Confirm completion of the ${appt.appointmentTypeName} session for ${client.legalFirstName} ${client.legalLastName}?`,
-                            details: 'This will update the appointment status to completed and move it to past session history.',
-                            icon: '✓',
-                            confirmText: 'Yes, Mark Completed',
-                            cancelText: 'Cancel',
-                            variant: 'success',
-                            onConfirm: () => {
-                              closeConfirmModal();
-                              handleStatusChangeInChart(appt.id!, 'completed');
-                            },
-                            onCancel: closeConfirmModal
-                          });
-                        }}
-                        className="px-3.5 py-2 bg-[#4A5741] text-white font-semibold text-xs rounded-xl hover:bg-[#384232] transition min-h-[38px] flex items-center justify-center"
-                      >
-                        ✓ Mark Completed
-                      </button>
-                      <button
-                        onClick={() => {
-                          setConfirmModal({
-                            isOpen: true,
-                            title: '🛑 Cancel Appointment',
-                            message: `Are you sure you want to cancel the scheduled ${appt.appointmentTypeName} session for ${client.legalFirstName} ${client.legalLastName}?`,
-                            icon: '🛑',
-                            confirmText: 'Yes, Cancel Session',
-                            cancelText: 'Keep Appointment',
-                            variant: 'danger',
-                            onConfirm: () => {
-                              closeConfirmModal();
-                              handleStatusChangeInChart(appt.id!, 'canceled_by_practice');
-                            },
-                            onCancel: closeConfirmModal
-                          });
-                        }}
-                        className="px-3.5 py-2 border border-red-300 text-red-700 font-semibold text-xs rounded-xl hover:bg-red-50 transition min-h-[38px] flex items-center justify-center"
-                      >
-                        Cancel
-                      </button>
-                    </div>
+                    {appt.notes && (
+                      <div className="pt-2 border-t border-[#EAE1D2]/80 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-[#4A5741]">Appointment Note / Instructions:</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleNote(appt.id!)}
+                            className="text-[11px] font-semibold text-[#BF5B33] hover:underline cursor-pointer"
+                          >
+                            {minimizedNotes[appt.id!] ? '📝 Open Note' : '✕ Close Note'}
+                          </button>
+                        </div>
+                        {!minimizedNotes[appt.id!] && (
+                          <div className="p-2.5 bg-white/90 rounded-lg border border-[#EAE1D2] text-xs italic text-[#2C2A2A] whitespace-pre-line">
+                            {appt.notes}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))
               )}
@@ -1013,6 +1043,22 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({ clientId, on
                     🏢 In-Person Office
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">
+                  Appointment Note / Comments (Optional)
+                </label>
+                <p className="text-[11px] text-[#4A5741] font-medium mb-1.5">
+                  ℹ️ Note: Comments added here will be viewable by both the therapist and the client.
+                </p>
+                <textarea
+                  rows={2}
+                  value={schedNote}
+                  onChange={(e) => setSchedNote(e.target.value)}
+                  placeholder="Add session notes or topics viewable by both client & therapist..."
+                  className="w-full p-2.5 rounded-xl border border-[#EAE1D2] bg-white text-xs text-[#2C2A2A]"
+                />
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-[#EAE1D2]">
