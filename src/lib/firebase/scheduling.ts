@@ -82,7 +82,16 @@ export const DEFAULT_AVAILABILITY_RULES: AvailabilityRules = {
   cancellationNoticeHours: 24,
   allowClientSelfScheduling: true,
   requireAppointmentApproval: false,
-  blockedPeriods: []
+  blockedPeriods: [],
+  emailNotifications: {
+    appointmentBooked: true,
+    appointmentRescheduled: true,
+    appointmentCanceled: true,
+    invoiceIssued: true,
+    paymentReceived: true,
+    intakeSubmitted: true,
+    consentSigned: true
+  }
 };
 
 /**
@@ -101,6 +110,10 @@ export async function getAvailabilityRules(therapistId: string = 'default'): Pro
       return {
         ...DEFAULT_AVAILABILITY_RULES,
         ...data,
+        emailNotifications: {
+          ...DEFAULT_AVAILABILITY_RULES.emailNotifications,
+          ...(data.emailNotifications || {})
+        },
         appointmentTypes,
         therapistId
       };
@@ -396,18 +409,21 @@ export async function bookAppointmentWithLock(
     details: `Format: ${appointment.format}`
   });
 
-  const recipientEmails: string[] = [];
-  if (appointment.clientEmail) recipientEmails.push(appointment.clientEmail);
-  recipientEmails.push('info@familytrusttherapy.com');
+  const rules = await getAvailabilityRules(appointment.therapistId || 'default');
+  if (rules.emailNotifications?.appointmentBooked !== false) {
+    const recipientEmails: string[] = [];
+    if (appointment.clientEmail) recipientEmails.push(appointment.clientEmail);
+    recipientEmails.push('info@familytrusttherapy.com');
 
-  sendPortalEmail({
-    to: recipientEmails,
-    subject: `Appointment Booking Notice: ${appointment.clientName || 'Client'}`,
-    headline: 'Appointment Successfully Booked',
-    bodyHtml: `<p>An appointment for <strong>${appointment.appointmentTypeName || 'Therapy Session'}</strong> has been scheduled for <strong>${new Date(appointment.startISO).toLocaleString()}</strong> (${appointment.format || 'In-Person/Telehealth'}).</p><p><strong>Client Name:</strong> ${appointment.clientName || 'Client'}</p><p><strong>Client Email:</strong> ${appointment.clientEmail || 'N/A'}</p>`,
-    actionUrl: 'https://familytrusttherapy.com/portal',
-    actionText: 'View Portal Calendar'
-  });
+    sendPortalEmail({
+      to: recipientEmails,
+      subject: `Appointment Booking Notice: ${appointment.clientName || 'Client'}`,
+      headline: 'Appointment Successfully Booked',
+      bodyHtml: `<p>An appointment for <strong>${appointment.appointmentTypeName || 'Therapy Session'}</strong> has been scheduled for <strong>${new Date(appointment.startISO).toLocaleString()}</strong> (${appointment.format || 'In-Person/Telehealth'}).</p><p><strong>Client Name:</strong> ${appointment.clientName || 'Client'}</p><p><strong>Client Email:</strong> ${appointment.clientEmail || 'N/A'}</p>`,
+      actionUrl: 'https://familytrusttherapy.com/portal',
+      actionText: 'View Portal Calendar'
+    });
+  }
 
   return newApptRef.id;
 }
@@ -496,17 +512,20 @@ export async function updateAppointmentStatus(
         details: cancelReason
       });
 
-      const recipients: string[] = ['info@familytrusttherapy.com'];
-      if (appt.clientEmail) recipients.push(appt.clientEmail);
+      const rules = await getAvailabilityRules(appt.therapistId || 'default');
+      if (rules.emailNotifications?.appointmentCanceled !== false) {
+        const recipients: string[] = ['info@familytrusttherapy.com'];
+        if (appt.clientEmail) recipients.push(appt.clientEmail);
 
-      sendPortalEmail({
-        to: recipients,
-        subject: `Appointment Cancellation Notice: ${appt.clientName || 'Client'}`,
-        headline: 'Appointment Canceled',
-        bodyHtml: `<p>The appointment scheduled for <strong>${new Date(appt.startISO).toLocaleString()}</strong> (${appt.appointmentTypeName || 'Therapy Session'}) has been canceled.</p><p><strong>Reason:</strong> ${cancelReason}</p>`,
-        actionUrl: 'https://familytrusttherapy.com/portal',
-        actionText: 'Open Portal'
-      });
+        sendPortalEmail({
+          to: recipients,
+          subject: `Appointment Cancellation Notice: ${appt.clientName || 'Client'}`,
+          headline: 'Appointment Canceled',
+          bodyHtml: `<p>The appointment scheduled for <strong>${new Date(appt.startISO).toLocaleString()}</strong> (${appt.appointmentTypeName || 'Therapy Session'}) has been canceled.</p><p><strong>Reason:</strong> ${cancelReason}</p>`,
+          actionUrl: 'https://familytrusttherapy.com/portal',
+          actionText: 'Open Portal'
+        });
+      }
 
       // Also create document in cancellationAlerts for fallback compatibility
       await addDoc(collection(db, 'cancellationAlerts'), {
@@ -583,16 +602,19 @@ export async function rescheduleAppointment(
       details: `New date/time: ${new Date(newStartISO).toLocaleString()}`
     });
 
-    const recipients: string[] = ['info@familytrusttherapy.com'];
-    if (apptData.clientEmail) recipients.push(apptData.clientEmail);
+    const rules = await getAvailabilityRules(apptData.therapistId || 'default');
+    if (rules.emailNotifications?.appointmentRescheduled !== false) {
+      const recipients: string[] = ['info@familytrusttherapy.com'];
+      if (apptData.clientEmail) recipients.push(apptData.clientEmail);
 
-    sendPortalEmail({
-      to: recipients,
-      subject: `Appointment Rescheduled: ${apptData.clientName || 'Client'}`,
-      headline: 'Appointment Rescheduled',
-      bodyHtml: `<p>The appointment for <strong>${apptData.clientName || 'Client'}</strong> has been rescheduled to <strong>${new Date(newStartISO).toLocaleString()}</strong>.</p>`,
-      actionUrl: 'https://familytrusttherapy.com/portal',
-      actionText: 'View Schedule'
-    });
+      sendPortalEmail({
+        to: recipients,
+        subject: `Appointment Rescheduled: ${apptData.clientName || 'Client'}`,
+        headline: 'Appointment Rescheduled',
+        bodyHtml: `<p>The appointment for <strong>${apptData.clientName || 'Client'}</strong> has been rescheduled to <strong>${new Date(newStartISO).toLocaleString()}</strong>.</p>`,
+        actionUrl: 'https://familytrusttherapy.com/portal',
+        actionText: 'View Schedule'
+      });
+    }
   }
 }

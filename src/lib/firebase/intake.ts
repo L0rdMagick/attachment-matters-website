@@ -16,6 +16,7 @@ export async function getIntakeSubmission(clientId: string): Promise<IntakeSubmi
 
 import { createPracticeNotification } from './notifications';
 import { sendPortalEmail } from '../email';
+import { getAvailabilityRules } from './scheduling';
 
 /**
  * Save draft or final submission of Intake Form
@@ -110,17 +111,20 @@ export async function saveIntakeSubmission(
       details: keyDetails.join('\n')
     });
 
-    const recipients: string[] = ['info@familytrusttherapy.com'];
-    if (cData.email) recipients.push(cData.email);
+    const rules = await getAvailabilityRules('default');
+    if (rules.emailNotifications?.intakeSubmitted !== false) {
+      const recipients: string[] = ['info@familytrusttherapy.com'];
+      if (cData.email) recipients.push(cData.email);
 
-    sendPortalEmail({
-      to: recipients,
-      subject: `Clinical Intake Submitted: ${clientName}`,
-      headline: 'Intake Questionnaire Received',
-      bodyHtml: `<p>Clinical intake questionnaire has been submitted for <strong>${clientName}</strong>.</p><p>${keyDetails.join('<br/>')}</p>`,
-      actionUrl: 'https://familytrusttherapy.com/portal',
-      actionText: 'Review Intake Submission'
-    });
+      sendPortalEmail({
+        to: recipients,
+        subject: `Clinical Intake Submitted: ${clientName}`,
+        headline: 'Intake Questionnaire Received',
+        bodyHtml: `<p>Clinical intake questionnaire has been submitted for <strong>${clientName}</strong>.</p><p>${keyDetails.join('<br/>')}</p>`,
+        actionUrl: 'https://familytrusttherapy.com/portal',
+        actionText: 'Review Intake Submission'
+      });
+    }
   }
 }
 

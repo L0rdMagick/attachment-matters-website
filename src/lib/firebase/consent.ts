@@ -365,6 +365,7 @@ export async function getSignedDocuments(clientId: string): Promise<SignedDocume
 
 import { createPracticeNotification } from './notifications';
 import { sendPortalEmail } from '../email';
+import { getAvailabilityRules } from './scheduling';
 
 /**
  * Sign & Freeze Consent Document (Firestore + LocalStorage Sync)
@@ -473,17 +474,20 @@ export async function signConsentDocument(
       details: detailsStr
     });
 
-    const recipients: string[] = ['info@familytrusttherapy.com'];
-    if (clientEmail) recipients.push(clientEmail);
+    const rules = await getAvailabilityRules('default');
+    if (rules.emailNotifications?.consentSigned !== false) {
+      const recipients: string[] = ['info@familytrusttherapy.com'];
+      if (clientEmail) recipients.push(clientEmail);
 
-    sendPortalEmail({
-      to: recipients,
-      subject: `Signed Document Executed: ${clientDisplayName} - ${template.title}`,
-      headline: 'Consent Document Signed & Recorded',
-      bodyHtml: `<p><strong>${clientDisplayName}</strong> has signed <strong>${template.title}</strong> (${template.version}).</p><p>Audit Record Hash: <code>${documentHash}</code></p>`,
-      actionUrl: 'https://familytrusttherapy.com/portal',
-      actionText: 'View Document Audit Trail'
-    });
+      sendPortalEmail({
+        to: recipients,
+        subject: `Signed Document Executed: ${clientDisplayName} - ${template.title}`,
+        headline: 'Consent Document Signed & Recorded',
+        bodyHtml: `<p><strong>${clientDisplayName}</strong> has signed <strong>${template.title}</strong> (${template.version}).</p><p>Audit Record Hash: <code>${documentHash}</code></p>`,
+        actionUrl: 'https://familytrusttherapy.com/portal',
+        actionText: 'View Document Audit Trail'
+      });
+    }
   } catch (notifErr) {
     console.warn("Failed to dispatch practice notification for document sign:", notifErr);
   }

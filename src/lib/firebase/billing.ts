@@ -34,6 +34,8 @@ export async function getLedgerForClient(clientId?: string): Promise<LedgerEntry
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as LedgerEntryData));
 }
 
+import { getAvailabilityRules } from './scheduling';
+
 /**
  * Create a new invoice
  */
@@ -44,7 +46,8 @@ export async function createInvoice(invoice: Omit<InvoiceData, 'id'>): Promise<s
     updatedAt: serverTimestamp()
   });
 
-  if (invoice.clientId) {
+  const rules = await getAvailabilityRules('default');
+  if (rules.emailNotifications?.invoiceIssued !== false && invoice.clientId) {
     try {
       const clientSnap = await getDoc(doc(db, 'clients', invoice.clientId));
       if (clientSnap.exists()) {
@@ -53,10 +56,10 @@ export async function createInvoice(invoice: Omit<InvoiceData, 'id'>): Promise<s
           const formattedAmount = (invoice.totalCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
           sendPortalEmail({
             to: cData.email,
-            subject: `New Invoice ${invoice.invoiceNumber || ''} - Attachment Matters`,
+            subject: `New Invoice ${invoice.invoiceNumber || ''} - Family Trust Therapy`,
             headline: 'New Invoice Issued',
             bodyHtml: `<p>Dear ${cData.legalFirstName || 'Client'},</p><p>A new invoice (<strong>${invoice.invoiceNumber || ''}</strong>) for <strong>${formattedAmount}</strong> has been issued for: <em>${invoice.description || 'Therapy Services'}</em>.</p><p>Due Date: ${invoice.dueDate || 'Upon receipt'}</p>`,
-            actionUrl: '/portal',
+            actionUrl: 'https://familytrusttherapy.com/portal',
             actionText: 'Pay / View Invoice'
           });
         }
@@ -169,22 +172,24 @@ export async function recordLedgerTransaction(entry: Omit<LedgerEntryData, 'id'>
     }
   });
 
-  if (entry.clientId && (entry.type === 'payment' || entry.type === 'partial_payment')) {
+  const rules = await getAvailabilityRules('default');
+  if (rules.emailNotifications?.paymentReceived !== false && entry.clientId && (entry.type === 'payment' || entry.type === 'partial_payment')) {
     try {
       const clientSnap = await getDoc(doc(db, 'clients', entry.clientId));
       if (clientSnap.exists()) {
         const cData = clientSnap.data();
-        if (cData.email) {
-          const formattedAmount = (entry.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-          sendPortalEmail({
-            to: cData.email,
-            subject: 'Payment Receipt - Attachment Matters',
-            headline: 'Payment Received',
-            bodyHtml: `<p>Dear ${cData.legalFirstName || 'Client'},</p><p>Thank you! Your payment of <strong>${formattedAmount}</strong> has been processed successfully.</p><p>Notes: ${entry.notes || 'Payment recorded'}</p>`,
-            actionUrl: '/portal',
-            actionText: 'View Statement'
-          });
-        }
+        const recipients: string[] = ['info@familytrusttherapy.com'];
+        if (cData.email) recipients.push(cData.email);
+
+        const formattedAmount = (entry.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        sendPortalEmail({
+          to: recipients,
+          subject: `Payment Received: ${cData.legalFirstName || 'Client'} (${formattedAmount})`,
+          headline: 'Payment Received',
+          bodyHtml: `<p>Payment of <strong>${formattedAmount}</strong> has been processed for <strong>${cData.legalFirstName || 'Client'} ${cData.legalLastName || ''}</strong>.</p><p><strong>Notes:</strong> ${entry.notes || 'Payment recorded'}</p>`,
+          actionUrl: 'https://familytrusttherapy.com/portal',
+          actionText: 'View Billing Ledger'
+        });
       }
     } catch (e) {
       console.warn("Failed to send payment receipt email:", e);

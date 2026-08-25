@@ -21,6 +21,16 @@ export interface BlockedPeriod {
   reason: string;
 }
 
+export interface EmailNotificationRules {
+  appointmentBooked?: boolean;
+  appointmentRescheduled?: boolean;
+  appointmentCanceled?: boolean;
+  invoiceIssued?: boolean;
+  paymentReceived?: boolean;
+  intakeSubmitted?: boolean;
+  consentSigned?: boolean;
+}
+
 export interface AvailabilityRules {
   therapistId: string;
   timezone: string; // Default: "America/Chicago"
@@ -32,6 +42,7 @@ export interface AvailabilityRules {
   allowClientSelfScheduling: boolean;
   requireAppointmentApproval: boolean;
   blockedPeriods: BlockedPeriod[];
+  emailNotifications?: EmailNotificationRules;
 }
 
 export type AppointmentStatus =

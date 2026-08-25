@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { getAvailabilityRules, saveAvailabilityRules } from '../../../lib/firebase/scheduling';
-import type { AvailabilityRules, AppointmentType } from '../../../types/scheduling';
+import type { AvailabilityRules, AppointmentType, EmailNotificationRules } from '../../../types/scheduling';
 import { usePortalModal } from '../common/PortalModalContext';
+
+type SettingsTab = 'hours' | 'types' | 'timezone' | 'permissions' | 'notifications';
 
 export const AvailabilityManager: React.FC = () => {
   const { user } = useAuth();
   const { showConfirm, showAlert } = usePortalModal();
   const [rules, setRules] = useState<AvailabilityRules | null>(null);
   const [loading, setLoading] = useState(true);
-  const [savingSection, setSavingSection] = useState<'hours' | 'types' | 'parameters' | null>(null);
+  const [activeTab, setActiveTab] = useState<SettingsTab>('hours');
+  const [savingSection, setSavingSection] = useState<string | null>(null);
 
   // Add Custom Appointment Type Modal state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -35,19 +38,21 @@ export const AvailabilityManager: React.FC = () => {
     loadRules();
   }, [user]);
 
-  const handleSaveSection = async (section: 'hours' | 'types' | 'parameters', updatedRules?: AvailabilityRules) => {
+  const handleSaveSection = async (section: string, updatedRules?: AvailabilityRules) => {
     const targetRules = updatedRules || rules;
     if (!targetRules || !user) return;
     setSavingSection(section);
 
     try {
       await saveAvailabilityRules({ ...targetRules, therapistId: user.uid });
-      const labels = {
+      const labels: Record<string, string> = {
         hours: 'Weekly Working Hours',
         types: 'Configured Appointment Types',
-        parameters: 'Practice Booking Parameters'
+        timezone: 'Practice Timezone & Booking Lead Times',
+        permissions: 'Client Permissions & Self-Scheduling Rules',
+        notifications: 'Email Notification Preferences'
       };
-      showAlert('✓ Saved Successfully', `${labels[section]} have been updated and saved to practice configuration.`, 'success', '✓');
+      showAlert('✓ Saved Successfully', `${labels[section] || 'Settings'} have been updated and saved to practice configuration.`, 'success', '✓');
     } catch (err) {
       console.error(err);
       showAlert('⚠️ Save Error', 'Failed to save settings section. Please try again.', 'danger', '⚠️');
@@ -75,6 +80,26 @@ export const AvailabilityManager: React.FC = () => {
     const updated = [...rules.appointmentTypes];
     updated[index] = { ...updated[index], [field]: val };
     setRules({ ...rules, appointmentTypes: updated });
+  };
+
+  const toggleEmailNotification = (key: keyof EmailNotificationRules) => {
+    if (!rules) return;
+    const current = rules.emailNotifications || {
+      appointmentBooked: true,
+      appointmentRescheduled: true,
+      appointmentCanceled: true,
+      invoiceIssued: true,
+      paymentReceived: true,
+      intakeSubmitted: true,
+      consentSigned: true
+    };
+    setRules({
+      ...rules,
+      emailNotifications: {
+        ...current,
+        [key]: !current[key]
+      }
+    });
   };
 
   const openAddAppointmentTypeModal = () => {
@@ -144,28 +169,104 @@ export const AvailabilityManager: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="p-8 text-center bg-white border border-[#EAE1D2] rounded-2xl">Loading therapist availability settings...</div>;
+    return <div className="p-8 text-center bg-white border border-[#EAE1D2] rounded-2xl">Loading practice settings...</div>;
   }
 
   if (!rules) return null;
 
   const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const emailNotifs = rules.emailNotifications || {
+    appointmentBooked: true,
+    appointmentRescheduled: true,
+    appointmentCanceled: true,
+    invoiceIssued: true,
+    paymentReceived: true,
+    intakeSubmitted: true,
+    consentSigned: true
+  };
 
   return (
-    <div className="space-y-8 font-sans">
+    <div className="space-y-6 font-sans">
+      {/* Header Banner */}
       <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm">
-        <h2 className="text-3xl font-serif text-[#2C2A2A] font-medium">Therapist Settings and Hours</h2>
+        <h2 className="text-3xl font-serif text-[#2C2A2A] font-medium">Practice & Portal Settings</h2>
         <p className="text-xs text-[#2C2A2A]/70 mt-1">
-          Configure working hours, session durations, pricing, buffer times, and client self-booking policies.
+          Manage practice working hours, appointment offerings, timezones, client permissions, and email notification triggers.
         </p>
       </div>
 
-      <div className="space-y-8">
-        {/* Working Hours by Day */}
+      {/* Navigation Tabs */}
+      <div className="flex overflow-x-auto gap-2 border-b border-[#EAE1D2] pb-2 scrollbar-none">
+        <button
+          type="button"
+          onClick={() => setActiveTab('hours')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 ${
+            activeTab === 'hours'
+              ? 'bg-[#BF5B33] text-white shadow-sm'
+              : 'bg-white border border-[#EAE1D2] text-[#2C2A2A] hover:bg-[#F7F2E9]'
+          }`}
+        >
+          <span>🕒</span> Hours
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('types')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 ${
+            activeTab === 'types'
+              ? 'bg-[#BF5B33] text-white shadow-sm'
+              : 'bg-white border border-[#EAE1D2] text-[#2C2A2A] hover:bg-[#F7F2E9]'
+          }`}
+        >
+          <span>🏷️</span> Appointment Types
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('timezone')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 ${
+            activeTab === 'timezone'
+              ? 'bg-[#BF5B33] text-white shadow-sm'
+              : 'bg-white border border-[#EAE1D2] text-[#2C2A2A] hover:bg-[#F7F2E9]'
+          }`}
+        >
+          <span>🌐</span> Timezone
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('permissions')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 ${
+            activeTab === 'permissions'
+              ? 'bg-[#BF5B33] text-white shadow-sm'
+              : 'bg-white border border-[#EAE1D2] text-[#2C2A2A] hover:bg-[#F7F2E9]'
+          }`}
+        >
+          <span>🔒</span> Client Permissions
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('notifications')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 ${
+            activeTab === 'notifications'
+              ? 'bg-[#BF5B33] text-white shadow-sm'
+              : 'bg-white border border-[#EAE1D2] text-[#2C2A2A] hover:bg-[#F7F2E9]'
+          }`}
+        >
+          <span>✉️</span> Email Notifications
+        </button>
+      </div>
+
+      {/* Tab 1: Hours */}
+      {activeTab === 'hours' && (
         <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
-          <h3 className="text-xl font-serif text-[#2C2A2A] font-medium border-b border-[#EAE1D2] pb-3">
-            1. Weekly Working Hours
-          </h3>
+          <div className="border-b border-[#EAE1D2] pb-3">
+            <h3 className="text-xl font-serif text-[#2C2A2A] font-medium">Weekly Working Hours</h3>
+            <p className="text-xs text-[#2C2A2A]/70 mt-1">
+              Enable the days of the week your practice is open and set operating hours for slot availability.
+            </p>
+          </div>
 
           <div className="space-y-3">
             {daysOfWeek.map((day) => {
@@ -177,7 +278,7 @@ export const AvailabilityManager: React.FC = () => {
                       type="checkbox"
                       checked={config.enabled}
                       onChange={(e) => updateWorkingDay(day, 'enabled', e.target.checked)}
-                      className="w-4 h-4 text-[#BF5B33] rounded"
+                      className="w-4 h-4 text-[#BF5B33] rounded accent-[#BF5B33] cursor-pointer"
                     />
                     <span className="text-xs font-semibold uppercase tracking-wider text-[#2C2A2A] w-28 capitalize">
                       {day}
@@ -191,14 +292,14 @@ export const AvailabilityManager: React.FC = () => {
                         type="time"
                         value={config.startTime}
                         onChange={(e) => updateWorkingDay(day, 'startTime', e.target.value)}
-                        className="px-2 py-1 rounded-lg border border-[#EAE1D2] bg-white"
+                        className="px-2 py-1 rounded-lg border border-[#EAE1D2] bg-white font-medium"
                       />
                       <span>End:</span>
                       <input
                         type="time"
                         value={config.endTime}
                         onChange={(e) => updateWorkingDay(day, 'endTime', e.target.value)}
-                        className="px-2 py-1 rounded-lg border border-[#EAE1D2] bg-white"
+                        className="px-2 py-1 rounded-lg border border-[#EAE1D2] bg-white font-medium"
                       />
                     </div>
                   ) : (
@@ -220,16 +321,18 @@ export const AvailabilityManager: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
 
-        {/* Appointment Types & Pricing (Fully Customizable) */}
+      {/* Tab 2: Appointment Types */}
+      {activeTab === 'types' && (
         <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#EAE1D2] pb-3 gap-2">
             <div>
               <h3 className="text-xl font-serif text-[#2C2A2A] font-medium">
-                2. Configured Appointment Types, Durations & Pricing
+                Configured Appointment Types, Durations & Pricing
               </h3>
               <p className="text-xs text-[#2C2A2A]/70 mt-0.5">
-                All parameters correspond 1-to-1 with client booking rules and therapist calendar slot allocations.
+                Customize session titles, pricing, durations, and buffer times available to clients and staff.
               </p>
             </div>
             <button
@@ -335,7 +438,7 @@ export const AvailabilityManager: React.FC = () => {
                       onChange={(e) => updateAppointmentType(index, 'format', e.target.value as any)}
                       className="w-full px-2 py-1 rounded-lg border border-[#EAE1D2] bg-white text-[11px] font-semibold"
                     >
-                      <option value="either">Either (Client Choice)</option>
+                      <option value="either">Either (Choice)</option>
                       <option value="telehealth">Telehealth Only</option>
                       <option value="in_person">In Person Only</option>
                     </select>
@@ -356,16 +459,21 @@ export const AvailabilityManager: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
 
-        {/* Practice Timezone & Rules */}
-        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
-          <h3 className="text-xl font-serif text-[#2C2A2A] font-medium border-b border-[#EAE1D2] pb-3">
-            3. Practice Timezone & Booking Parameters (0 - 100 Days)
-          </h3>
+      {/* Tab 3: Timezone */}
+      {activeTab === 'timezone' && (
+        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="border-b border-[#EAE1D2] pb-3">
+            <h3 className="text-xl font-serif text-[#2C2A2A] font-medium">Practice Timezone & Lead Times</h3>
+            <p className="text-xs text-[#2C2A2A]/70 mt-1">
+              Configure practice operating timezone and advance notice requirements for scheduling.
+            </p>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-semibold uppercase text-[#2C2A2A]">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-xs font-semibold uppercase text-[#2C2A2A]">
             <div>
-              <label htmlFor="av-tz" className="block mb-1">Practice Timezone</label>
+              <label htmlFor="av-tz" className="block mb-2">Practice Timezone</label>
               <select
                 id="av-tz"
                 value={rules.timezone}
@@ -382,7 +490,7 @@ export const AvailabilityManager: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="av-max-advance" className="block mb-1">
+              <label htmlFor="av-max-advance" className="block mb-2">
                 Max Advance Booking (Days)
               </label>
               <div className="flex items-center gap-2">
@@ -399,12 +507,12 @@ export const AvailabilityManager: React.FC = () => {
                   className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs bg-white"
                   placeholder="e.g. 60"
                 />
-                <span className="text-[11px] text-[#2C2A2A]/70 normal-case whitespace-nowrap">Days Ahead</span>
+                <span className="text-[11px] text-[#2C2A2A]/70 normal-case whitespace-nowrap">Days</span>
               </div>
             </div>
 
             <div>
-              <label htmlFor="av-notice-days" className="block mb-1">
+              <label htmlFor="av-notice-days" className="block mb-2">
                 Min Booking Notice (Days)
               </label>
               <div className="flex items-center gap-2">
@@ -428,7 +536,7 @@ export const AvailabilityManager: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="av-cancel-days" className="block mb-1">
+              <label htmlFor="av-cancel-days" className="block mb-2">
                 Cancellation Deadline (Days)
               </label>
               <div className="flex items-center gap-2">
@@ -452,37 +560,239 @@ export const AvailabilityManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Client Self-Scheduling Permission */}
-          <div className="pt-4 border-t border-[#EAE1D2] flex items-center justify-between gap-4">
-            <div>
-              <label htmlFor="av-self-sched" className="text-xs font-semibold uppercase text-[#2C2A2A] block cursor-pointer">
-                Allow Clients to Self-Schedule Appointments
-              </label>
-              <p className="text-[11px] text-[#2C2A2A]/70 normal-case mt-0.5">
-                When enabled, clients can view available time slots and book appointments independently in the portal.
-              </p>
+          <div className="pt-4 border-t border-[#EAE1D2] flex justify-end">
+            <button
+              type="button"
+              disabled={savingSection === 'timezone'}
+              onClick={() => handleSaveSection('timezone')}
+              className="py-2.5 px-6 bg-[#4A5741] hover:bg-[#384232] text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {savingSection === 'timezone' ? 'Saving Timezone...' : '✓ Save Timezone Settings'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 4: Client Permissions */}
+      {activeTab === 'permissions' && (
+        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="border-b border-[#EAE1D2] pb-3">
+            <h3 className="text-xl font-serif text-[#2C2A2A] font-medium">Client Permissions & Self-Scheduling Rules</h3>
+            <p className="text-xs text-[#2C2A2A]/70 mt-1">
+              Control client privileges for booking, rescheduling, and appointment approvals within the portal.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {/* Allow Clients to Self-Schedule Appointments */}
+            <div className="p-4 bg-[#F7F2E9] rounded-2xl border border-[#EAE1D2] flex items-center justify-between gap-4">
+              <div>
+                <label htmlFor="av-self-sched" className="text-sm font-semibold text-[#2C2A2A] block cursor-pointer">
+                  Allow Clients to Self-Schedule Appointments
+                </label>
+                <p className="text-xs text-[#2C2A2A]/70 mt-1">
+                  When enabled, clients can browse therapist open slots and book sessions directly in the portal. When disabled, only practice staff can schedule appointments.
+                </p>
+              </div>
+              <input
+                id="av-self-sched"
+                type="checkbox"
+                checked={rules.allowClientSelfScheduling ?? true}
+                onChange={(e) => setRules({ ...rules, allowClientSelfScheduling: e.target.checked })}
+                className="w-5 h-5 text-[#BF5B33] rounded cursor-pointer accent-[#BF5B33]"
+              />
             </div>
-            <input
-              id="av-self-sched"
-              type="checkbox"
-              checked={rules.allowClientSelfScheduling ?? true}
-              onChange={(e) => setRules({ ...rules, allowClientSelfScheduling: e.target.checked })}
-              className="w-5 h-5 text-[#BF5B33] rounded cursor-pointer accent-[#BF5B33]"
-            />
+
+            {/* Require Therapist Approval */}
+            <div className="p-4 bg-[#F7F2E9] rounded-2xl border border-[#EAE1D2] flex items-center justify-between gap-4">
+              <div>
+                <label htmlFor="av-req-approval" className="text-sm font-semibold text-[#2C2A2A] block cursor-pointer">
+                  Require Therapist Approval for Client Bookings
+                </label>
+                <p className="text-xs text-[#2C2A2A]/70 mt-1">
+                  When enabled, client-booked appointments enter a "Requested" status until manually approved by practice staff.
+                </p>
+              </div>
+              <input
+                id="av-req-approval"
+                type="checkbox"
+                checked={rules.requireAppointmentApproval ?? false}
+                onChange={(e) => setRules({ ...rules, requireAppointmentApproval: e.target.checked })}
+                className="w-5 h-5 text-[#BF5B33] rounded cursor-pointer accent-[#BF5B33]"
+              />
+            </div>
           </div>
 
           <div className="pt-4 border-t border-[#EAE1D2] flex justify-end">
             <button
               type="button"
-              disabled={savingSection === 'parameters'}
-              onClick={() => handleSaveSection('parameters')}
+              disabled={savingSection === 'permissions'}
+              onClick={() => handleSaveSection('permissions')}
               className="py-2.5 px-6 bg-[#4A5741] hover:bg-[#384232] text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 disabled:opacity-50"
             >
-              {savingSection === 'parameters' ? 'Saving Practice Parameters...' : '✓ Save Booking Settings'}
+              {savingSection === 'permissions' ? 'Saving Permissions...' : '✓ Save Client Permissions'}
             </button>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Tab 5: Email Notifications */}
+      {activeTab === 'notifications' && (
+        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="border-b border-[#EAE1D2] pb-3">
+            <h3 className="text-xl font-serif text-[#2C2A2A] font-medium">Email Notification Preferences</h3>
+            <p className="text-xs text-[#2C2A2A]/70 mt-1">
+              Check or uncheck individual notification triggers to disallow or allow email alerts to be sent.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {/* Trigger 1: Appointment Booked */}
+            <div className="p-4 bg-[#F7F2E9] rounded-2xl border border-[#EAE1D2] flex items-center justify-between gap-4">
+              <div>
+                <label htmlFor="notif-booked" className="text-sm font-semibold text-[#2C2A2A] block cursor-pointer">
+                  📅 Appointment Booked
+                </label>
+                <p className="text-xs text-[#2C2A2A]/70 mt-0.5">
+                  Send email confirmation to client and practice when a new session is scheduled.
+                </p>
+              </div>
+              <input
+                id="notif-booked"
+                type="checkbox"
+                checked={emailNotifs.appointmentBooked ?? true}
+                onChange={() => toggleEmailNotification('appointmentBooked')}
+                className="w-5 h-5 text-[#BF5B33] rounded cursor-pointer accent-[#BF5B33]"
+              />
+            </div>
+
+            {/* Trigger 2: Appointment Rescheduled */}
+            <div className="p-4 bg-[#F7F2E9] rounded-2xl border border-[#EAE1D2] flex items-center justify-between gap-4">
+              <div>
+                <label htmlFor="notif-resched" className="text-sm font-semibold text-[#2C2A2A] block cursor-pointer">
+                  🔄 Appointment Rescheduled
+                </label>
+                <p className="text-xs text-[#2C2A2A]/70 mt-0.5">
+                  Send email notification showing original vs updated date/time when a session is moved.
+                </p>
+              </div>
+              <input
+                id="notif-resched"
+                type="checkbox"
+                checked={emailNotifs.appointmentRescheduled ?? true}
+                onChange={() => toggleEmailNotification('appointmentRescheduled')}
+                className="w-5 h-5 text-[#BF5B33] rounded cursor-pointer accent-[#BF5B33]"
+              />
+            </div>
+
+            {/* Trigger 3: Appointment Canceled */}
+            <div className="p-4 bg-[#F7F2E9] rounded-2xl border border-[#EAE1D2] flex items-center justify-between gap-4">
+              <div>
+                <label htmlFor="notif-canceled" className="text-sm font-semibold text-[#2C2A2A] block cursor-pointer">
+                  🛑 Appointment Canceled
+                </label>
+                <p className="text-xs text-[#2C2A2A]/70 mt-0.5">
+                  Send immediate email notice when an appointment is canceled by client or staff.
+                </p>
+              </div>
+              <input
+                id="notif-canceled"
+                type="checkbox"
+                checked={emailNotifs.appointmentCanceled ?? true}
+                onChange={() => toggleEmailNotification('appointmentCanceled')}
+                className="w-5 h-5 text-[#BF5B33] rounded cursor-pointer accent-[#BF5B33]"
+              />
+            </div>
+
+            {/* Trigger 4: Invoice Issued */}
+            <div className="p-4 bg-[#F7F2E9] rounded-2xl border border-[#EAE1D2] flex items-center justify-between gap-4">
+              <div>
+                <label htmlFor="notif-invoice" className="text-sm font-semibold text-[#2C2A2A] block cursor-pointer">
+                  💳 New Invoice Issued / Fee Adjustment
+                </label>
+                <p className="text-xs text-[#2C2A2A]/70 mt-0.5">
+                  Send email to client when a new bill or balance due change is posted.
+                </p>
+              </div>
+              <input
+                id="notif-invoice"
+                type="checkbox"
+                checked={emailNotifs.invoiceIssued ?? true}
+                onChange={() => toggleEmailNotification('invoiceIssued')}
+                className="w-5 h-5 text-[#BF5B33] rounded cursor-pointer accent-[#BF5B33]"
+              />
+            </div>
+
+            {/* Trigger 5: Payment Received */}
+            <div className="p-4 bg-[#F7F2E9] rounded-2xl border border-[#EAE1D2] flex items-center justify-between gap-4">
+              <div>
+                <label htmlFor="notif-payment" className="text-sm font-semibold text-[#2C2A2A] block cursor-pointer">
+                  🧾 Payment Received / Receipt
+                </label>
+                <p className="text-xs text-[#2C2A2A]/70 mt-0.5">
+                  Send payment receipt to client and payment confirmation notice to practice.
+                </p>
+              </div>
+              <input
+                id="notif-payment"
+                type="checkbox"
+                checked={emailNotifs.paymentReceived ?? true}
+                onChange={() => toggleEmailNotification('paymentReceived')}
+                className="w-5 h-5 text-[#BF5B33] rounded cursor-pointer accent-[#BF5B33]"
+              />
+            </div>
+
+            {/* Trigger 6: Intake Submitted */}
+            <div className="p-4 bg-[#F7F2E9] rounded-2xl border border-[#EAE1D2] flex items-center justify-between gap-4">
+              <div>
+                <label htmlFor="notif-intake" className="text-sm font-semibold text-[#2C2A2A] block cursor-pointer">
+                  📝 Clinical Intake Submitted
+                </label>
+                <p className="text-xs text-[#2C2A2A]/70 mt-0.5">
+                  Send email notice to practice staff when a client completes initial intake paperwork.
+                </p>
+              </div>
+              <input
+                id="notif-intake"
+                type="checkbox"
+                checked={emailNotifs.intakeSubmitted ?? true}
+                onChange={() => toggleEmailNotification('intakeSubmitted')}
+                className="w-5 h-5 text-[#BF5B33] rounded cursor-pointer accent-[#BF5B33]"
+              />
+            </div>
+
+            {/* Trigger 7: Consent Document Signed */}
+            <div className="p-4 bg-[#F7F2E9] rounded-2xl border border-[#EAE1D2] flex items-center justify-between gap-4">
+              <div>
+                <label htmlFor="notif-consent" className="text-sm font-semibold text-[#2C2A2A] block cursor-pointer">
+                  📄 Consent Agreement Signed
+                </label>
+                <p className="text-xs text-[#2C2A2A]/70 mt-0.5">
+                  Send confirmation email with audit record hash when a client signs a consent form or policy.
+                </p>
+              </div>
+              <input
+                id="notif-consent"
+                type="checkbox"
+                checked={emailNotifs.consentSigned ?? true}
+                onChange={() => toggleEmailNotification('consentSigned')}
+                className="w-5 h-5 text-[#BF5B33] rounded cursor-pointer accent-[#BF5B33]"
+              />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-[#EAE1D2] flex justify-end">
+            <button
+              type="button"
+              disabled={savingSection === 'notifications'}
+              onClick={() => handleSaveSection('notifications')}
+              className="py-2.5 px-6 bg-[#4A5741] hover:bg-[#384232] text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {savingSection === 'notifications' ? 'Saving Email Preferences...' : '✓ Save Email Notification Settings'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Add Custom Appointment Type Overlay Modal */}
       {showAddModal && (
