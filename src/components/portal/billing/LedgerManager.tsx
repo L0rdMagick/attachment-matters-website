@@ -47,6 +47,13 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
   const [submittingInv, setSubmittingInv] = useState(false);
   const [invMessage, setInvMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // New Invoice Instant Payment State
+  const [recordInstantPay, setRecordInstantPay] = useState(false);
+  const [instantPayAmount, setInstantPayAmount] = useState('');
+  const [instantPayMethod, setInstantPayMethod] = useState<'credit_card_token' | 'check' | 'cash' | 'hsa_fsa' | 'other'>('credit_card_token');
+  const [instantPayDate, setInstantPayDate] = useState(new Date().toISOString().split('T')[0]);
+  const [instantPayRef, setInstantPayRef] = useState('');
+
   // Edit Invoice Modal State
   const [editingInvoice, setEditingInvoice] = useState<InvoiceData | null>(null);
   const [editLineItems, setEditLineItems] = useState<any[]>([]);
@@ -277,7 +284,8 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
         paymentMethod: 'credit_card_token',
         transactionRef: '',
         notes: '',
-        amount: '150.00'
+        amount: '150.00',
+        paymentDate: new Date().toISOString().split('T')[0]
       }
     ]);
   };
@@ -427,6 +435,21 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
         createdById: user!.uid
       });
 
+      if (recordInstantPay && parseFloat(instantPayAmount) > 0) {
+        const payCents = Math.round(parseFloat(instantPayAmount) * 100);
+        await recordLedgerTransaction({
+          clientId: targetId,
+          invoiceId: invId,
+          type: 'payment',
+          amountCents: payCents,
+          paymentMethod: instantPayMethod,
+          transactionRef: instantPayRef || `REF-${Date.now().toString().slice(-6)}`,
+          notes: `Payment recorded upon creation for invoice ${invoiceNum}`,
+          createdById: user!.uid,
+          paymentDate: instantPayDate || new Date().toISOString().split('T')[0]
+        });
+      }
+
       const targetIdKey = isStaff ? (targetClientId || selectedClientId) : (targetClientId || user?.uid || '');
       const [invs, ledger] = await Promise.all([
         getInvoicesForClient(targetIdKey),
@@ -436,6 +459,10 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
       setLedgerEntries(ledger);
       setShowNewInv(false);
       setLineItems([createDefaultLineItem()]);
+      setRecordInstantPay(false);
+      setInstantPayAmount('');
+      setInstantPayRef('');
+      setInstantPayDate(new Date().toISOString().split('T')[0]);
       setInvMessage({ type: 'success', text: `Invoice ${invoiceNum} created and assigned successfully to ${getClientName(targetId)}!` });
     } catch (err: any) {
       console.error("Failed to create invoice", err);
@@ -486,7 +513,8 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
         paymentMethod: p.paymentMethod || 'credit_card_token',
         transactionRef: p.transactionRef || '',
         notes: p.notes || '',
-        amount: ((p.amountCents || 0) / 100).toFixed(2)
+        amount: ((p.amountCents || 0) / 100).toFixed(2),
+        paymentDate: p.paymentDate || (p.createdAtISO ? p.createdAtISO.split('T')[0] : new Date().toISOString().split('T')[0])
       }))
     );
     setDeletedPaymentIds([]);
@@ -534,7 +562,8 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
             amountCents: payCents,
             paymentMethod: pay.paymentMethod,
             transactionRef: pay.transactionRef,
-            notes: pay.notes || `Payment received for ${editingInvoice.invoiceNumber}`
+            notes: pay.notes || `Payment received for ${editingInvoice.invoiceNumber}`,
+            paymentDate: pay.paymentDate || new Date().toISOString().split('T')[0]
           });
         } else {
           await recordLedgerTransaction({
@@ -545,7 +574,8 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
             paymentMethod: pay.paymentMethod || 'credit_card_token',
             transactionRef: pay.transactionRef || `REF-${Date.now().toString().slice(-6)}`,
             notes: pay.notes || `Payment received for ${editingInvoice.invoiceNumber}`,
-            createdById: user!.uid
+            createdById: user!.uid,
+            paymentDate: pay.paymentDate || new Date().toISOString().split('T')[0]
           });
         }
       }
@@ -1043,6 +1073,79 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
                 </div>
               </div>
 
+              {/* Optional Instant Payment Entry Section */}
+              <div className="p-4 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2] space-y-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="chk-instant-pay"
+                    checked={recordInstantPay}
+                    onChange={(e) => {
+                      setRecordInstantPay(e.target.checked);
+                      if (e.target.checked && !instantPayAmount) {
+                        setInstantPayAmount((calculateTotalCents() / 100).toFixed(2));
+                      }
+                    }}
+                    className="w-4 h-4 text-[#BF5B33] rounded accent-[#BF5B33] cursor-pointer"
+                  />
+                  <label htmlFor="chk-instant-pay" className="text-xs font-bold text-[#2C2A2A] cursor-pointer">
+                    💳 Record Immediate Payment for this Invoice Now
+                  </label>
+                </div>
+
+                {recordInstantPay && (
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 text-xs">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-700 mb-1">Payment Amount ($ USD) *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        required={recordInstantPay}
+                        value={instantPayAmount}
+                        onChange={(e) => setInstantPayAmount(e.target.value)}
+                        className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white font-mono font-bold text-emerald-800"
+                        placeholder={(calculateTotalCents() / 100).toFixed(2)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-700 mb-1">Payment Method</label>
+                      <select
+                        value={instantPayMethod}
+                        onChange={(e) => setInstantPayMethod(e.target.value as any)}
+                        className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs bg-white outline-none"
+                      >
+                        <option value="credit_card_token">Credit Card / HSA (Tokenized)</option>
+                        <option value="check">Check</option>
+                        <option value="cash">Cash</option>
+                        <option value="hsa_fsa">HSA / FSA Card</option>
+                        <option value="other">Other / Direct Transfer</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-700 mb-1">Payment / Transaction Date *</label>
+                      <input
+                        type="date"
+                        required={recordInstantPay}
+                        value={instantPayDate}
+                        onChange={(e) => setInstantPayDate(e.target.value)}
+                        className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-700 mb-1">Reference / Check #</label>
+                      <input
+                        type="text"
+                        value={instantPayRef}
+                        onChange={(e) => setInstantPayRef(e.target.value)}
+                        className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white font-mono"
+                        placeholder="Transaction Ref or Check #"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center justify-between pt-4 border-t border-[#EAE1D2]">
                 <button
                   type="button"
@@ -1263,7 +1366,7 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
                             Remove Payment
                           </button>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
                           <div>
                             <label className="block text-[11px] font-semibold text-gray-700 mb-1">Payment Method</label>
                             <select
@@ -1277,6 +1380,16 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
                               <option value="hsa_fsa">HSA / FSA Card</option>
                               <option value="other">Other / Direct Transfer</option>
                             </select>
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Payment / Transaction Date *</label>
+                            <input
+                              type="date"
+                              required
+                              value={pay.paymentDate || new Date().toISOString().split('T')[0]}
+                              onChange={(e) => updateEditPaymentEntry(pIdx, 'paymentDate', e.target.value)}
+                              className="w-full p-2 rounded-lg border border-[#EAE1D2] text-xs outline-none bg-white font-medium"
+                            />
                           </div>
                           <div>
                             <label className="block text-[11px] font-semibold text-gray-700 mb-1">Reference / Check #</label>

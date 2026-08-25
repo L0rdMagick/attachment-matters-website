@@ -84,9 +84,15 @@ export async function updateInvoice(invoiceId: string, updates: Partial<InvoiceD
 }
 
 /**
- * Delete an existing invoice
+ * Delete an existing invoice and all associated ledger entries
  */
 export async function deleteInvoice(invoiceId: string): Promise<void> {
+  // 1. Delete all ledger entries linked to this invoice (initial charge, payments, credits)
+  const ledgerSnap = await getDocs(query(collection(db, 'ledgerEntries'), where('invoiceId', '==', invoiceId)));
+  const deletePromises = ledgerSnap.docs.map((d) => deleteDoc(d.ref));
+  await Promise.all(deletePromises);
+
+  // 2. Delete invoice document
   const invRef = doc(db, 'invoices', invoiceId);
   await deleteDoc(invRef);
 }
