@@ -195,14 +195,14 @@ export const AvailabilityManager: React.FC = () => {
         </p>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex overflow-x-auto gap-2 border-b border-[#EAE1D2] pb-2 scrollbar-none">
+      {/* Responsive Navigation Tabs (Above the Fold on Mobile & Desktop) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-wrap gap-1.5 sm:gap-2 border-b border-[#EAE1D2] pb-3">
         <button
           type="button"
           onClick={() => setActiveTab('hours')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 ${
+          className={`px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
             activeTab === 'hours'
-              ? 'bg-[#BF5B33] text-white shadow-sm'
+              ? 'bg-[#BF5B33] text-white shadow-sm font-bold'
               : 'bg-white border border-[#EAE1D2] text-[#2C2A2A] hover:bg-[#F7F2E9]'
           }`}
         >
@@ -212,21 +212,21 @@ export const AvailabilityManager: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('types')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 ${
+          className={`px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
             activeTab === 'types'
-              ? 'bg-[#BF5B33] text-white shadow-sm'
+              ? 'bg-[#BF5B33] text-white shadow-sm font-bold'
               : 'bg-white border border-[#EAE1D2] text-[#2C2A2A] hover:bg-[#F7F2E9]'
           }`}
         >
-          <span>🏷️</span> Appointment Types
+          <span>🏷️</span> Types
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('timezone')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 ${
+          className={`px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
             activeTab === 'timezone'
-              ? 'bg-[#BF5B33] text-white shadow-sm'
+              ? 'bg-[#BF5B33] text-white shadow-sm font-bold'
               : 'bg-white border border-[#EAE1D2] text-[#2C2A2A] hover:bg-[#F7F2E9]'
           }`}
         >
@@ -236,25 +236,25 @@ export const AvailabilityManager: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('permissions')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 ${
+          className={`px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
             activeTab === 'permissions'
-              ? 'bg-[#BF5B33] text-white shadow-sm'
+              ? 'bg-[#BF5B33] text-white shadow-sm font-bold'
               : 'bg-white border border-[#EAE1D2] text-[#2C2A2A] hover:bg-[#F7F2E9]'
           }`}
         >
-          <span>🔒</span> Client Permissions
+          <span>🔒</span> Permissions
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('notifications')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 ${
+          className={`col-span-2 sm:col-span-1 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
             activeTab === 'notifications'
-              ? 'bg-[#BF5B33] text-white shadow-sm'
+              ? 'bg-[#BF5B33] text-white shadow-sm font-bold'
               : 'bg-white border border-[#EAE1D2] text-[#2C2A2A] hover:bg-[#F7F2E9]'
           }`}
         >
-          <span>✉️</span> Email Notifications
+          <span>✉️</span> Notifications
         </button>
       </div>
 
