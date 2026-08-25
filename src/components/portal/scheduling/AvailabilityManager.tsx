@@ -218,7 +218,7 @@ export const AvailabilityManager: React.FC = () => {
               : 'bg-white border border-[#EAE1D2] text-[#2C2A2A] hover:bg-[#F7F2E9]'
           }`}
         >
-          <span>🏷️</span> Types
+          <span>🛋️</span> Sessions
         </button>
 
         <button
@@ -230,7 +230,7 @@ export const AvailabilityManager: React.FC = () => {
               : 'bg-white border border-[#EAE1D2] text-[#2C2A2A] hover:bg-[#F7F2E9]'
           }`}
         >
-          <span>🌐</span> Timezone
+          <span>⏱️</span> Lead Times
         </button>
 
         <button
@@ -260,15 +260,34 @@ export const AvailabilityManager: React.FC = () => {
 
       {/* Tab 1: Hours */}
       {activeTab === 'hours' && (
-        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+        <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
           <div className="border-b border-[#EAE1D2] pb-3">
-            <h3 className="text-xl font-serif text-[#2C2A2A] font-medium">Weekly Working Hours</h3>
+            <h3 className="text-xl font-serif text-[#2C2A2A] font-medium">Practice Timezone & Working Hours</h3>
             <p className="text-xs text-[#2C2A2A]/70 mt-1">
-              Enable the days of the week your practice is open and set operating hours for slot availability.
+              Select your practice operating timezone and configure weekly working hours for therapist availability.
             </p>
           </div>
 
+          {/* Timezone Setting */}
+          <div className="p-4 bg-[#F7F2E9] rounded-2xl border border-[#EAE1D2] max-w-md space-y-1.5 text-xs font-semibold uppercase text-[#2C2A2A]">
+            <label htmlFor="av-tz-hours" className="block text-[#4A5741] font-bold">Practice Operating Timezone</label>
+            <select
+              id="av-tz-hours"
+              value={rules.timezone}
+              onChange={(e) => setRules({ ...rules, timezone: e.target.value })}
+              className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs normal-case bg-white font-medium text-[#2C2A2A]"
+            >
+              <option value="America/Denver">America/Denver (Mountain MT)</option>
+              <option value="America/Chicago">America/Chicago (Central CT)</option>
+              <option value="America/New_York">America/New_York (Eastern ET)</option>
+              <option value="America/Los_Angeles">America/Los_Angeles (Pacific PT)</option>
+              <option value="America/Anchorage">America/Anchorage (Alaska AK)</option>
+              <option value="Pacific/Honolulu">Pacific/Honolulu (Hawaii HST)</option>
+            </select>
+          </div>
+
           <div className="space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#4A5741]">Weekly Schedule by Day</h4>
             {daysOfWeek.map((day) => {
               const config = rules.workingDays[day] || { enabled: false, startTime: '09:00', endTime: '17:00' };
               return (
@@ -323,13 +342,13 @@ export const AvailabilityManager: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 2: Appointment Types */}
+      {/* Tab 2: Sessions */}
       {activeTab === 'types' && (
         <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#EAE1D2] pb-3 gap-2">
             <div>
               <h3 className="text-xl font-serif text-[#2C2A2A] font-medium">
-                Configured Appointment Types, Durations & Pricing
+                Configured Therapy Sessions, Durations & Pricing
               </h3>
               <p className="text-xs text-[#2C2A2A]/70 mt-0.5">
                 Customize session titles, pricing, durations, and buffer times available to clients and staff.
@@ -340,7 +359,7 @@ export const AvailabilityManager: React.FC = () => {
               onClick={openAddAppointmentTypeModal}
               className="px-3.5 py-2 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl shadow-xs transition w-fit flex items-center gap-1"
             >
-              ➕ Add Custom Appointment Type
+              ➕ Add Custom Session Type
             </button>
           </div>
 
@@ -461,34 +480,17 @@ export const AvailabilityManager: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 3: Timezone */}
+      {/* Tab 3: Lead Times */}
       {activeTab === 'timezone' && (
         <div className="bg-white border border-[#EAE1D2] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
           <div className="border-b border-[#EAE1D2] pb-3">
-            <h3 className="text-xl font-serif text-[#2C2A2A] font-medium">Practice Timezone & Lead Times</h3>
+            <h3 className="text-xl font-serif text-[#2C2A2A] font-medium">Practice Lead Times & Cancellation Policy</h3>
             <p className="text-xs text-[#2C2A2A]/70 mt-1">
-              Configure practice operating timezone and advance notice requirements for scheduling.
+              Configure advance booking limits, minimum notice required, and cancellation deadlines.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-xs font-semibold uppercase text-[#2C2A2A]">
-            <div>
-              <label htmlFor="av-tz" className="block mb-2">Practice Timezone</label>
-              <select
-                id="av-tz"
-                value={rules.timezone}
-                onChange={(e) => setRules({ ...rules, timezone: e.target.value })}
-                className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs normal-case bg-white"
-              >
-                <option value="America/Denver">America/Denver (Mountain MT)</option>
-                <option value="America/Chicago">America/Chicago (Central CT)</option>
-                <option value="America/New_York">America/New_York (Eastern ET)</option>
-                <option value="America/Los_Angeles">America/Los_Angeles (Pacific PT)</option>
-                <option value="America/Anchorage">America/Anchorage (Alaska AK)</option>
-                <option value="Pacific/Honolulu">Pacific/Honolulu (Hawaii HST)</option>
-              </select>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs font-semibold uppercase text-[#2C2A2A]">
             <div>
               <label htmlFor="av-max-advance" className="block mb-2">
                 Max Advance Booking (Days)
