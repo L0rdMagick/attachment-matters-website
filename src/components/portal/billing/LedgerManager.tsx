@@ -64,6 +64,158 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
   // Selected Appointment Detail Modal State
   const [selectedApptDetail, setSelectedApptDetail] = useState<AppointmentData | null>(null);
 
+  // Financial Export Modal State
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportCategory, setExportCategory] = useState<'all' | 'pending' | 'invoiced_balance' | 'paid_totals'>('all');
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
+  const [exportClientId, setExportClientId] = useState(selectedClientId || '');
+
+  const handleGenerateCSVExport = () => {
+    const activeExportClient = exportClientId;
+
+    const matchesClient = (cid?: string) => {
+      if (!activeExportClient) return true;
+      return cid === activeExportClient;
+    };
+
+    const isDateInRange = (dateStr?: string) => {
+      if (!dateStr) return true;
+      const targetTime = new Date(dateStr).getTime();
+      if (exportStartDate && targetTime < new Date(exportStartDate).getTime()) return false;
+      if (exportEndDate && targetTime > new Date(`${exportEndDate}T23:59:59`).getTime()) return false;
+      return true;
+    };
+
+    const rows: string[][] = [
+      [
+        "Transaction Date",
+        "Client Legal Name",
+        "Client ID",
+        "Record Category",
+        "Invoice / Ref Number",
+        "Description / Service",
+        "Service Date",
+        "Total Amount ($)",
+        "Paid Amount ($)",
+        "Balance Due ($)",
+        "Status",
+        "Payment Method / Auth",
+        "Notes / Audit Reference"
+      ]
+    ];
+
+    // 1. Pending Charges
+    if (exportCategory === 'all' || exportCategory === 'pending') {
+      upcomingAppointments.forEach((appt) => {
+        if (matchesClient(appt.clientId) && isDateInRange(appt.startISO)) {
+          const cName = getClientName(appt.clientId);
+          const amt = (appt.priceInCents / 100).toFixed(2);
+          rows.push([
+            new Date(appt.startISO).toLocaleDateString('en-US'),
+            cName,
+            appt.clientId,
+            "Pending Charge",
+            `APPT-${appt.id?.slice(-6) || ''}`,
+            `${appt.appointmentTypeName || 'Therapy Session'} (${appt.format || 'Standard'})`,
+            new Date(appt.startISO).toLocaleDateString('en-US'),
+            amt,
+            "0.00",
+            amt,
+            "PENDING",
+            "Unbilled",
+            `Upcoming Scheduled Session: ${appt.notes || 'No notes'}`
+          ]);
+        }
+      });
+    }
+
+    // 2. Invoiced Balance Due / Issued Invoices
+    if (exportCategory === 'all' || exportCategory === 'invoiced_balance') {
+      invoices.forEach((inv) => {
+        if (matchesClient(inv.clientId) && (isDateInRange(inv.createdAtISO) || isDateInRange(inv.dueDate))) {
+          if (exportCategory === 'invoiced_balance' && inv.balanceCents <= 0) return;
+
+          const cName = getClientName(inv.clientId);
+          const totalAmt = (inv.totalCents / 100).toFixed(2);
+          const paidAmt = ((inv.totalCents - inv.balanceCents) / 100).toFixed(2);
+          const balanceAmt = (inv.balanceCents / 100).toFixed(2);
+
+          rows.push([
+            inv.createdAtISO ? new Date(inv.createdAtISO).toLocaleDateString('en-US') : 'N/A',
+            cName,
+            inv.clientId,
+            inv.balanceCents > 0 ? "Invoiced Balance Due" : "Settled Invoice",
+            inv.invoiceNumber || inv.id || '',
+            inv.description || "Psychotherapy Services",
+            inv.dueDate || 'N/A',
+            totalAmt,
+            paidAmt,
+            balanceAmt,
+            inv.status.toUpperCase(),
+            "Portal Invoice",
+            `Line items: ${inv.lineItems?.map((l: any) => l.title).join('; ') || 'Standard session'}`
+          ]);
+        }
+      });
+    }
+
+    // 3. Paid Totals / Ledger Payments & Credits
+    if (exportCategory === 'all' || exportCategory === 'paid_totals') {
+      ledgerEntries.forEach((entry) => {
+        if (matchesClient(entry.clientId) && isDateInRange(entry.createdAtISO)) {
+          if (exportCategory === 'paid_totals' && entry.type !== 'payment' && entry.type !== 'partial_payment' && entry.type !== 'credit') {
+            return;
+          }
+
+          const cName = getClientName(entry.clientId);
+          const amt = (entry.amountCents / 100).toFixed(2);
+
+          rows.push([
+            entry.createdAtISO ? new Date(entry.createdAtISO).toLocaleDateString('en-US') : 'N/A',
+            cName,
+            entry.clientId,
+            entry.type === 'payment' || entry.type === 'partial_payment' ? "Paid Receipt" : `Ledger ${entry.type.toUpperCase()}`,
+            entry.transactionRef || entry.invoiceId || entry.id || '',
+            entry.notes || `Ledger Entry: ${entry.type}`,
+            entry.createdById || 'system',
+            amt,
+            amt,
+            "0.00",
+            "SETTLED",
+            entry.paymentMethod || 'Credit Card / Token',
+            `Audit Ref: ${entry.notes || 'Recorded in portal'}`
+          ]);
+        }
+      });
+    }
+
+    const csvContent = rows
+      .map((row) =>
+        row
+          .map((cell) => {
+            const str = String(cell ?? '');
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+              return `"${str.replace(/"/g, '""')}"`;
+            }
+            return `"${str}"`;
+          })
+          .join(',')
+      )
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const filename = `financial_report_${exportCategory}_${exportStartDate || 'all'}_to_${exportEndDate || 'today'}.csv`;
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setShowExportModal(false);
+  };
+
   const addLineItem = () => {
     setLineItems((prev) => [...prev, createDefaultLineItem()]);
   };
@@ -553,14 +705,179 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
         </div>
       )}
 
-      {isStaff && (
-        <div className="flex justify-end">
+      <div className="flex flex-col sm:flex-row items-center justify-end gap-3">
+        <button
+          onClick={() => {
+            setExportClientId(activeClientId || '');
+            setShowExportModal(true);
+          }}
+          className="w-full sm:w-auto px-4 py-3 bg-[#4A5741] hover:bg-[#384232] text-white text-xs font-semibold rounded-xl transition shadow-sm min-h-[44px] flex items-center justify-center gap-1.5 cursor-pointer"
+        >
+          📥 Export Financial Report
+        </button>
+
+        {isStaff && (
           <button
             onClick={() => setShowNewInv(true)}
-            className="w-full sm:w-auto px-4 py-3 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl transition shadow-sm min-h-[44px] flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto px-4 py-3 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl transition shadow-sm min-h-[44px] flex items-center justify-center gap-1.5 cursor-pointer"
           >
             + Create New Invoice
           </button>
+        )}
+      </div>
+
+      {/* Financial Export Overlay Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans animate-fade-in overflow-y-auto">
+          <div className="bg-[#F7F2E9] border border-[#EAE1D2] rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 my-auto">
+            <div className="flex items-center justify-between border-b border-[#EAE1D2] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📥</span>
+                <div>
+                  <h3 className="text-lg font-serif text-[#2C2A2A] font-semibold">
+                    Export Financial & Tax Audit Report
+                  </h3>
+                  <p className="text-xs text-gray-500">Generate CSV statement for accounting, taxes, or insurance audit</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setShowExportModal(false)} className="text-gray-400 hover:text-gray-600 font-bold text-sm">✕</button>
+            </div>
+
+            <div className="space-y-4 bg-white p-5 rounded-xl border border-[#EAE1D2]">
+              {/* 1. Client Filter */}
+              {isStaff && !targetClientId && (
+                <div>
+                  <span className="block text-xs font-bold uppercase tracking-wider text-[#4A5741] mb-1">
+                    Client Filter (Applied)
+                  </span>
+                  <PortalClientSelector
+                    clients={clientList}
+                    selectedClientId={exportClientId}
+                    onSelectClient={(id) => setExportClientId(id)}
+                    includeAllOption={true}
+                    allOptionLabel="🌐 All Client Accounts (Practice-Wide)"
+                  />
+                </div>
+              )}
+
+              {/* 2. Charge Category / Report Type */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#4A5741] mb-1">
+                  Report Type / Charge Category *
+                </label>
+                <select
+                  value={exportCategory}
+                  onChange={(e) => setExportCategory(e.target.value as any)}
+                  className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs font-medium bg-white text-[#2C2A2A] focus:ring-2 focus:ring-[#BF5B33] outline-none"
+                >
+                  <option value="all">📊 All Totals (Comprehensive Audit Report)</option>
+                  <option value="pending">⏳ Pending Charges (Upcoming Session Charges)</option>
+                  <option value="invoiced_balance">💳 Invoiced Balance Due (Unpaid / Partial Invoices)</option>
+                  <option value="paid_totals">🧾 Paid Totals (Completed Payments & Receipts)</option>
+                </select>
+              </div>
+
+              {/* 3. Date Range Filter */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#4A5741]">
+                  Date Range Filter
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] text-gray-500 mb-0.5">Start Date</label>
+                    <input
+                      type="date"
+                      value={exportStartDate}
+                      onChange={(e) => setExportStartDate(e.target.value)}
+                      className="w-full p-2 rounded-xl border border-[#EAE1D2] text-xs bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-gray-500 mb-0.5">End Date</label>
+                    <input
+                      type="date"
+                      value={exportEndDate}
+                      onChange={(e) => setExportEndDate(e.target.value)}
+                      className="w-full p-2 rounded-xl border border-[#EAE1D2] text-xs bg-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Quick Date Presets */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date();
+                      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                      const today = now.toISOString().split('T')[0];
+                      setExportStartDate(firstDay);
+                      setExportEndDate(today);
+                    }}
+                    className="px-2.5 py-1 text-[10px] font-semibold bg-[#F7F2E9] border border-[#EAE1D2] rounded-lg hover:bg-[#BF5B33] hover:text-white transition"
+                  >
+                    This Month
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date();
+                      const firstDayPrev = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+                      const lastDayPrev = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+                      setExportStartDate(firstDayPrev);
+                      setExportEndDate(lastDayPrev);
+                    }}
+                    className="px-2.5 py-1 text-[10px] font-semibold bg-[#F7F2E9] border border-[#EAE1D2] rounded-lg hover:bg-[#BF5B33] hover:text-white transition"
+                  >
+                    Last Month
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date();
+                      const startYtd = `${now.getFullYear()}-01-01`;
+                      const today = now.toISOString().split('T')[0];
+                      setExportStartDate(startYtd);
+                      setExportEndDate(today);
+                    }}
+                    className="px-2.5 py-1 text-[10px] font-semibold bg-[#F7F2E9] border border-[#EAE1D2] rounded-lg hover:bg-[#BF5B33] hover:text-white transition"
+                  >
+                    Year To Date (YTD)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExportStartDate('');
+                      setExportEndDate('');
+                    }}
+                    className="px-2.5 py-1 text-[10px] font-semibold bg-[#F7F2E9] border border-[#EAE1D2] rounded-lg hover:bg-[#BF5B33] hover:text-white transition"
+                  >
+                    All Time
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2 border-t border-[#EAE1D2]">
+              <button
+                type="button"
+                onClick={() => setShowExportModal(false)}
+                className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateCSVExport}
+                className="px-5 py-2.5 bg-[#BF5B33] hover:bg-[#a64e2b] text-white text-xs font-semibold rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                📥 Download CSV Report
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
