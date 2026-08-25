@@ -170,15 +170,18 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
 
           const cName = getClientName(entry.clientId);
           const amt = (entry.amountCents / 100).toFixed(2);
+          const txDateStr = entry.paymentDate
+            ? new Date(`${entry.paymentDate}T00:00:00`).toLocaleDateString('en-US')
+            : (entry.createdAtISO ? new Date(entry.createdAtISO).toLocaleDateString('en-US') : 'N/A');
 
           rows.push([
-            entry.createdAtISO ? new Date(entry.createdAtISO).toLocaleDateString('en-US') : 'N/A',
+            txDateStr,
             cName,
             entry.clientId,
             entry.type === 'payment' || entry.type === 'partial_payment' ? "Paid Receipt" : `Ledger ${entry.type.toUpperCase()}`,
             entry.transactionRef || entry.invoiceId || entry.id || '',
             entry.notes || `Ledger Entry: ${entry.type}`,
-            entry.createdById || 'system',
+            entry.paymentDate || entry.createdById || 'system',
             amt,
             amt,
             "0.00",
@@ -309,6 +312,7 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
   const [payAmount, setPayAmount] = useState('');
   const [payMethod, setPayMethod] = useState<'credit_card_token' | 'check' | 'cash' | 'hsa_fsa'>('credit_card_token');
   const [payRef, setPayRef] = useState('');
+  const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Single Invoice PDF Modal View
   const [viewSingleInvoice, setViewSingleInvoice] = useState<InvoiceData | null>(null);
@@ -613,7 +617,8 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
         paymentMethod: payMethod,
         transactionRef: payRef || `REF-${Date.now().toString().slice(-6)}`,
         notes: `Payment received for ${selectedInvForPay.invoiceNumber}`,
-        createdById: user.uid
+        createdById: user.uid,
+        paymentDate: payDate || new Date().toISOString().split('T')[0]
       });
 
       const targetIdKey = isStaff ? (targetClientId || selectedClientId) : (targetClientId || user?.uid || '');
@@ -626,6 +631,7 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
       setSelectedInvForPay(null);
       setPayAmount('');
       setPayRef('');
+      setPayDate(new Date().toISOString().split('T')[0]);
       setInvMessage({ type: 'success', text: `Payment of $${(amountCents / 100).toFixed(2)} recorded successfully for invoice ${selectedInvForPay.invoiceNumber}!` });
     } catch (err: any) {
       console.error("Failed to record payment", err);
@@ -1521,6 +1527,17 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
               </div>
 
               <div>
+                <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Payment / Transaction Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={payDate}
+                  onChange={(e) => setPayDate(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-[#EAE1D2] text-xs outline-none focus:ring-2 focus:ring-[#BF5B33]/20 font-medium bg-white"
+                />
+              </div>
+
+              <div>
                 <label className="block text-xs font-semibold uppercase text-[#2C2A2A] mb-1">Reference # / Check #</label>
                 <input
                   type="text"
@@ -1892,33 +1909,42 @@ export const LedgerManager: React.FC<LedgerManagerProps> = ({ targetClientId, on
           <p className="text-xs text-[#2C2A2A]/60 py-4 text-center">No ledger transaction entries logged.</p>
         ) : (
           <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-            {ledgerEntries.map((e, idx) => (
-              <div key={idx} className="p-3 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#2C2A2A]">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold uppercase tracking-wider font-mono text-[#4A5741] px-2 py-0.5 bg-[#4A5741]/10 rounded-md">
-                    {e.type.replace(/_/g, ' ')}
-                  </span>
-                  {isStaff && e.clientId && (
-                    onSelectClient ? (
-                      <button
-                        type="button"
-                        onClick={() => onSelectClient(e.clientId)}
-                        className="text-[#BF5B33] hover:underline font-semibold flex items-center gap-0.5 cursor-pointer text-xs"
-                        title="View Client Chart / Profile"
-                      >
-                        👤 {getClientName(e.clientId)} ↗
-                      </button>
-                    ) : (
-                      <span className="font-semibold text-xs text-[#4A5741]">👤 {getClientName(e.clientId)}</span>
-                    )
-                  )}
-                  <span className="text-[#2C2A2A]/80 italic">{e.notes}</span>
+            {ledgerEntries.map((e, idx) => {
+              const formattedTxDate = e.paymentDate
+                ? new Date(`${e.paymentDate}T00:00:00`).toLocaleDateString('en-US')
+                : (e.createdAtISO ? new Date(e.createdAtISO).toLocaleDateString('en-US') : 'N/A');
+
+              return (
+                <div key={idx} className="p-3 bg-[#F7F2E9] rounded-xl border border-[#EAE1D2] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#2C2A2A]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold uppercase tracking-wider font-mono text-[#4A5741] px-2 py-0.5 bg-[#4A5741]/10 rounded-md">
+                      {e.type.replace(/_/g, ' ')}
+                    </span>
+                    <span className="text-[11px] font-semibold text-[#BF5B33] bg-[#BF5B33]/10 px-2 py-0.5 rounded-md">
+                      📅 {formattedTxDate}
+                    </span>
+                    {isStaff && e.clientId && (
+                      onSelectClient ? (
+                        <button
+                          type="button"
+                          onClick={() => onSelectClient(e.clientId)}
+                          className="text-[#BF5B33] hover:underline font-semibold flex items-center gap-0.5 cursor-pointer text-xs"
+                          title="View Client Chart / Profile"
+                        >
+                          👤 {getClientName(e.clientId)} ↗
+                        </button>
+                      ) : (
+                        <span className="font-semibold text-xs text-[#4A5741]">👤 {getClientName(e.clientId)}</span>
+                      )
+                    )}
+                    <span className="text-[#2C2A2A]/80 italic">{e.notes}</span>
+                  </div>
+                  <div className="font-mono font-bold text-[#2C2A2A]">
+                    {['payment', 'credit'].includes(e.type) ? '-' : '+'}${(e.amountCents / 100).toFixed(2)}
+                  </div>
                 </div>
-                <div className="font-mono font-bold text-[#2C2A2A]">
-                  {['payment', 'credit'].includes(e.type) ? '-' : '+'}${(e.amountCents / 100).toFixed(2)}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

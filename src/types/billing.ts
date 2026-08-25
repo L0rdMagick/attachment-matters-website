@@ -20,6 +20,8 @@ export interface LedgerEntryData {
   notes?: string;
   createdById: string;
   createdAt?: any;
+  createdAtISO?: string;
+  paymentDate?: string;
 }
 
 export type InvoiceStatus = 'draft' | 'unpaid' | 'partially_paid' | 'paid' | 'overdue' | 'void';
